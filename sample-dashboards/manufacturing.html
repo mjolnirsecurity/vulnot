@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - Manufacturing Line HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2634 0%, #0d1821 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(90deg, #1e3a5f 0%, #0d1821 100%);
+            padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #00a8ff;
+        }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #00a8ff; }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 20px; background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #1e3a5f; padding: 5px 15px; border-radius: 15px; color: #00a8ff; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #00a8ff; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .process-view { background: #1a2634; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .section-title { font-size: 18px; color: #00a8ff; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a3f5f; }
+        .production-line { display: flex; align-items: center; gap: 20px; padding: 30px; background: #0d1821; border-radius: 10px; overflow-x: auto; }
+        .station {
+            min-width: 150px; padding: 20px; background: linear-gradient(180deg, #1e3a5f 0%, #0d1821 100%);
+            border: 2px solid #2a5a8f; border-radius: 10px; text-align: center;
+        }
+        .station.active { border-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
+        .station.error { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231, 76, 60, 0.3); }
+        .station-icon { width: 60px; height: 60px; margin: 0 auto 10px; }
+        .station-name { font-size: 12px; color: #00a8ff; margin-bottom: 5px; }
+        .station-status { font-size: 10px; padding: 3px 8px; border-radius: 10px; display: inline-block; }
+        .station-status.running { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .station-status.stopped { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .station-status.idle { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .conveyor { width: 80px; height: 20px; background: repeating-linear-gradient(90deg, #333 0px, #333 10px, #444 10px, #444 20px); border-radius: 5px; position: relative; animation: conveyorMove 1s linear infinite; }
+        @keyframes conveyorMove { from { background-position: 0 0; } to { background-position: 20px 0; } }
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .metric-card { background: #0d1821; border-radius: 10px; padding: 20px; text-align: center; border: 1px solid #2a3f5f; }
+        .metric-value { font-size: 32px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .metric-value.green { color: #00ff88; }
+        .metric-value.blue { color: #00a8ff; }
+        .metric-value.yellow { color: #ffd700; }
+        .metric-value.red { color: #e74c3c; }
+        .metric-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .metric-unit { font-size: 14px; color: #666; }
+        .plc-status { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .plc-card { background: #0d1821; border-radius: 10px; padding: 15px; border: 1px solid #2a3f5f; }
+        .plc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .plc-name { color: #00a8ff; font-weight: bold; }
+        .plc-mode { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .plc-details { font-size: 11px; color: #666; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #1a2634; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .recipe-info { background: #0d1821; border-radius: 10px; padding: 15px; }
+        .recipe-name { font-size: 18px; color: #00a8ff; margin-bottom: 10px; }
+        .recipe-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+        .recipe-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #2a3f5f; }
+        .recipe-label { color: #888; }
+        .recipe-value { color: #e0e0e0; font-weight: bold; }
+        .quality-gauge { margin-top: 15px; }
+        .quality-bar { height: 30px; background: #1a2634; border-radius: 5px; overflow: hidden; position: relative; }
+        .quality-fill { height: 100%; transition: width 0.5s; }
+        .quality-fill.good { background: linear-gradient(90deg, #00ff88, #00cc6a); }
+        .quality-zones { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; }
+        .quality-zone { flex: 1; border-right: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
+        .alarm-list { max-height: 180px; overflow-y: auto; }
+        .alarm-item { display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; background: rgba(231, 76, 60, 0.1); border-left: 3px solid #e74c3c; border-radius: 5px; font-size: 11px; }
+        .alarm-item.warning { background: rgba(255, 215, 0, 0.1); border-left-color: #ffd700; }
+        .alarm-time { color: #666; font-family: monospace; }
+        .robot-status { display: flex; gap: 15px; }
+        .robot-item { flex: 1; background: #0d1821; border-radius: 10px; padding: 15px; text-align: center; }
+        .robot-icon { width: 50px; height: 50px; margin: 0 auto 10px; }
+        .robot-name { font-size: 12px; color: #00a8ff; }
+        .robot-state { font-size: 11px; color: #00ff88; margin-top: 5px; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #0d1821; padding: 10px 30px; display: flex; justify-content: space-between; border-top: 1px solid #2a3f5f; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40">
+                <rect x="5" y="10" width="30" height="20" fill="none" stroke="#00a8ff" stroke-width="2" rx="3"/>
+                <circle cx="12" cy="20" r="4" fill="none" stroke="#00a8ff" stroke-width="2"/>
+                <circle cx="28" cy="20" r="4" fill="none" stroke="#00a8ff" stroke-width="2"/>
+                <line x1="16" y1="20" x2="24" y2="20" stroke="#00a8ff" stroke-width="2"/>
+            </svg>
+            <div>
+                <h1>VULNOT</h1>
+                <small style="color: #888;">Manufacturing Line - Scenario 3</small>
+            </div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator"><div class="status-dot"></div><span>PRODUCTION ACTIVE</span></div>
+            <div class="protocol-badge">S7COMM :102</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="process-view">
+            <h2 class="section-title">Production Line - Automotive Assembly</h2>
+            <div class="production-line">
+                <div class="station active">
+                    <svg class="station-icon" viewBox="0 0 60 60"><rect x="10" y="20" width="40" height="30" fill="none" stroke="#00a8ff" stroke-width="2"/><path d="M20 20 L20 10 L40 10 L40 20" fill="none" stroke="#00a8ff" stroke-width="2"/></svg>
+                    <div class="station-name">MATERIAL FEED</div>
+                    <div class="station-status running">RUNNING</div>
+                </div>
+                <div class="conveyor"></div>
+                <div class="station active">
+                    <svg class="station-icon" viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#00a8ff" stroke-width="2"/><path d="M20 30 L40 30 M30 20 L30 40" stroke="#00a8ff" stroke-width="2"/></svg>
+                    <div class="station-name">CNC MACHINING</div>
+                    <div class="station-status running">RUNNING</div>
+                </div>
+                <div class="conveyor"></div>
+                <div class="station active">
+                    <svg class="station-icon" viewBox="0 0 60 60"><path d="M15 45 L30 15 L45 45 Z" fill="none" stroke="#00a8ff" stroke-width="2"/><circle cx="30" cy="35" r="5" fill="none" stroke="#00a8ff" stroke-width="2"/></svg>
+                    <div class="station-name">ROBOT WELD</div>
+                    <div class="station-status running">RUNNING</div>
+                </div>
+                <div class="conveyor"></div>
+                <div class="station error">
+                    <svg class="station-icon" viewBox="0 0 60 60"><rect x="10" y="15" width="40" height="30" fill="none" stroke="#e74c3c" stroke-width="2" rx="5"/><circle cx="30" cy="30" r="8" fill="none" stroke="#e74c3c" stroke-width="2"/></svg>
+                    <div class="station-name">QUALITY CHECK</div>
+                    <div class="station-status stopped">FAULT</div>
+                </div>
+                <div class="conveyor" style="animation-play-state: paused;"></div>
+                <div class="station">
+                    <svg class="station-icon" viewBox="0 0 60 60"><rect x="10" y="20" width="40" height="25" fill="none" stroke="#888" stroke-width="2"/><path d="M10 35 L50 35" stroke="#888" stroke-width="2"/></svg>
+                    <div class="station-name">PACKAGING</div>
+                    <div class="station-status idle">WAITING</div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value green" id="parts-count">1,247</div>
+                    <div class="metric-label">Parts Produced</div>
+                    <div class="metric-unit">Today</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value blue">78.5</div>
+                    <div class="metric-label">Line Speed</div>
+                    <div class="metric-unit">units/hr</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value yellow">96.2%</div>
+                    <div class="metric-label">OEE</div>
+                    <div class="metric-unit">Overall Equipment Effectiveness</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value red">3</div>
+                    <div class="metric-label">Rejects</div>
+                    <div class="metric-unit">This shift</div>
+                </div>
+            </div>
+
+            <div class="plc-status">
+                <div class="plc-card">
+                    <div class="plc-header">
+                        <span class="plc-name">S7-1500 PLC-01</span>
+                        <span class="plc-mode">RUN</span>
+                    </div>
+                    <div class="plc-details">IP: 10.0.3.10 | Rack 0 Slot 1 | CPU 1516-3 PN/DP</div>
+                </div>
+                <div class="plc-card">
+                    <div class="plc-header">
+                        <span class="plc-name">S7-1500 PLC-02</span>
+                        <span class="plc-mode">RUN</span>
+                    </div>
+                    <div class="plc-details">IP: 10.0.3.11 | Rack 0 Slot 1 | CPU 1516-3 PN/DP</div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Active Recipe</h3>
+                <div class="recipe-info">
+                    <div class="recipe-name">PART-A7842-REV3</div>
+                    <div class="recipe-details">
+                        <div class="recipe-item"><span class="recipe-label">Batch Size</span><span class="recipe-value">500</span></div>
+                        <div class="recipe-item"><span class="recipe-label">Completed</span><span class="recipe-value">247</span></div>
+                        <div class="recipe-item"><span class="recipe-label">Cycle Time</span><span class="recipe-value">45.8s</span></div>
+                        <div class="recipe-item"><span class="recipe-label">Material</span><span class="recipe-value">AL-6061</span></div>
+                    </div>
+                </div>
+                <div class="quality-gauge">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-size: 12px; color: #888;">Quality Rate</span>
+                        <span style="font-size: 14px; color: #00ff88; font-weight: bold;">99.8%</span>
+                    </div>
+                    <div class="quality-bar">
+                        <div class="quality-fill good" style="width: 99.8%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Robot Status</h3>
+                <div class="robot-status">
+                    <div class="robot-item">
+                        <svg class="robot-icon" viewBox="0 0 50 50"><rect x="15" y="10" width="20" height="15" fill="none" stroke="#00ff88" stroke-width="2"/><rect x="10" y="25" width="30" height="20" fill="none" stroke="#00ff88" stroke-width="2"/><line x1="5" y1="30" x2="10" y2="30" stroke="#00ff88" stroke-width="2"/><line x1="40" y1="30" x2="45" y2="30" stroke="#00ff88" stroke-width="2"/></svg>
+                        <div class="robot-name">KUKA KR-210</div>
+                        <div class="robot-state">WELDING</div>
+                    </div>
+                    <div class="robot-item">
+                        <svg class="robot-icon" viewBox="0 0 50 50"><rect x="15" y="10" width="20" height="15" fill="none" stroke="#00ff88" stroke-width="2"/><rect x="10" y="25" width="30" height="20" fill="none" stroke="#00ff88" stroke-width="2"/><line x1="5" y1="30" x2="10" y2="30" stroke="#00ff88" stroke-width="2"/><line x1="40" y1="30" x2="45" y2="30" stroke="#00ff88" stroke-width="2"/></svg>
+                        <div class="robot-name">ABB IRB-6700</div>
+                        <div class="robot-state">HANDLING</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Active Alarms</h3>
+                <div class="alarm-list">
+                    <div class="alarm-item">
+                        <span class="alarm-time">14:52:18</span>
+                        <span>QC Station - Vision System Fault</span>
+                    </div>
+                    <div class="alarm-item warning">
+                        <span class="alarm-time">14:48:05</span>
+                        <span>Robot R2 - Torque Warning</span>
+                    </div>
+                    <div class="alarm-item warning">
+                        <span class="alarm-time">14:32:41</span>
+                        <span>Conveyor C3 - Speed Deviation</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security Training Platform</span>
+        <span>Network: 10.0.3.0/24 | DB Blocks: DB1-DB100</span>
+        <span>Last Update: <span id="last-update">--:--:--</span></span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        setInterval(() => {
+            const count = parseInt(document.getElementById('parts-count').textContent.replace(',', ''));
+            document.getElementById('parts-count').textContent = (count + Math.floor(Math.random() * 3)).toLocaleString();
+        }, 5000);
+    </script>
+</body>
+</html>

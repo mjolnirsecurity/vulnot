@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - Building Automation HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a2a1a 0%, #0d1a0d 100%); color: #e0e0e0; min-height: 100vh; }
+        .header { background: linear-gradient(90deg, #1e3a1e 0%, #0d1a0d 100%); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #27ae60; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #27ae60; }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 20px; background: rgba(39, 174, 96, 0.1); border: 1px solid #27ae60; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #27ae60; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #1e3a1e; padding: 5px 15px; border-radius: 15px; color: #27ae60; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #27ae60; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .building-view { background: #1a2a1a; border-radius: 15px; padding: 20px; border: 1px solid #2a4a2a; }
+        .section-title { font-size: 18px; color: #27ae60; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a4a2a; }
+        .floor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .floor-card { background: linear-gradient(180deg, #1e3a1e 0%, #0d1a0d 100%); border: 2px solid #2a4a2a; border-radius: 15px; padding: 20px; }
+        .floor-card.active { border-color: #27ae60; }
+        .floor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .floor-name { font-size: 14px; color: #27ae60; font-weight: bold; }
+        .floor-status { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .zone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .zone { background: #0d1a0d; border-radius: 8px; padding: 10px; text-align: center; font-size: 10px; }
+        .zone-temp { font-size: 16px; font-weight: bold; color: #27ae60; }
+        .zone-name { color: #666; margin-top: 3px; }
+        .hvac-status { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .hvac-unit { background: #0d1a0d; border-radius: 10px; padding: 15px; border: 1px solid #2a4a2a; }
+        .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .hvac-name { font-size: 12px; color: #27ae60; }
+        .hvac-mode { font-size: 10px; padding: 3px 8px; border-radius: 10px; }
+        .hvac-mode.cooling { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        .hvac-mode.heating { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .hvac-mode.off { background: rgba(127, 140, 141, 0.2); color: #7f8c8d; }
+        .hvac-metrics { display: flex; justify-content: space-around; text-align: center; font-size: 11px; }
+        .hvac-metric-value { font-size: 18px; font-weight: bold; }
+        .hvac-metric-label { color: #666; }
+        .energy-panel { background: #0d1a0d; border-radius: 10px; padding: 20px; margin-top: 20px; }
+        .energy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .energy-total { font-size: 28px; font-weight: bold; color: #27ae60; }
+        .energy-chart { display: flex; align-items: flex-end; gap: 5px; height: 100px; }
+        .energy-bar { flex: 1; background: linear-gradient(180deg, #27ae60, #1e8449); border-radius: 3px 3px 0 0; transition: height 0.5s; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #1a2a1a; border-radius: 15px; padding: 20px; border: 1px solid #2a4a2a; }
+        .comfort-gauge { text-align: center; padding: 20px; background: #0d1a0d; border-radius: 10px; }
+        .comfort-score { font-size: 64px; font-weight: bold; color: #27ae60; }
+        .comfort-label { color: #888; }
+        .schedule-list { display: flex; flex-direction: column; gap: 10px; }
+        .schedule-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0d1a0d; border-radius: 8px; font-size: 12px; }
+        .schedule-time { font-family: monospace; color: #27ae60; }
+        .schedule-action { color: #888; }
+        .device-status { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .device-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #0d1a0d; border-radius: 8px; font-size: 11px; }
+        .device-icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #1e3a1e; border-radius: 8px; }
+        .device-info { flex: 1; }
+        .device-name { color: #27ae60; }
+        .device-state { color: #666; font-size: 10px; }
+        .lighting-control { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .light-btn { padding: 15px; background: #0d1a0d; border: 2px solid #2a4a2a; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .light-btn.on { border-color: #f39c12; background: rgba(243, 156, 18, 0.1); }
+        .light-btn.on .light-icon { color: #f39c12; }
+        .light-icon { font-size: 24px; margin-bottom: 5px; }
+        .light-label { font-size: 10px; color: #888; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #0d1a0d; padding: 10px 30px; display: flex; justify-content: space-between; border-top: 1px solid #2a4a2a; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40"><rect x="8" y="15" width="24" height="20" fill="none" stroke="#27ae60" stroke-width="2"/><path d="M5 15 L20 5 L35 15" fill="none" stroke="#27ae60" stroke-width="2"/><rect x="16" y="25" width="8" height="10" fill="none" stroke="#27ae60" stroke-width="2"/></svg>
+            <div><h1>VULNOT</h1><small style="color: #888;">Building Automation - Scenario 5</small></div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator"><div class="status-dot"></div><span>BUILDING ONLINE</span></div>
+            <div class="protocol-badge">BACnet :47808</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="building-view">
+            <h2 class="section-title">Corporate Tower - Floor Temperature Overview</h2>
+            <div class="floor-grid">
+                <div class="floor-card active">
+                    <div class="floor-header"><span class="floor-name">FLOOR 4 - EXEC</span><span class="floor-status">OCCUPIED</span></div>
+                    <div class="zone-grid">
+                        <div class="zone"><div class="zone-temp">72°F</div><div class="zone-name">Zone A</div></div>
+                        <div class="zone"><div class="zone-temp">71°F</div><div class="zone-name">Zone B</div></div>
+                        <div class="zone"><div class="zone-temp">73°F</div><div class="zone-name">Zone C</div></div>
+                    </div>
+                </div>
+                <div class="floor-card active">
+                    <div class="floor-header"><span class="floor-name">FLOOR 3 - OFFICE</span><span class="floor-status">OCCUPIED</span></div>
+                    <div class="zone-grid">
+                        <div class="zone"><div class="zone-temp">71°F</div><div class="zone-name">Zone A</div></div>
+                        <div class="zone"><div class="zone-temp">72°F</div><div class="zone-name">Zone B</div></div>
+                        <div class="zone"><div class="zone-temp">70°F</div><div class="zone-name">Zone C</div></div>
+                    </div>
+                </div>
+                <div class="floor-card">
+                    <div class="floor-header"><span class="floor-name">FLOOR 2 - CONF</span><span class="floor-status" style="background: rgba(127, 140, 141, 0.2); color: #7f8c8d;">UNOCCUPIED</span></div>
+                    <div class="zone-grid">
+                        <div class="zone"><div class="zone-temp" style="color: #7f8c8d;">68°F</div><div class="zone-name">Zone A</div></div>
+                        <div class="zone"><div class="zone-temp" style="color: #7f8c8d;">68°F</div><div class="zone-name">Zone B</div></div>
+                        <div class="zone"><div class="zone-temp" style="color: #7f8c8d;">67°F</div><div class="zone-name">Zone C</div></div>
+                    </div>
+                </div>
+                <div class="floor-card active">
+                    <div class="floor-header"><span class="floor-name">FLOOR 1 - LOBBY</span><span class="floor-status">OCCUPIED</span></div>
+                    <div class="zone-grid">
+                        <div class="zone"><div class="zone-temp">70°F</div><div class="zone-name">Zone A</div></div>
+                        <div class="zone"><div class="zone-temp">71°F</div><div class="zone-name">Zone B</div></div>
+                        <div class="zone"><div class="zone-temp">70°F</div><div class="zone-name">Zone C</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hvac-status">
+                <div class="hvac-unit">
+                    <div class="hvac-header"><span class="hvac-name">AHU-01 (Floors 1-2)</span><span class="hvac-mode cooling">COOLING</span></div>
+                    <div class="hvac-metrics">
+                        <div><div class="hvac-metric-value" style="color: #3498db;">55°F</div><div class="hvac-metric-label">Supply</div></div>
+                        <div><div class="hvac-metric-value" style="color: #e74c3c;">74°F</div><div class="hvac-metric-label">Return</div></div>
+                        <div><div class="hvac-metric-value" style="color: #27ae60;">85%</div><div class="hvac-metric-label">Fan</div></div>
+                    </div>
+                </div>
+                <div class="hvac-unit">
+                    <div class="hvac-header"><span class="hvac-name">AHU-02 (Floors 3-4)</span><span class="hvac-mode cooling">COOLING</span></div>
+                    <div class="hvac-metrics">
+                        <div><div class="hvac-metric-value" style="color: #3498db;">54°F</div><div class="hvac-metric-label">Supply</div></div>
+                        <div><div class="hvac-metric-value" style="color: #e74c3c;">73°F</div><div class="hvac-metric-label">Return</div></div>
+                        <div><div class="hvac-metric-value" style="color: #27ae60;">90%</div><div class="hvac-metric-label">Fan</div></div>
+                    </div>
+                </div>
+                <div class="hvac-unit">
+                    <div class="hvac-header"><span class="hvac-name">CHILLER-01</span><span class="hvac-mode cooling">RUNNING</span></div>
+                    <div class="hvac-metrics">
+                        <div><div class="hvac-metric-value" style="color: #3498db;">44°F</div><div class="hvac-metric-label">CHW Sup</div></div>
+                        <div><div class="hvac-metric-value" style="color: #27ae60;">78%</div><div class="hvac-metric-label">Load</div></div>
+                        <div><div class="hvac-metric-value" style="color: #f39c12;">245kW</div><div class="hvac-metric-label">Power</div></div>
+                    </div>
+                </div>
+                <div class="hvac-unit">
+                    <div class="hvac-header"><span class="hvac-name">BOILER-01</span><span class="hvac-mode off">STANDBY</span></div>
+                    <div class="hvac-metrics">
+                        <div><div class="hvac-metric-value" style="color: #7f8c8d;">--°F</div><div class="hvac-metric-label">HW Sup</div></div>
+                        <div><div class="hvac-metric-value" style="color: #7f8c8d;">0%</div><div class="hvac-metric-label">Load</div></div>
+                        <div><div class="hvac-metric-value" style="color: #7f8c8d;">0kW</div><div class="hvac-metric-label">Power</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="energy-panel">
+                <div class="energy-header">
+                    <div><div style="color: #888; font-size: 12px;">Today's Energy Usage</div><div class="energy-total">1,847 kWh</div></div>
+                    <div style="text-align: right;"><div style="color: #27ae60; font-size: 14px;">▼ 12%</div><div style="color: #666; font-size: 11px;">vs yesterday</div></div>
+                </div>
+                <div class="energy-chart">
+                    <div class="energy-bar" style="height: 30%;"></div>
+                    <div class="energy-bar" style="height: 25%;"></div>
+                    <div class="energy-bar" style="height: 40%;"></div>
+                    <div class="energy-bar" style="height: 55%;"></div>
+                    <div class="energy-bar" style="height: 70%;"></div>
+                    <div class="energy-bar" style="height: 85%;"></div>
+                    <div class="energy-bar" style="height: 95%;"></div>
+                    <div class="energy-bar" style="height: 100%;"></div>
+                    <div class="energy-bar" style="height: 90%;"></div>
+                    <div class="energy-bar" style="height: 75%;"></div>
+                    <div class="energy-bar" style="height: 80%;"></div>
+                    <div class="energy-bar" style="height: 65%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 5px;">
+                    <span>6AM</span><span>9AM</span><span>12PM</span><span>3PM</span><span>6PM</span>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Comfort Index</h3>
+                <div class="comfort-gauge">
+                    <div class="comfort-score">94</div>
+                    <div class="comfort-label">Building Comfort Score</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Lighting Control</h3>
+                <div class="lighting-control">
+                    <div class="light-btn on"><div class="light-icon">💡</div><div class="light-label">Lobby</div></div>
+                    <div class="light-btn on"><div class="light-icon">💡</div><div class="light-label">Floor 3</div></div>
+                    <div class="light-btn on"><div class="light-icon">💡</div><div class="light-label">Floor 4</div></div>
+                    <div class="light-btn"><div class="light-icon">💡</div><div class="light-label">Floor 2</div></div>
+                    <div class="light-btn on"><div class="light-icon">💡</div><div class="light-label">Parking</div></div>
+                    <div class="light-btn"><div class="light-icon">💡</div><div class="light-label">Exterior</div></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Schedule</h3>
+                <div class="schedule-list">
+                    <div class="schedule-item"><span class="schedule-time">06:00</span><span class="schedule-action">Pre-cool start</span></div>
+                    <div class="schedule-item"><span class="schedule-time">07:00</span><span class="schedule-action">Occupied mode</span></div>
+                    <div class="schedule-item"><span class="schedule-time">18:00</span><span class="schedule-action">Setback mode</span></div>
+                    <div class="schedule-item"><span class="schedule-time">22:00</span><span class="schedule-action">Unoccupied</span></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security</span>
+        <span>Network: 10.0.5.0/24 | BACnet Device: 1001</span>
+        <span id="last-update">--:--:--</span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = 'Last Update: ' + now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>

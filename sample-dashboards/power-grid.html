@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - Power Grid Substation HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(90deg, #2d2d2d 0%, #1a1a1a 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ffd700;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2);
+        }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 15px; border-radius: 20px;
+            background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88;
+        }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #5a4a1a; padding: 5px 15px; border-radius: 15px; color: #ffd700; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #ffd700; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .process-view { background: #252525; border-radius: 15px; padding: 20px; border: 1px solid #3a3a3a; }
+        .section-title { font-size: 18px; color: #ffd700; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #3a3a3a; }
+        .grid-diagram { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; padding: 20px; }
+        .substation {
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border: 2px solid #444; border-radius: 15px; padding: 20px;
+            text-align: center; position: relative;
+        }
+        .substation.active { border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        .substation h3 { color: #ffd700; margin-bottom: 15px; font-size: 14px; }
+        .breaker-container { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+        .breaker {
+            width: 50px; height: 70px; border-radius: 5px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .breaker.closed { background: linear-gradient(180deg, #1a4a1a, #0a2a0a); border: 2px solid #00ff88; }
+        .breaker.open { background: linear-gradient(180deg, #4a1a1a, #2a0a0a); border: 2px solid #ff4444; }
+        .breaker-label { font-size: 10px; color: #888; margin-top: 5px; }
+        .breaker-status { font-size: 8px; font-weight: bold; margin-top: 3px; }
+        .breaker.closed .breaker-status { color: #00ff88; }
+        .breaker.open .breaker-status { color: #ff4444; }
+        .voltage-display {
+            background: #1a1a1a; border-radius: 10px; padding: 15px; margin-top: 15px;
+        }
+        .voltage-value { font-size: 28px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .voltage-value.normal { color: #00ff88; }
+        .voltage-value.warning { color: #f39c12; }
+        .voltage-value.danger { color: #e74c3c; }
+        .voltage-label { font-size: 11px; color: #888; }
+        .current-display { display: flex; justify-content: space-around; margin-top: 10px; }
+        .current-phase { text-align: center; }
+        .current-value { font-size: 16px; font-weight: bold; color: #00d4ff; }
+        .current-label { font-size: 10px; color: #666; }
+        .power-flow {
+            background: #1a1a1a; border-radius: 10px; padding: 20px; margin-top: 20px;
+        }
+        .power-bar { display: flex; align-items: center; gap: 15px; margin: 10px 0; }
+        .power-label { width: 100px; font-size: 12px; color: #888; }
+        .power-meter {
+            flex: 1; height: 20px; background: #2a2a2a; border-radius: 10px;
+            overflow: hidden; position: relative;
+        }
+        .power-fill {
+            height: 100%; border-radius: 10px; transition: width 0.5s;
+            background: linear-gradient(90deg, #00ff88, #00cc6a);
+        }
+        .power-value { width: 80px; text-align: right; font-weight: bold; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #252525; border-radius: 15px; padding: 20px; border: 1px solid #3a3a3a; }
+        .freq-display {
+            text-align: center; padding: 20px;
+            background: linear-gradient(180deg, #1a2a1a 0%, #0a1a0a 100%);
+            border-radius: 10px; border: 2px solid #00ff88;
+        }
+        .freq-value { font-size: 48px; font-weight: bold; color: #00ff88; font-family: 'Courier New', monospace; }
+        .freq-label { color: #888; margin-top: 5px; }
+        .event-log { max-height: 250px; overflow-y: auto; }
+        .event-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px; margin-bottom: 8px;
+            background: #1a1a1a; border-radius: 5px;
+            font-size: 11px; border-left: 3px solid #ffd700;
+        }
+        .event-item.trip { border-left-color: #e74c3c; }
+        .event-item.close { border-left-color: #00ff88; }
+        .event-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .rtu-status { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .rtu-item {
+            background: #1a1a1a; border-radius: 8px; padding: 12px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .rtu-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .rtu-dot.online { background: #00ff88; }
+        .rtu-dot.offline { background: #ff4444; }
+        .rtu-info { font-size: 11px; }
+        .rtu-name { color: #ffd700; }
+        .rtu-addr { color: #666; }
+        .footer {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #1a1a1a; padding: 10px 30px;
+            display: flex; justify-content: space-between;
+            border-top: 1px solid #3a3a3a; font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="18" fill="none" stroke="#ffd700" stroke-width="2"/>
+                <path d="M15 10 L25 20 L15 30 M25 10 L15 20 L25 30" fill="none" stroke="#ffd700" stroke-width="2"/>
+            </svg>
+            <div>
+                <h1>VULNOT</h1>
+                <small style="color: #888;">Power Grid Substation - Scenario 2</small>
+            </div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>GRID SYNCHRONIZED</span>
+            </div>
+            <div class="protocol-badge">DNP3 :20000</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="process-view">
+            <h2 class="section-title">Substation Overview - 138kV/13.8kV Distribution</h2>
+            <div class="grid-diagram">
+                <div class="substation active">
+                    <h3>BUS 1 - 138kV</h3>
+                    <div class="breaker-container">
+                        <div class="breaker closed" title="CB-101">
+                            <svg width="30" height="40" viewBox="0 0 30 40">
+                                <rect x="5" y="5" width="20" height="30" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <line x1="15" y1="5" x2="15" y2="35" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                            <div class="breaker-label">CB-101</div>
+                            <div class="breaker-status">CLOSED</div>
+                        </div>
+                        <div class="breaker closed" title="CB-102">
+                            <svg width="30" height="40" viewBox="0 0 30 40">
+                                <rect x="5" y="5" width="20" height="30" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <line x1="15" y1="5" x2="15" y2="35" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                            <div class="breaker-label">CB-102</div>
+                            <div class="breaker-status">CLOSED</div>
+                        </div>
+                    </div>
+                    <div class="voltage-display">
+                        <div class="voltage-value normal" id="bus1-voltage">138.2 kV</div>
+                        <div class="voltage-label">Line Voltage</div>
+                        <div class="current-display">
+                            <div class="current-phase"><div class="current-value">245A</div><div class="current-label">Phase A</div></div>
+                            <div class="current-phase"><div class="current-value">242A</div><div class="current-label">Phase B</div></div>
+                            <div class="current-phase"><div class="current-value">248A</div><div class="current-label">Phase C</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="substation active">
+                    <h3>TRANSFORMER T1</h3>
+                    <div style="padding: 20px;">
+                        <svg width="100" height="80" viewBox="0 0 100 80">
+                            <circle cx="30" cy="40" r="25" fill="none" stroke="#ffd700" stroke-width="2"/>
+                            <circle cx="70" cy="40" r="25" fill="none" stroke="#ffd700" stroke-width="2"/>
+                            <text x="30" y="45" text-anchor="middle" fill="#ffd700" font-size="12">138kV</text>
+                            <text x="70" y="45" text-anchor="middle" fill="#ffd700" font-size="12">13.8kV</text>
+                        </svg>
+                    </div>
+                    <div class="voltage-display">
+                        <div style="display: flex; justify-content: space-around;">
+                            <div><div class="voltage-value normal" style="font-size: 20px;">45°C</div><div class="voltage-label">Oil Temp</div></div>
+                            <div><div class="voltage-value normal" style="font-size: 20px;">32 MVA</div><div class="voltage-label">Load</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="substation active">
+                    <h3>BUS 2 - 13.8kV</h3>
+                    <div class="breaker-container">
+                        <div class="breaker closed" title="CB-201">
+                            <svg width="30" height="40" viewBox="0 0 30 40">
+                                <rect x="5" y="5" width="20" height="30" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <line x1="15" y1="5" x2="15" y2="35" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                            <div class="breaker-label">CB-201</div>
+                            <div class="breaker-status">CLOSED</div>
+                        </div>
+                        <div class="breaker open" title="CB-202">
+                            <svg width="30" height="40" viewBox="0 0 30 40">
+                                <rect x="5" y="5" width="20" height="30" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <line x1="15" y1="5" x2="15" y2="20" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                            <div class="breaker-label">CB-202</div>
+                            <div class="breaker-status">OPEN</div>
+                        </div>
+                    </div>
+                    <div class="voltage-display">
+                        <div class="voltage-value normal" id="bus2-voltage">13.82 kV</div>
+                        <div class="voltage-label">Distribution Voltage</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="power-flow">
+                <h3 class="section-title" style="margin-bottom: 15px;">Power Flow Analysis</h3>
+                <div class="power-bar">
+                    <span class="power-label">Active Power (P)</span>
+                    <div class="power-meter"><div class="power-fill" style="width: 68%;"></div></div>
+                    <span class="power-value" style="color: #00ff88;">27.2 MW</span>
+                </div>
+                <div class="power-bar">
+                    <span class="power-label">Reactive Power (Q)</span>
+                    <div class="power-meter"><div class="power-fill" style="width: 35%; background: linear-gradient(90deg, #00d4ff, #0088cc);"></div></div>
+                    <span class="power-value" style="color: #00d4ff;">14.1 MVAR</span>
+                </div>
+                <div class="power-bar">
+                    <span class="power-label">Power Factor</span>
+                    <div class="power-meter"><div class="power-fill" style="width: 89%;"></div></div>
+                    <span class="power-value" style="color: #00ff88;">0.89</span>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Grid Frequency</h3>
+                <div class="freq-display">
+                    <div class="freq-value" id="frequency">60.00</div>
+                    <div class="freq-label">Hz - Nominal</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">RTU Status</h3>
+                <div class="rtu-status">
+                    <div class="rtu-item">
+                        <div class="rtu-dot online"></div>
+                        <div class="rtu-info"><div class="rtu-name">RTU-001</div><div class="rtu-addr">DNP3 Addr: 1</div></div>
+                    </div>
+                    <div class="rtu-item">
+                        <div class="rtu-dot online"></div>
+                        <div class="rtu-info"><div class="rtu-name">RTU-002</div><div class="rtu-addr">DNP3 Addr: 2</div></div>
+                    </div>
+                    <div class="rtu-item">
+                        <div class="rtu-dot online"></div>
+                        <div class="rtu-info"><div class="rtu-name">RTU-003</div><div class="rtu-addr">DNP3 Addr: 3</div></div>
+                    </div>
+                    <div class="rtu-item">
+                        <div class="rtu-dot offline"></div>
+                        <div class="rtu-info"><div class="rtu-name">RTU-004</div><div class="rtu-addr">DNP3 Addr: 4</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Event Log</h3>
+                <div class="event-log">
+                    <div class="event-item close">
+                        <span class="event-time">14:45:32</span>
+                        <span>CB-201 Closed - Remote</span>
+                    </div>
+                    <div class="event-item trip">
+                        <span class="event-time">14:42:18</span>
+                        <span>CB-202 Trip - Overcurrent</span>
+                    </div>
+                    <div class="event-item">
+                        <span class="event-time">14:38:05</span>
+                        <span>Voltage deviation +2.1%</span>
+                    </div>
+                    <div class="event-item">
+                        <span class="event-time">14:30:00</span>
+                        <span>Scheduled data poll</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security Training Platform</span>
+        <span>Network: 10.0.2.0/24 | RTU: 10.0.2.10</span>
+        <span>Last Update: <span id="last-update">--:--:--</span></span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        setInterval(() => {
+            const freq = 59.95 + Math.random() * 0.1;
+            const v1 = 137.5 + Math.random() * 1.5;
+            const v2 = 13.7 + Math.random() * 0.3;
+            document.getElementById('frequency').textContent = freq.toFixed(2);
+            document.getElementById('bus1-voltage').textContent = v1.toFixed(1) + ' kV';
+            document.getElementById('bus2-voltage').textContent = v2.toFixed(2) + ' kV';
+        }, 2000);
+    </script>
+</body>
+</html>

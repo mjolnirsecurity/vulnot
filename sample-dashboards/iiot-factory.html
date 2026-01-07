@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - IIoT Smart Factory HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0a1628 0%, #051015 100%); color: #e0e0e0; min-height: 100vh; }
+        .header { background: linear-gradient(90deg, #0f2847 0%, #051015 100%); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00bcd4; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #00bcd4; }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 20px; background: rgba(0, 188, 212, 0.1); border: 1px solid #00bcd4; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00bcd4; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #0f2847; padding: 5px 15px; border-radius: 15px; color: #00bcd4; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #00bcd4; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .iiot-view { background: #0a1628; border-radius: 15px; padding: 20px; border: 1px solid #1a3a5f; }
+        .section-title { font-size: 18px; color: #00bcd4; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #1a3a5f; }
+        .sensor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .sensor-card { background: linear-gradient(180deg, #0f2847 0%, #051015 100%); border: 1px solid #1a3a5f; border-radius: 12px; padding: 15px; position: relative; overflow: hidden; }
+        .sensor-card.online { border-color: #00bcd4; }
+        .sensor-card.warning { border-color: #f39c12; }
+        .sensor-card.offline { border-color: #e74c3c; opacity: 0.7; }
+        .sensor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .sensor-id { font-size: 10px; color: #00bcd4; font-family: monospace; }
+        .sensor-status { width: 8px; height: 8px; border-radius: 50%; }
+        .sensor-status.online { background: #00bcd4; }
+        .sensor-status.warning { background: #f39c12; }
+        .sensor-status.offline { background: #e74c3c; }
+        .sensor-value { font-size: 28px; font-weight: bold; color: #fff; margin: 10px 0; }
+        .sensor-type { font-size: 11px; color: #888; }
+        .sensor-trend { position: absolute; bottom: 0; left: 0; right: 0; height: 30px; }
+        .gateway-section { margin-top: 20px; }
+        .gateway-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .gateway-card { background: #051015; border: 2px solid #1a3a5f; border-radius: 12px; padding: 20px; text-align: center; }
+        .gateway-card.active { border-color: #00bcd4; box-shadow: 0 0 20px rgba(0, 188, 212, 0.2); }
+        .gateway-icon { width: 60px; height: 60px; margin: 0 auto 15px; background: #0f2847; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .gateway-name { font-size: 14px; color: #00bcd4; margin-bottom: 5px; }
+        .gateway-info { font-size: 11px; color: #888; }
+        .gateway-stats { display: flex; justify-content: space-around; margin-top: 15px; font-size: 11px; }
+        .gateway-stat { text-align: center; }
+        .gateway-stat-value { font-size: 16px; font-weight: bold; color: #00bcd4; }
+        .gateway-stat-label { color: #666; }
+        .mqtt-panel { background: #051015; border-radius: 10px; padding: 20px; margin-top: 20px; }
+        .topic-list { max-height: 150px; overflow-y: auto; }
+        .topic-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #0a1628; border-radius: 5px; margin-bottom: 5px; font-size: 11px; font-family: monospace; }
+        .topic-name { color: #00bcd4; }
+        .topic-rate { color: #888; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #0a1628; border-radius: 15px; padding: 20px; border: 1px solid #1a3a5f; }
+        .network-map { background: #051015; border-radius: 10px; padding: 15px; position: relative; height: 200px; }
+        .network-node { position: absolute; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; cursor: pointer; }
+        .network-node.broker { background: #00bcd4; top: 80px; left: 50%; transform: translateX(-50%); }
+        .network-node.gateway { background: #27ae60; }
+        .network-node.sensor { background: #3498db; width: 25px; height: 25px; font-size: 8px; }
+        .network-line { position: absolute; background: #1a3a5f; height: 2px; transform-origin: left center; }
+        .alert-feed { max-height: 200px; overflow-y: auto; }
+        .alert-item { display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; background: #051015; border-left: 3px solid #00bcd4; border-radius: 5px; font-size: 11px; }
+        .alert-item.warning { border-left-color: #f39c12; }
+        .alert-item.error { border-left-color: #e74c3c; }
+        .alert-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .firmware-list { display: flex; flex-direction: column; gap: 10px; }
+        .firmware-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #051015; border-radius: 8px; font-size: 11px; }
+        .firmware-device { color: #00bcd4; }
+        .firmware-version { color: #888; font-family: monospace; }
+        .firmware-status { padding: 3px 8px; border-radius: 10px; font-size: 9px; }
+        .firmware-status.current { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .firmware-status.update { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #051015; padding: 10px 30px; display: flex; justify-content: space-between; border-top: 1px solid #1a3a5f; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="#00bcd4" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="#00bcd4"/><path d="M20 5 L20 10 M20 30 L20 35 M5 20 L10 20 M30 20 L35 20" stroke="#00bcd4" stroke-width="2"/></svg>
+            <div><h1>VULNOT</h1><small style="color: #888;">IIoT Smart Factory - Scenario 7</small></div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator"><div class="status-dot"></div><span>17 SENSORS ONLINE</span></div>
+            <div class="protocol-badge">MQTT :1883</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="iiot-view">
+            <h2 class="section-title">IIoT Sensor Network - Real-time Telemetry</h2>
+            <div class="sensor-grid">
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">TEMP-001</span><div class="sensor-status online"></div></div><div class="sensor-value">72.4°F</div><div class="sensor-type">Temperature</div></div>
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">TEMP-002</span><div class="sensor-status online"></div></div><div class="sensor-value">68.9°F</div><div class="sensor-type">Temperature</div></div>
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">HUM-001</span><div class="sensor-status online"></div></div><div class="sensor-value">45%</div><div class="sensor-type">Humidity</div></div>
+                <div class="sensor-card warning"><div class="sensor-header"><span class="sensor-id">HUM-002</span><div class="sensor-status warning"></div></div><div class="sensor-value" style="color: #f39c12;">78%</div><div class="sensor-type">Humidity (HIGH)</div></div>
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">VIB-001</span><div class="sensor-status online"></div></div><div class="sensor-value">0.12g</div><div class="sensor-type">Vibration</div></div>
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">VIB-002</span><div class="sensor-status online"></div></div><div class="sensor-value">0.08g</div><div class="sensor-type">Vibration</div></div>
+                <div class="sensor-card online"><div class="sensor-header"><span class="sensor-id">PWR-001</span><div class="sensor-status online"></div></div><div class="sensor-value">245kW</div><div class="sensor-type">Power Meter</div></div>
+                <div class="sensor-card offline"><div class="sensor-header"><span class="sensor-id">PWR-002</span><div class="sensor-status offline"></div></div><div class="sensor-value" style="color: #e74c3c;">--</div><div class="sensor-type">OFFLINE</div></div>
+            </div>
+
+            <div class="gateway-section">
+                <h3 class="section-title">Edge Gateways</h3>
+                <div class="gateway-grid">
+                    <div class="gateway-card active">
+                        <div class="gateway-icon"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="5" y="8" width="20" height="14" fill="none" stroke="#00bcd4" stroke-width="2" rx="2"/><circle cx="10" cy="15" r="2" fill="#00bcd4"/><circle cx="15" cy="15" r="2" fill="#00bcd4"/><circle cx="20" cy="15" r="2" fill="#00bcd4"/></svg></div>
+                        <div class="gateway-name">GW-PROD-01</div>
+                        <div class="gateway-info">Production Floor A</div>
+                        <div class="gateway-stats">
+                            <div class="gateway-stat"><div class="gateway-stat-value">8</div><div class="gateway-stat-label">Sensors</div></div>
+                            <div class="gateway-stat"><div class="gateway-stat-value">1.2k</div><div class="gateway-stat-label">Msg/min</div></div>
+                        </div>
+                    </div>
+                    <div class="gateway-card active">
+                        <div class="gateway-icon"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="5" y="8" width="20" height="14" fill="none" stroke="#00bcd4" stroke-width="2" rx="2"/><circle cx="10" cy="15" r="2" fill="#00bcd4"/><circle cx="15" cy="15" r="2" fill="#00bcd4"/><circle cx="20" cy="15" r="2" fill="#00bcd4"/></svg></div>
+                        <div class="gateway-name">GW-PROD-02</div>
+                        <div class="gateway-info">Production Floor B</div>
+                        <div class="gateway-stats">
+                            <div class="gateway-stat"><div class="gateway-stat-value">6</div><div class="gateway-stat-label">Sensors</div></div>
+                            <div class="gateway-stat"><div class="gateway-stat-value">890</div><div class="gateway-stat-label">Msg/min</div></div>
+                        </div>
+                    </div>
+                    <div class="gateway-card active">
+                        <div class="gateway-icon"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="5" y="8" width="20" height="14" fill="none" stroke="#00bcd4" stroke-width="2" rx="2"/><circle cx="10" cy="15" r="2" fill="#00bcd4"/><circle cx="15" cy="15" r="2" fill="#00bcd4"/><circle cx="20" cy="15" r="2" fill="#00bcd4"/></svg></div>
+                        <div class="gateway-name">GW-UTIL-01</div>
+                        <div class="gateway-info">Utilities Room</div>
+                        <div class="gateway-stats">
+                            <div class="gateway-stat"><div class="gateway-stat-value">3</div><div class="gateway-stat-label">Sensors</div></div>
+                            <div class="gateway-stat"><div class="gateway-stat-value">450</div><div class="gateway-stat-label">Msg/min</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mqtt-panel">
+                <h3 class="section-title" style="margin-bottom: 10px;">MQTT Topic Activity</h3>
+                <div class="topic-list">
+                    <div class="topic-item"><span class="topic-name">factory/prod-a/temp/#</span><span class="topic-rate">120 msg/min</span></div>
+                    <div class="topic-item"><span class="topic-name">factory/prod-a/vibration/#</span><span class="topic-rate">240 msg/min</span></div>
+                    <div class="topic-item"><span class="topic-name">factory/prod-b/power/#</span><span class="topic-rate">60 msg/min</span></div>
+                    <div class="topic-item"><span class="topic-name">factory/util/hvac/#</span><span class="topic-rate">30 msg/min</span></div>
+                    <div class="topic-item"><span class="topic-name">factory/alerts/#</span><span class="topic-rate">5 msg/min</span></div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Recent Alerts</h3>
+                <div class="alert-feed">
+                    <div class="alert-item warning"><span class="alert-time">14:52:18</span><span>HUM-002 threshold exceeded</span></div>
+                    <div class="alert-item error"><span class="alert-time">14:48:05</span><span>PWR-002 connection lost</span></div>
+                    <div class="alert-item"><span class="alert-time">14:32:41</span><span>GW-PROD-01 firmware check</span></div>
+                    <div class="alert-item"><span class="alert-time">14:15:00</span><span>Scheduled data sync</span></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Firmware Status</h3>
+                <div class="firmware-list">
+                    <div class="firmware-item"><span class="firmware-device">GW-PROD-01</span><span class="firmware-version">v2.4.1</span><span class="firmware-status current">CURRENT</span></div>
+                    <div class="firmware-item"><span class="firmware-device">GW-PROD-02</span><span class="firmware-version">v2.3.8</span><span class="firmware-status update">UPDATE</span></div>
+                    <div class="firmware-item"><span class="firmware-device">GW-UTIL-01</span><span class="firmware-version">v2.4.1</span><span class="firmware-status current">CURRENT</span></div>
+                    <div class="firmware-item"><span class="firmware-device">TEMP-001</span><span class="firmware-version">v1.2.0</span><span class="firmware-status current">CURRENT</span></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security</span>
+        <span>Network: 10.0.7.0/24 | Broker: mqtt://10.0.7.5:1883</span>
+        <span id="last-update">--:--:--</span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = 'Last Update: ' + now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - Packaging Line HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #2d1f1a 0%, #1a0f0a 100%); color: #e0e0e0; min-height: 100vh; }
+        .header { background: linear-gradient(90deg, #4a2a1a 0%, #1a0f0a 100%); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e67e22; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #e67e22; }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 20px; background: rgba(39, 174, 96, 0.1); border: 1px solid #27ae60; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #27ae60; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #4a2a1a; padding: 5px 15px; border-radius: 15px; color: #e67e22; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #e67e22; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+        .process-view { background: #2d1f1a; border-radius: 15px; padding: 20px; border: 1px solid #4a3a2a; }
+        .section-title { font-size: 18px; color: #e67e22; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #4a3a2a; }
+        .line-visual { background: #1a0f0a; border-radius: 10px; padding: 30px; position: relative; overflow: hidden; }
+        .conveyor-belt { height: 60px; background: repeating-linear-gradient(90deg, #333 0px, #333 20px, #444 20px, #444 40px); border-radius: 5px; position: relative; animation: beltMove 2s linear infinite; margin: 40px 0; }
+        @keyframes beltMove { from { background-position: 0 0; } to { background-position: 40px 0; } }
+        .station-row { display: flex; justify-content: space-between; padding: 0 50px; }
+        .pack-station { text-align: center; width: 120px; }
+        .station-icon { width: 80px; height: 80px; margin: 0 auto; background: linear-gradient(180deg, #4a2a1a 0%, #2d1f1a 100%); border: 2px solid #e67e22; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .station-icon.active { box-shadow: 0 0 20px rgba(230, 126, 34, 0.5); }
+        .station-name { font-size: 11px; color: #e67e22; margin-top: 8px; }
+        .station-rate { font-size: 10px; color: #888; }
+        .product-flow { position: absolute; display: flex; gap: 50px; animation: flowAnim 4s linear infinite; }
+        @keyframes flowAnim { from { transform: translateX(-100px); } to { transform: translateX(calc(100% + 100px)); } }
+        .product-box { width: 30px; height: 25px; background: linear-gradient(180deg, #8b4513, #654321); border: 1px solid #a0522d; border-radius: 3px; }
+        .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
+        .metric-box { background: #1a0f0a; border-radius: 10px; padding: 15px; text-align: center; border: 1px solid #4a3a2a; }
+        .metric-value { font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .metric-value.orange { color: #e67e22; }
+        .metric-value.green { color: #27ae60; }
+        .metric-value.blue { color: #3498db; }
+        .metric-label { font-size: 10px; color: #888; margin-top: 5px; }
+        .plc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .plc-box { background: #1a0f0a; border-radius: 10px; padding: 15px; border: 1px solid #4a3a2a; }
+        .plc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .plc-name { font-size: 12px; color: #e67e22; }
+        .plc-status { font-size: 9px; padding: 3px 8px; border-radius: 10px; background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .plc-tags { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; font-size: 10px; }
+        .tag-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #2d1f1a; }
+        .tag-name { color: #888; }
+        .tag-value { color: #e0e0e0; font-family: monospace; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #2d1f1a; border-radius: 15px; padding: 20px; border: 1px solid #4a3a2a; }
+        .order-info { background: #1a0f0a; border-radius: 10px; padding: 15px; }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .order-id { font-size: 16px; color: #e67e22; font-weight: bold; }
+        .order-status { font-size: 10px; padding: 5px 10px; border-radius: 10px; background: rgba(230, 126, 34, 0.2); color: #e67e22; }
+        .order-progress { margin: 15px 0; }
+        .progress-bar { height: 15px; background: #2d1f1a; border-radius: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #e67e22, #d35400); border-radius: 8px; }
+        .order-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px; }
+        .detail-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #2d1f1a; }
+        .detail-label { color: #888; }
+        .detail-value { color: #e0e0e0; }
+        .quality-stats { display: flex; flex-direction: column; gap: 10px; }
+        .quality-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a0f0a; border-radius: 8px; }
+        .quality-label { font-size: 12px; color: #888; }
+        .quality-value { font-size: 14px; font-weight: bold; }
+        .quality-value.good { color: #27ae60; }
+        .quality-value.warn { color: #f39c12; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #1a0f0a; padding: 10px 30px; display: flex; justify-content: space-between; border-top: 1px solid #4a3a2a; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40"><rect x="8" y="12" width="24" height="18" fill="none" stroke="#e67e22" stroke-width="2" rx="2"/><path d="M8 18 L32 18" stroke="#e67e22" stroke-width="2"/><path d="M15 12 L15 8 L25 8 L25 12" fill="none" stroke="#e67e22" stroke-width="2"/></svg>
+            <div><h1>VULNOT</h1><small style="color: #888;">Packaging Line - Scenario 6</small></div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator"><div class="status-dot"></div><span>LINE RUNNING</span></div>
+            <div class="protocol-badge">EtherNet/IP :44818</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="process-view">
+            <h2 class="section-title">Packaging Line PL-01 - Carton Packaging</h2>
+            <div class="line-visual">
+                <div class="station-row">
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="10" y="15" width="20" height="15" fill="none" stroke="#e67e22" stroke-width="2"/><path d="M5 15 L20 5 L35 15" fill="none" stroke="#e67e22" stroke-width="2"/></svg></div><div class="station-name">INFEED</div><div class="station-rate">120 ppm</div></div>
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="8" y="10" width="24" height="20" fill="none" stroke="#e67e22" stroke-width="2"/><line x1="8" y1="20" x2="32" y2="20" stroke="#e67e22" stroke-width="2"/></svg></div><div class="station-name">CARTON FORM</div><div class="station-rate">118 ppm</div></div>
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="10" y="8" width="20" height="24" fill="none" stroke="#e67e22" stroke-width="2"/><path d="M10 16 L30 16 M10 24 L30 24" stroke="#e67e22" stroke-width="2"/></svg></div><div class="station-name">PRODUCT FILL</div><div class="station-rate">118 ppm</div></div>
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="8" y="10" width="24" height="20" fill="none" stroke="#e67e22" stroke-width="2"/><path d="M8 10 L20 5 L32 10" fill="none" stroke="#e67e22" stroke-width="2"/></svg></div><div class="station-name">SEAL</div><div class="station-rate">117 ppm</div></div>
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="10" y="10" width="20" height="20" fill="none" stroke="#e67e22" stroke-width="2"/><text x="20" y="24" text-anchor="middle" fill="#e67e22" font-size="10">SCAN</text></svg></div><div class="station-name">LABEL/SCAN</div><div class="station-rate">117 ppm</div></div>
+                    <div class="pack-station"><div class="station-icon active"><svg width="40" height="40" viewBox="0 0 40 40"><path d="M10 30 L20 10 L30 30" fill="none" stroke="#e67e22" stroke-width="2"/><line x1="15" y1="22" x2="25" y2="22" stroke="#e67e22" stroke-width="2"/></svg></div><div class="station-name">CASE PACK</div><div class="station-rate">19 cpm</div></div>
+                </div>
+                <div class="conveyor-belt"></div>
+            </div>
+
+            <div class="metrics-row">
+                <div class="metric-box"><div class="metric-value orange" id="throughput">117</div><div class="metric-label">Packs/Min</div></div>
+                <div class="metric-box"><div class="metric-value green">98.7%</div><div class="metric-label">Efficiency</div></div>
+                <div class="metric-box"><div class="metric-value blue" id="total-count">24,847</div><div class="metric-label">Today's Count</div></div>
+                <div class="metric-box"><div class="metric-value green">99.2%</div><div class="metric-label">Yield</div></div>
+                <div class="metric-box"><div class="metric-value orange">12</div><div class="metric-label">Rejects</div></div>
+            </div>
+
+            <div class="plc-grid">
+                <div class="plc-box">
+                    <div class="plc-header"><span class="plc-name">CompactLogix L33ER</span><span class="plc-status">RUN</span></div>
+                    <div class="plc-tags">
+                        <div class="tag-item"><span class="tag-name">Line_Speed</span><span class="tag-value">117</span></div>
+                        <div class="tag-item"><span class="tag-name">Infeed_Count</span><span class="tag-value">24859</span></div>
+                        <div class="tag-item"><span class="tag-name">Reject_Count</span><span class="tag-value">12</span></div>
+                        <div class="tag-item"><span class="tag-name">Line_State</span><span class="tag-value">RUN</span></div>
+                    </div>
+                </div>
+                <div class="plc-box">
+                    <div class="plc-header"><span class="plc-name">PowerFlex 525</span><span class="plc-status">RUN</span></div>
+                    <div class="plc-tags">
+                        <div class="tag-item"><span class="tag-name">Speed_Ref</span><span class="tag-value">85%</span></div>
+                        <div class="tag-item"><span class="tag-name">Speed_Act</span><span class="tag-value">84.8%</span></div>
+                        <div class="tag-item"><span class="tag-name">Current</span><span class="tag-value">12.4A</span></div>
+                        <div class="tag-item"><span class="tag-name">Torque</span><span class="tag-value">45%</span></div>
+                    </div>
+                </div>
+                <div class="plc-box">
+                    <div class="plc-header"><span class="plc-name">Vision System</span><span class="plc-status">INSP</span></div>
+                    <div class="plc-tags">
+                        <div class="tag-item"><span class="tag-name">Pass_Count</span><span class="tag-value">24847</span></div>
+                        <div class="tag-item"><span class="tag-name">Fail_Count</span><span class="tag-value">12</span></div>
+                        <div class="tag-item"><span class="tag-name">Pass_Rate</span><span class="tag-value">99.95%</span></div>
+                        <div class="tag-item"><span class="tag-name">Trigger_Rate</span><span class="tag-value">117/min</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Current Order</h3>
+                <div class="order-info">
+                    <div class="order-header"><span class="order-id">ORD-2024-1847</span><span class="order-status">RUNNING</span></div>
+                    <div class="order-progress">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px;"><span>Progress</span><span>82.8%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: 82.8%;"></div></div>
+                    </div>
+                    <div class="order-details">
+                        <div class="detail-item"><span class="detail-label">Target</span><span class="detail-value">30,000</span></div>
+                        <div class="detail-item"><span class="detail-label">Complete</span><span class="detail-value">24,847</span></div>
+                        <div class="detail-item"><span class="detail-label">SKU</span><span class="detail-value">PKG-4521</span></div>
+                        <div class="detail-item"><span class="detail-label">ETA</span><span class="detail-value">44 min</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Quality Metrics</h3>
+                <div class="quality-stats">
+                    <div class="quality-item"><span class="quality-label">Seal Integrity</span><span class="quality-value good">99.8%</span></div>
+                    <div class="quality-item"><span class="quality-label">Label Accuracy</span><span class="quality-value good">100%</span></div>
+                    <div class="quality-item"><span class="quality-label">Weight Check</span><span class="quality-value good">99.5%</span></div>
+                    <div class="quality-item"><span class="quality-label">Barcode Read</span><span class="quality-value warn">98.2%</span></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security</span>
+        <span>Network: 10.0.6.0/24 | CIP Connection: 10.0.6.10</span>
+        <span id="last-update">--:--:--</span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = 'Last Update: ' + now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        setInterval(() => {
+            const count = parseInt(document.getElementById('total-count').textContent.replace(',', ''));
+            document.getElementById('total-count').textContent = (count + 2).toLocaleString();
+            document.getElementById('throughput').textContent = 115 + Math.floor(Math.random() * 5);
+        }, 1000);
+    </script>
+</body>
+</html>

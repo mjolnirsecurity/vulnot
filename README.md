@@ -341,6 +341,51 @@ VULNOT maps findings to major OT security frameworks:
 
 ---
 
+## SIEM Integration
+
+Forward all OT security logs to your SIEM platform for centralized monitoring, alerting, and compliance reporting.
+
+### Supported Platforms
+
+| SIEM Platform | Status | Documentation |
+|---------------|--------|---------------|
+| **Sumo Logic** | Primary | [integrations/siem/sumologic](integrations/siem/sumologic/) |
+| **Splunk** | Supported | [integrations/siem/splunk](integrations/siem/splunk/) |
+| **ELK Stack** | Supported | [integrations/siem/elk](integrations/siem/elk/) |
+| **Google Chronicle** | Supported | [integrations/siem/chronicle](integrations/siem/chronicle/) |
+
+### Features
+
+- **Real-time Log Forwarding**: All protocol activity streamed via Redis pub/sub
+- **MITRE ATT&CK Enrichment**: Automatic technique and tactic mapping
+- **Normalized Log Format**: Consistent schema across all protocols
+- **Batch Processing**: Configurable batch sizes and flush intervals
+
+### Quick Start
+
+```bash
+# Sumo Logic (set your HTTP Source URL)
+export SUMO_HTTP_SOURCE_URL="https://endpoint.sumologic.com/..."
+cd integrations/siem/sumologic
+docker-compose up -d
+```
+
+### Custom Dashboards
+
+Need custom SIEM dashboards, correlation rules, or integration support?
+
+**Contact Mjolnir Security**: [sales@mjolnirsecurity.com](mailto:sales@mjolnirsecurity.com)
+
+---
+
+## Sample Dashboards
+
+Interactive HTML dashboards demonstrating HMI interfaces for each scenario.
+
+See [sample-dashboards/README.md](sample-dashboards/README.md) for all 9 scenario dashboards.
+
+---
+
 ## Documentation
 
 | Document | Description |

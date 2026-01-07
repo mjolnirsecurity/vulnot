@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VULNOT - CNC Motion Control HMI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%); color: #e0e0e0; min-height: 100vh; }
+        .header { background: linear-gradient(90deg, #2a2a2a 0%, #0d0d0d 100%); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ff6b35; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo h1 { font-size: 24px; color: #ff6b35; }
+        .status-bar { display: flex; gap: 20px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 20px; background: rgba(39, 174, 96, 0.1); border: 1px solid #27ae60; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #27ae60; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .protocol-badge { background: #2a2a2a; padding: 5px 15px; border-radius: 15px; color: #ff6b35; font-weight: bold; }
+        .time { font-family: 'Courier New', monospace; font-size: 18px; color: #ff6b35; }
+        .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .cnc-view { background: #1a1a1a; border-radius: 15px; padding: 20px; border: 1px solid #333; }
+        .section-title { font-size: 18px; color: #ff6b35; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .machine-status { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .position-display { background: #0d0d0d; border-radius: 10px; padding: 20px; }
+        .axis-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .axis-card { background: #1a1a1a; border: 2px solid #333; border-radius: 10px; padding: 15px; text-align: center; }
+        .axis-card.active { border-color: #ff6b35; }
+        .axis-label { font-size: 24px; font-weight: bold; color: #ff6b35; margin-bottom: 10px; }
+        .axis-value { font-size: 32px; font-weight: bold; font-family: 'Courier New', monospace; color: #27ae60; }
+        .axis-unit { font-size: 12px; color: #888; }
+        .axis-velocity { font-size: 11px; color: #666; margin-top: 5px; }
+        .spindle-display { background: #0d0d0d; border-radius: 10px; padding: 20px; text-align: center; }
+        .spindle-rpm { font-size: 48px; font-weight: bold; color: #ff6b35; font-family: 'Courier New', monospace; }
+        .spindle-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .spindle-gauge { width: 150px; height: 150px; margin: 20px auto; position: relative; }
+        .spindle-ring { fill: none; stroke: #333; stroke-width: 10; }
+        .spindle-progress { fill: none; stroke: #ff6b35; stroke-width: 10; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 0.5s; }
+        .spindle-load { font-size: 14px; color: #888; margin-top: 10px; }
+        .tool-section { margin-top: 20px; }
+        .tool-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .tool-slot { background: #0d0d0d; border: 2px solid #333; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .tool-slot.active { border-color: #27ae60; background: rgba(39, 174, 96, 0.1); }
+        .tool-slot.empty { opacity: 0.5; }
+        .tool-number { font-size: 18px; font-weight: bold; color: #ff6b35; }
+        .tool-type { font-size: 10px; color: #888; margin-top: 5px; }
+        .tool-life { font-size: 9px; color: #27ae60; margin-top: 3px; }
+        .program-panel { background: #0d0d0d; border-radius: 10px; padding: 20px; margin-top: 20px; }
+        .program-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .program-name { font-size: 16px; color: #ff6b35; font-family: monospace; }
+        .program-status { padding: 5px 15px; border-radius: 15px; font-size: 11px; background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .gcode-display { background: #1a1a1a; border-radius: 5px; padding: 15px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 120px; overflow-y: auto; }
+        .gcode-line { padding: 2px 0; }
+        .gcode-line.current { background: rgba(255, 107, 53, 0.2); color: #ff6b35; }
+        .gcode-line.executed { color: #666; }
+        .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: #1a1a1a; border-radius: 15px; padding: 20px; border: 1px solid #333; }
+        .feed-override { text-align: center; }
+        .override-value { font-size: 48px; font-weight: bold; color: #27ae60; }
+        .override-slider { width: 100%; margin: 15px 0; }
+        .drive-status { display: flex; flex-direction: column; gap: 10px; }
+        .drive-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #0d0d0d; border-radius: 8px; }
+        .drive-name { font-size: 12px; color: #ff6b35; }
+        .drive-temp { font-size: 12px; color: #27ae60; }
+        .drive-bar { width: 60px; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+        .drive-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); }
+        .alarm-panel { max-height: 150px; overflow-y: auto; }
+        .alarm-item { display: flex; gap: 10px; padding: 8px; margin-bottom: 5px; background: #0d0d0d; border-left: 3px solid #f39c12; border-radius: 3px; font-size: 10px; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: #0d0d0d; padding: 10px 30px; display: flex; justify-content: space-between; border-top: 1px solid #333; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="#ff6b35" stroke-width="2"/><path d="M20 10 L20 30 M10 20 L30 20" stroke="#ff6b35" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="none" stroke="#ff6b35" stroke-width="2"/></svg>
+            <div><h1>VULNOT</h1><small style="color: #888;">CNC Motion Control - Scenario 8</small></div>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator"><div class="status-dot"></div><span>MACHINING</span></div>
+            <div class="protocol-badge">PROFINET :34964</div>
+            <div class="time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="cnc-view">
+            <h2 class="section-title">5-Axis CNC Machining Center - DMG MORI DMU 50</h2>
+            <div class="machine-status">
+                <div class="position-display">
+                    <h3 style="font-size: 14px; color: #888; margin-bottom: 15px;">Machine Position (mm)</h3>
+                    <div class="axis-grid">
+                        <div class="axis-card active"><div class="axis-label">X</div><div class="axis-value" id="pos-x">125.432</div><div class="axis-unit">mm</div><div class="axis-velocity">vel: 2500 mm/min</div></div>
+                        <div class="axis-card active"><div class="axis-label">Y</div><div class="axis-value" id="pos-y">-87.156</div><div class="axis-unit">mm</div><div class="axis-velocity">vel: 1800 mm/min</div></div>
+                        <div class="axis-card active"><div class="axis-label">Z</div><div class="axis-value" id="pos-z">-45.000</div><div class="axis-unit">mm</div><div class="axis-velocity">vel: 500 mm/min</div></div>
+                        <div class="axis-card"><div class="axis-label">A</div><div class="axis-value">15.000</div><div class="axis-unit">deg</div><div class="axis-velocity">vel: 0 deg/min</div></div>
+                        <div class="axis-card"><div class="axis-label">C</div><div class="axis-value">90.000</div><div class="axis-unit">deg</div><div class="axis-velocity">vel: 0 deg/min</div></div>
+                    </div>
+                </div>
+                <div class="spindle-display">
+                    <div class="spindle-rpm" id="spindle-rpm">8,500</div>
+                    <div class="spindle-label">Spindle RPM</div>
+                    <svg class="spindle-gauge" viewBox="0 0 150 150">
+                        <circle class="spindle-ring" cx="75" cy="75" r="60"/>
+                        <circle class="spindle-progress" cx="75" cy="75" r="60" stroke-dasharray="377" stroke-dashoffset="94"/>
+                    </svg>
+                    <div class="spindle-load">Load: 42%</div>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3 class="section-title" style="margin-top: 20px;">Tool Magazine (20 positions)</h3>
+                <div class="tool-grid">
+                    <div class="tool-slot active"><div class="tool-number">T1</div><div class="tool-type">End Mill 10mm</div><div class="tool-life">Life: 85%</div></div>
+                    <div class="tool-slot"><div class="tool-number">T2</div><div class="tool-type">End Mill 6mm</div><div class="tool-life">Life: 92%</div></div>
+                    <div class="tool-slot"><div class="tool-number">T3</div><div class="tool-type">Ball Nose 8mm</div><div class="tool-life">Life: 78%</div></div>
+                    <div class="tool-slot"><div class="tool-number">T4</div><div class="tool-type">Drill 5mm</div><div class="tool-life">Life: 65%</div></div>
+                    <div class="tool-slot"><div class="tool-number">T5</div><div class="tool-type">Face Mill 50mm</div><div class="tool-life">Life: 95%</div></div>
+                    <div class="tool-slot empty"><div class="tool-number">T6</div><div class="tool-type">Empty</div></div>
+                    <div class="tool-slot"><div class="tool-number">T7</div><div class="tool-type">Tap M8</div><div class="tool-life">Life: 88%</div></div>
+                    <div class="tool-slot"><div class="tool-number">T8</div><div class="tool-type">Reamer 10H7</div><div class="tool-life">Life: 72%</div></div>
+                    <div class="tool-slot empty"><div class="tool-number">T9</div><div class="tool-type">Empty</div></div>
+                    <div class="tool-slot"><div class="tool-number">T10</div><div class="tool-type">Probe</div><div class="tool-life">--</div></div>
+                </div>
+            </div>
+
+            <div class="program-panel">
+                <div class="program-header"><span class="program-name">O1234 - AEROSPACE_BRACKET_V2</span><span class="program-status">RUNNING</span></div>
+                <div class="gcode-display">
+                    <div class="gcode-line executed">N0010 G90 G54 G17</div>
+                    <div class="gcode-line executed">N0020 T1 M6</div>
+                    <div class="gcode-line executed">N0030 S8500 M3</div>
+                    <div class="gcode-line current">N0040 G0 X125.432 Y-87.156</div>
+                    <div class="gcode-line">N0050 G1 Z-45.0 F500</div>
+                    <div class="gcode-line">N0060 G1 X150.0 F2500</div>
+                    <div class="gcode-line">N0070 G2 X175.0 Y-62.156 R25.0</div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3 class="section-title">Feed Override</h3>
+                <div class="feed-override">
+                    <div class="override-value">100%</div>
+                    <input type="range" class="override-slider" min="0" max="150" value="100">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666;"><span>0%</span><span>100%</span><span>150%</span></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Servo Drives</h3>
+                <div class="drive-status">
+                    <div class="drive-item"><span class="drive-name">X-Axis Drive</span><div class="drive-bar"><div class="drive-fill" style="width: 35%;"></div></div><span class="drive-temp">42°C</span></div>
+                    <div class="drive-item"><span class="drive-name">Y-Axis Drive</span><div class="drive-bar"><div class="drive-fill" style="width: 28%;"></div></div><span class="drive-temp">38°C</span></div>
+                    <div class="drive-item"><span class="drive-name">Z-Axis Drive</span><div class="drive-bar"><div class="drive-fill" style="width: 45%;"></div></div><span class="drive-temp">45°C</span></div>
+                    <div class="drive-item"><span class="drive-name">Spindle Drive</span><div class="drive-bar"><div class="drive-fill" style="width: 62%;"></div></div><span class="drive-temp">58°C</span></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 class="section-title">Alarms/Messages</h3>
+                <div class="alarm-panel">
+                    <div class="alarm-item"><span style="color: #666;">14:45</span><span>Tool T1 life warning (85%)</span></div>
+                    <div class="alarm-item"><span style="color: #666;">14:30</span><span>Coolant level OK</span></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>VULNOT v1.0 - Mjolnir Security</span>
+        <span>Network: 10.0.8.0/24 | PROFINET: 10.0.8.10</span>
+        <span id="last-update">--:--:--</span>
+    </footer>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = 'Last Update: ' + now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        setInterval(() => {
+            const x = 125 + Math.random() * 0.5;
+            const y = -87 - Math.random() * 0.2;
+            const rpm = 8400 + Math.floor(Math.random() * 200);
+            document.getElementById('pos-x').textContent = x.toFixed(3);
+            document.getElementById('pos-y').textContent = y.toFixed(3);
+            document.getElementById('spindle-rpm').textContent = rpm.toLocaleString();
+        }, 500);
+    </script>
+</body>
+</html>
