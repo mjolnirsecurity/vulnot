@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""
+VULNOT MQTT Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import time
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.live import Live
+
+console = Console()
+
+# MQTT Control Packet Types
+MQTT_CONNECT = 0x10
+MQTT_CONNACK = 0x20
+MQTT_PUBLISH = 0x30
+MQTT_SUBSCRIBE = 0x82
+MQTT_SUBACK = 0x90
+MQTT_PINGREQ = 0xC0
+MQTT_PINGRESP = 0xD0
+MQTT_DISCONNECT = 0xE0
+
+def encode_remaining_length(length: int) -> bytes:
+    """Encode MQTT remaining length"""
+    result = bytearray()
+    while True:
+        byte = length % 128
+        length = length // 128
+        if length > 0:
+            byte = byte | 0x80
+        result.append(byte)
+        if length == 0:
+            break
+    return bytes(result)
+
+def build_connect(client_id: str = "vulnot-attacker") -> bytes:
+    """Build MQTT CONNECT packet"""
+    # Variable header
+    protocol_name = b'\x00\x04MQTT'
+    protocol_level = bytes([0x04])  # MQTT 3.1.1
+    connect_flags = bytes([0x02])  # Clean session
+    keep_alive = struct.pack('>H', 60)
+
+    # Payload
+    client_id_bytes = client_id.encode('utf-8')
+    client_id_len = struct.pack('>H', len(client_id_bytes))
+
+    variable_header = protocol_name + protocol_level + connect_flags + keep_alive
+    payload = client_id_len + client_id_bytes
+
+    remaining_length = encode_remaining_length(len(variable_header) + len(payload))
+
+    return bytes([MQTT_CONNECT]) + remaining_length + variable_header + payload
+
+def build_subscribe(topic: str, packet_id: int = 1) -> bytes:
+    """Build MQTT SUBSCRIBE packet"""
+    # Variable header
+    packet_id_bytes = struct.pack('>H', packet_id)
+
+    # Payload
+    topic_bytes = topic.encode('utf-8')
+    topic_len = struct.pack('>H', len(topic_bytes))
+    qos = bytes([0x00])  # QoS 0
+
+    payload = topic_len + topic_bytes + qos
+    remaining_length = encode_remaining_length(len(packet_id_bytes) + len(payload))
+
+    return bytes([MQTT_SUBSCRIBE]) + remaining_length + packet_id_bytes + payload
+
+def build_publish(topic: str, message: str, retain: bool = False) -> bytes:
+    """Build MQTT PUBLISH packet"""
+    # Fixed header
+    flags = 0x00
+    if retain:
+        flags |= 0x01
+
+    # Variable header
+    topic_bytes = topic.encode('utf-8')
+    topic_len = struct.pack('>H', len(topic_bytes))
+
+    # Payload
+    message_bytes = message.encode('utf-8')
+
+    variable_header = topic_len + topic_bytes
+    remaining_length = encode_remaining_length(len(variable_header) + len(message_bytes))
+
+    return bytes([MQTT_PUBLISH | flags]) + remaining_length + variable_header + message_bytes
+
+class MQTTClient:
+    def __init__(self, host: str, port: int = 1883, timeout: float = 5.0):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.sock = None
+
+    def connect(self) -> bool:
+        """Connect to MQTT broker"""
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+        self.sock.connect((self.host, self.port))
+
+        # Send CONNECT
+        connect_packet = build_connect()
+        self.sock.send(connect_packet)
+
+        # Wait for CONNACK
+        response = self.sock.recv(4)
+        if response[0] == MQTT_CONNACK:
+            return True
+        return False
+
+    def subscribe(self, topic: str) -> bool:
+        """Subscribe to topic"""
+        sub_packet = build_subscribe(topic)
+        self.sock.send(sub_packet)
+
+        response = self.sock.recv(5)
+        if response[0] == MQTT_SUBACK:
+            return True
+        return False
+
+    def publish(self, topic: str, message: str, retain: bool = False):
+        """Publish message to topic"""
+        pub_packet = build_publish(topic, message, retain)
+        self.sock.send(pub_packet)
+
+    def receive(self, timeout: float = 1.0) -> tuple:
+        """Receive a message"""
+        self.sock.settimeout(timeout)
+        try:
+            data = self.sock.recv(4096)
+            if data and (data[0] & 0xF0) == MQTT_PUBLISH:
+                # Parse PUBLISH packet
+                idx = 1
+                multiplier = 1
+                remaining_length = 0
+                while True:
+                    byte = data[idx]
+                    remaining_length += (byte & 127) * multiplier
+                    multiplier *= 128
+                    idx += 1
+                    if (byte & 128) == 0:
+                        break
+
+                topic_len = struct.unpack('>H', data[idx:idx+2])[0]
+                idx += 2
+                topic = data[idx:idx+topic_len].decode('utf-8')
+                idx += topic_len
+                message = data[idx:idx+remaining_length-2-topic_len].decode('utf-8')
+
+                return (topic, message)
+        except socket.timeout:
+            pass
+        return (None, None)
+
+    def disconnect(self):
+        """Disconnect from broker"""
+        if self.sock:
+            self.sock.send(bytes([MQTT_DISCONNECT, 0x00]))
+            self.sock.close()
+
+@click.group()
+def cli():
+    """VULNOT MQTT Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.7.0/24)')
+@click.option('--port', '-p', default=1883, help='MQTT port (default: 1883)')
+def scan(network: str, port: int):
+    """Scan network for MQTT brokers"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT MQTT Broker Scanner        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip_str, port))
+                if result == 0:
+                    found.append({'ip': ip_str, 'port': port, 'status': 'MQTT'})
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered MQTT Brokers")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Status", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['status'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No MQTT brokers found[/]")
+
+    console.print(f"\n[green]Found {len(found)} MQTT broker(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=1883, help='MQTT port')
+def info(target: str, port: int):
+    """Get MQTT broker information"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT MQTT Broker Info           ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        client = MQTTClient(target, port)
+        if client.connect():
+            console.print("[green]Connected to broker![/]\n")
+
+            # Display broker info
+            table = Table(title="MQTT Broker Information")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value", style="white")
+
+            table.add_row("Host", target)
+            table.add_row("Port", str(port))
+            table.add_row("Protocol", "MQTT 3.1.1")
+            table.add_row("Authentication", "[red]None[/]")
+            table.add_row("TLS/SSL", "[red]Disabled[/]")
+            table.add_row("Anonymous Access", "[red]Allowed[/]")
+
+            console.print(table)
+            client.disconnect()
+        else:
+            console.print("[red]Failed to connect[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • No authentication required")
+    console.print("  • Traffic is unencrypted")
+    console.print("  • Anyone can subscribe to all topics")
+    console.print("  • Anyone can publish to any topic")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=1883, help='MQTT port')
+@click.option('--topic', '-T', default='#', help='Topic to subscribe (default: # for all)')
+@click.option('--duration', '-d', default=30, help='Listen duration in seconds')
+def sniff(target: str, port: int, topic: str, duration: int):
+    """Sniff MQTT messages"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT MQTT Message Sniffer       ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Topic:[/] {topic}")
+    console.print(f"[yellow]Duration:[/] {duration} seconds\n")
+
+    try:
+        client = MQTTClient(target, port)
+        if client.connect():
+            console.print("[green]Connected![/]")
+
+            if client.subscribe(topic):
+                console.print(f"[green]Subscribed to:[/] {topic}\n")
+
+                table = Table(title="Captured Messages")
+                table.add_column("Time", style="dim")
+                table.add_column("Topic", style="cyan")
+                table.add_column("Message", style="white")
+
+                # Simulated IIoT messages for training
+                messages = [
+                    ("factory/sensor/temp_1", '{"value": 45.2, "unit": "C"}'),
+                    ("factory/sensor/vibration_1", '{"value": 0.05, "unit": "mm/s"}'),
+                    ("factory/plc/status", '{"running": true, "mode": "auto"}'),
+                    ("factory/sensor/pressure_1", '{"value": 4.5, "unit": "bar"}'),
+                    ("factory/robot/arm_1/position", '{"x": 100, "y": 50, "z": 200}'),
+                    ("factory/conveyor/speed", '{"value": 1.5, "unit": "m/s"}'),
+                    ("factory/production/count", '{"today": 1523, "target": 2000}'),
+                    ("factory/energy/consumption", '{"value": 125.5, "unit": "kWh"}'),
+                ]
+
+                console.print("[yellow]Listening for messages (simulated for training)...[/]\n")
+
+                start_time = time.time()
+                msg_idx = 0
+
+                while (time.time() - start_time) < duration:
+                    # Simulate receiving messages
+                    time.sleep(2)
+
+                    if msg_idx < len(messages):
+                        topic_name, message = messages[msg_idx]
+                        timestamp = time.strftime("%H:%M:%S")
+                        table.add_row(timestamp, topic_name, message)
+                        msg_idx += 1
+
+                        # Print updated table
+                        console.print(f"[dim]{timestamp}[/] [cyan]{topic_name}[/] {message}")
+
+                console.print("\n")
+                console.print(table)
+
+            client.disconnect()
+        else:
+            console.print("[red]Failed to connect[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=1883, help='MQTT port')
+@click.option('--topic', '-T', required=True, help='Topic to publish to')
+@click.option('--message', '-m', required=True, help='Message to publish')
+@click.option('--retain', is_flag=True, help='Set retain flag')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def publish(target: str, port: int, topic: str, message: str, retain: bool, force: bool):
+    """Publish message to MQTT topic"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT MQTT Message Publisher     ║[/]")
+    console.print("[bold red]║     FOR TRAINING PURPOSES ONLY         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Topic:[/] {topic}\n"
+        f"[cyan]Retain:[/] {retain}\n"
+        f"[red]Message:[/] {message}",
+        title="[bold red]Publish Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Publish message?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        client = MQTTClient(target, port)
+        if client.connect():
+            client.publish(topic, message, retain)
+            console.print("\n[green]Message published![/]")
+            console.print(f"[yellow]Topic:[/] {topic}")
+            console.print(f"[yellow]Message:[/] {message}")
+            client.disconnect()
+        else:
+            console.print("[red]Failed to connect[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=1883, help='MQTT port')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['fake_sensor', 'dos', 'command_injection', 'data_exfil']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, port: int, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'fake_sensor': {
+            'name': 'Fake Sensor Data',
+            'description': 'Inject false sensor readings to mask real conditions',
+            'impact': 'Operators see normal values while actual conditions may be critical'
+        },
+        'dos': {
+            'name': 'Message Flood',
+            'description': 'Flood broker with messages to overwhelm processing',
+            'impact': 'Legitimate messages delayed or dropped, system instability'
+        },
+        'command_injection': {
+            'name': 'Command Injection',
+            'description': 'Publish malicious commands to control topics',
+            'impact': 'Unauthorized control of IIoT devices and PLCs'
+        },
+        'data_exfil': {
+            'name': 'Data Exfiltration',
+            'description': 'Subscribe to all topics and extract sensitive data',
+            'impact': 'Production data, credentials, and IP stolen'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT MQTT Attack Scenario       ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the IIoT dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

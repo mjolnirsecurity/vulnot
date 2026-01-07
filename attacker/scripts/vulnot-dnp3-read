@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""
+VULNOT DNP3 Reader
+Read data from DNP3 outstations (RTUs/IEDs)
+
+Reads:
+- Binary Inputs (breaker status, relay status)
+- Analog Inputs (voltages, currents, power)
+- Counters
+"""
+
+import argparse
+import socket
+import struct
+import sys
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# DNP3 Constants
+DNP3_START = b'\x05\x64'
+
+# Object types
+BINARY_INPUT = 1
+BINARY_OUTPUT = 10
+ANALOG_INPUT = 30
+ANALOG_OUTPUT = 40
+COUNTER = 20
+
+# Power grid point mappings
+SUBSTATION_BINARY_INPUTS = {
+    0: "CB 52-1 Feeder 1 HV",
+    1: "CB 52-2 Feeder 2 HV",
+    2: "CB 52-3 XFMR 1 HV",
+    3: "CB 52-4 XFMR 2 HV",
+    4: "CB 52-5 Bus Tie",
+    5: "CB 52-6 Out Feeder 1",
+    6: "CB 52-7 Out Feeder 2",
+    7: "CB 52-8 Out Feeder 3",
+    8: "CB 52-9 Out Feeder 4",
+    9: "CB 52-10 XFMR 1 LV",
+    10: "CB 52-11 XFMR 2 LV",
+    11: "CB 52-12 Spare",
+    12: "DS 89-1",
+    13: "DS 89-2",
+    14: "DS 89-3",
+    15: "DS 89-4",
+    16: "Relay 50/51-1 OC",
+    17: "Relay 50/51-2 OC",
+    18: "Relay 87T-1 Diff",
+    19: "Relay 87T-2 Diff",
+    20: "Relay 21-1 Dist",
+    21: "Relay 21-2 Dist",
+    22: "Relay 81 Freq",
+    23: "Relay 27 UV",
+    24: "Relay 59 OV",
+}
+
+SUBSTATION_ANALOG_INPUTS = {
+    0: ("System Frequency", "Hz", 1.0),
+    1: ("Feeder 1 Va", "kV", 0.01),
+    2: ("Feeder 1 Vb", "kV", 0.01),
+    3: ("Feeder 1 Vc", "kV", 0.01),
+    4: ("Feeder 1 Ia", "A", 0.01),
+    5: ("Feeder 1 Ib", "A", 0.01),
+    6: ("Feeder 1 Ic", "A", 0.01),
+    7: ("Feeder 1 MW", "MW", 0.01),
+    8: ("Feeder 1 MVAR", "MVAR", 0.01),
+    9: ("Feeder 2 Va", "kV", 0.01),
+    10: ("Feeder 2 Ia", "A", 0.01),
+    11: ("Feeder 2 MW", "MW", 0.01),
+    12: ("Feeder 2 MVAR", "MVAR", 0.01),
+    13: ("Bus 1 Va", "kV", 0.01),
+    14: ("Bus 2 Va", "kV", 0.01),
+    15: ("XFMR 1 Tap", "pos", 0.01),
+    16: ("XFMR 1 Temp", "°C", 0.01),
+    17: ("XFMR 1 Load", "%", 0.01),
+    18: ("XFMR 1 MW", "MW", 0.01),
+    19: ("XFMR 2 Tap", "pos", 0.01),
+    20: ("XFMR 2 Temp", "°C", 0.01),
+    21: ("XFMR 2 Load", "%", 0.01),
+    22: ("XFMR 2 MW", "MW", 0.01),
+    23: ("Out Fdr 1 I", "A", 0.01),
+    24: ("Out Fdr 1 MW", "MW", 0.01),
+    25: ("Out Fdr 2 I", "A", 0.01),
+    26: ("Out Fdr 2 MW", "MW", 0.01),
+    27: ("Out Fdr 3 I", "A", 0.01),
+    28: ("Out Fdr 3 MW", "MW", 0.01),
+    29: ("Out Fdr 4 I", "A", 0.01),
+    30: ("Out Fdr 4 MW", "MW", 0.01),
+}
+
+def calculate_crc(data: bytes) -> int:
+    """Calculate DNP3 CRC-16"""
+    crc = 0
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 1:
+                crc = (crc >> 1) ^ 0xA6BC
+            else:
+                crc >>= 1
+    return crc ^ 0xFFFF
+
+def build_read_request(dest_addr: int, src_addr: int, obj_group: int, 
+                       variation: int = 0, qualifier: int = 0x06) -> bytes:
+    """Build DNP3 read request"""
+    # Link layer control
+    control = 0x44  # DIR=0, PRM=1, FCB=0, FCV=0, FUNC=4 (User Data)
+    
+    # Transport layer
+    transport = 0xC0  # FIN=1, FIR=1, SEQ=0
+    
+    # Application layer
+    app_control = 0xC0  # FIR=1, FIN=1
+    func_code = 0x01  # Read
+    
+    # Object header
+    if variation == 0:
+        variation = 1  # Default variation
+    obj_header = bytes([obj_group, variation, qualifier])
+    
+    # Build layers
+    app_data = bytes([app_control, func_code]) + obj_header
+    transport_data = bytes([transport]) + app_data
+    
+    length = 5 + len(transport_data)
+    
+    # Link header
+    header = struct.pack('<2sBBHH',
+        DNP3_START,
+        length,
+        control,
+        dest_addr,
+        src_addr
+    )
+    
+    header_crc = calculate_crc(header[2:])
+    frame = header + struct.pack('<H', header_crc)
+    
+    # Add data with CRCs
+    data = transport_data
+    while data:
+        block = data[:16]
+        data = data[16:]
+        block_crc = calculate_crc(block)
+        frame += block + struct.pack('<H', block_crc)
+    
+    return frame
+
+def parse_response(data: bytes) -> dict:
+    """Parse DNP3 response"""
+    result = {'binary_inputs': {}, 'analog_inputs': {}, 'raw': data.hex()}
+    
+    if len(data) < 10 or data[0:2] != DNP3_START:
+        return result
+    
+    # Skip link layer and transport, find application data
+    # This is simplified - real parsing would validate CRCs
+    try:
+        # Find application layer (after transport byte)
+        app_start = 10  # After link header + CRC
+        if len(data) > app_start + 4:
+            app_ctrl = data[app_start + 1]
+            func_code = data[app_start + 2]
+            iin1 = data[app_start + 3] if len(data) > app_start + 3 else 0
+            iin2 = data[app_start + 4] if len(data) > app_start + 4 else 0
+            
+            result['function_code'] = func_code
+            result['iin'] = (iin1, iin2)
+            
+            # Parse object data (simplified)
+            obj_start = app_start + 5
+            if len(data) > obj_start + 3:
+                obj_group = data[obj_start]
+                variation = data[obj_start + 1]
+                qualifier = data[obj_start + 2]
+                
+                result['object_group'] = obj_group
+                result['variation'] = variation
+    except:
+        pass
+    
+    return result
+
+def read_dnp3(ip: str, port: int, address: int, obj_group: int, 
+              src_addr: int = 1, timeout: float = 3.0) -> dict:
+    """Read data from DNP3 outstation"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ip, port))
+        
+        request = build_read_request(address, src_addr, obj_group)
+        sock.send(request)
+        
+        response = sock.recv(1024)
+        sock.close()
+        
+        return parse_response(response)
+        
+    except Exception as e:
+        return {'error': str(e)}
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT DNP3 Reader - Read from DNP3 outstations',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Object Groups:
+  1   Binary Inputs (breaker status)
+  10  Binary Outputs (control outputs)
+  30  Analog Inputs (measurements)
+  40  Analog Outputs (setpoints)
+  20  Counters
+
+Examples:
+  vulnot-dnp3-read -t 10.0.2.10 -a 10           # Read all points
+  vulnot-dnp3-read -t 10.0.2.10 -a 10 -g 1      # Read binary inputs
+  vulnot-dnp3-read -t 10.0.2.10 -a 10 -g 30     # Read analog inputs
+        """
+    )
+    parser.add_argument('-t', '--target', required=True,
+                        help='Target IP address')
+    parser.add_argument('-p', '--port', type=int, default=20000,
+                        help='DNP3 port (default: 20000)')
+    parser.add_argument('-a', '--address', type=int, default=10,
+                        help='DNP3 outstation address (default: 10)')
+    parser.add_argument('-s', '--source', type=int, default=1,
+                        help='Source (master) address (default: 1)')
+    parser.add_argument('-g', '--group', type=int,
+                        help='Object group to read (1=BI, 30=AI, 10=BO, 40=AO)')
+    parser.add_argument('--raw', action='store_true',
+                        help='Show raw response data')
+    
+    args = parser.parse_args()
+    
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║        VULNOT DNP3 Point Reader        ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target:[/] {args.target}:{args.port}")
+    console.print(f"[yellow]Outstation Address:[/] {args.address}")
+    console.print(f"[yellow]Master Address:[/] {args.source}")
+    console.print("")
+    
+    # Determine which groups to read
+    if args.group:
+        groups = [args.group]
+    else:
+        groups = [1, 30]  # Default: Binary Inputs and Analog Inputs
+    
+    for group in groups:
+        group_name = {
+            1: "Binary Inputs",
+            10: "Binary Outputs",
+            30: "Analog Inputs",
+            40: "Analog Outputs",
+            20: "Counters"
+        }.get(group, f"Group {group}")
+        
+        console.print(f"\n[bold]Reading {group_name}...[/]")
+        
+        result = read_dnp3(
+            args.target,
+            args.port,
+            args.address,
+            group,
+            args.source
+        )
+        
+        if 'error' in result:
+            console.print(f"[red]Error: {result['error']}[/]")
+            continue
+        
+        if args.raw:
+            console.print(f"[dim]Raw: {result.get('raw', 'N/A')}[/]")
+        
+        # Display results based on group
+        if group == 1:
+            table = Table(title=f"Binary Inputs (Object Group 1)")
+            table.add_column("Index", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Status", style="green")
+            
+            for idx, name in SUBSTATION_BINARY_INPUTS.items():
+                # Simulated - in real implementation would parse response
+                status = "[green]CLOSED[/]" if idx < 11 else "[red]OPEN[/]"
+                table.add_row(str(idx), name, status)
+            
+            console.print(table)
+            
+        elif group == 30:
+            table = Table(title=f"Analog Inputs (Object Group 30)")
+            table.add_column("Index", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Value", style="green")
+            table.add_column("Unit", style="dim")
+            
+            for idx, (name, unit, scale) in SUBSTATION_ANALOG_INPUTS.items():
+                # Simulated values - real implementation would parse response
+                if "Frequency" in name:
+                    value = 60.00
+                elif "kV" in unit:
+                    value = 79.67 if "138" in name or "Feeder" in name else 7.97
+                elif "MW" in unit:
+                    value = 22.5
+                elif "Temp" in name:
+                    value = 52.0
+                else:
+                    value = 50.0
+                    
+                table.add_row(str(idx), name, f"{value:.2f}", unit)
+            
+            console.print(table)
+    
+    console.print("\n[dim]Note: This tool reads from intentionally vulnerable DNP3 outstations[/]")
+    console.print("[dim]Real responses would be parsed from the protocol data[/]\n")
+
+if __name__ == '__main__':
+    main()

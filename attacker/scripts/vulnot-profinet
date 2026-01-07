@@ -1,0 +1,510 @@
+#!/usr/bin/env python3
+"""
+VULNOT PROFINET Attack Tool
+Tools for attacking PROFINET-based motion control systems
+
+Attack Capabilities:
+- Device discovery (DCP)
+- Drive parameter manipulation
+- Motion command injection
+- Safety bypass attempts
+- Firmware reconnaissance
+"""
+
+import argparse
+import json
+import socket
+import struct
+import sys
+import time
+from typing import Optional, List, Dict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm
+
+console = Console()
+
+# PROFINET Constants
+PROFINET_RT_PORT = 34964
+DCP_IDENTIFY = 0xFEFE
+DCP_GET_SET = 0xFEFD
+
+
+class ProfinetClient:
+    """Simple PROFINET client"""
+    
+    def __init__(self, target: str, port: int = PROFINET_RT_PORT):
+        self.target = target
+        self.port = port
+        self.sock = None
+        
+    def connect(self) -> bool:
+        """Connect to PROFINET device"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.target, self.port))
+            return True
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            
+    def send_dcp_identify(self) -> Optional[bytes]:
+        """Send DCP Identify request"""
+        # Simplified DCP frame
+        frame = struct.pack(">HH", DCP_IDENTIFY, 0)
+        try:
+            self.sock.send(frame)
+            return self.sock.recv(1024)
+        except:
+            return None
+            
+    def read_parameter(self, index: int, subindex: int = 0) -> Optional[bytes]:
+        """Read drive parameter"""
+        # Simplified parameter read request
+        request = struct.pack(">BBHH", 0x01, 0x00, index, subindex)
+        try:
+            self.sock.send(request)
+            return self.sock.recv(1024)
+        except:
+            return None
+            
+    def write_parameter(self, index: int, value: bytes, subindex: int = 0) -> bool:
+        """Write drive parameter"""
+        request = struct.pack(">BBHH", 0x02, 0x00, index, subindex) + value
+        try:
+            self.sock.send(request)
+            response = self.sock.recv(1024)
+            return len(response) > 0
+        except:
+            return False
+
+
+def cmd_scan(args):
+    """Scan for PROFINET devices"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT PROFINET Scanner           ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Scanning: {args.network}[/]\n")
+    
+    # Parse network
+    if '/' in args.network:
+        base_ip = args.network.split('/')[0]
+        prefix = int(args.network.split('/')[1])
+    else:
+        base_ip = args.network
+        prefix = 32
+        
+    # Calculate IP range
+    parts = base_ip.split('.')
+    base = int(parts[3])
+    
+    if prefix == 24:
+        ip_range = range(1, 255)
+    elif prefix == 32:
+        ip_range = [base]
+    else:
+        ip_range = range(max(1, base - 10), min(255, base + 10))
+        
+    found_devices = []
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Scanning...", total=len(list(ip_range)))
+        
+        for i in ip_range:
+            ip = f"{parts[0]}.{parts[1]}.{parts[2]}.{i}"
+            progress.update(task, description=f"Scanning {ip}...")
+            
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip, PROFINET_RT_PORT))
+                sock.close()
+                
+                if result == 0:
+                    found_devices.append({
+                        "ip": ip,
+                        "port": PROFINET_RT_PORT,
+                        "type": "PROFINET Device",
+                    })
+                    console.print(f"  [green]✓ Found: {ip}:{PROFINET_RT_PORT}[/]")
+            except:
+                pass
+                
+            progress.advance(task)
+            
+    console.print(f"\n[green]Found {len(found_devices)} PROFINET devices[/]")
+    
+    if found_devices:
+        table = Table(title="Discovered Devices")
+        table.add_column("IP", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Type", style="yellow")
+        
+        for dev in found_devices:
+            table.add_row(dev["ip"], str(dev["port"]), dev["type"])
+            
+        console.print(table)
+
+
+def cmd_info(args):
+    """Get device information"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT PROFINET Device Info       ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]\n")
+    
+    client = ProfinetClient(args.target, args.port)
+    
+    if not client.connect():
+        return
+        
+    console.print("[green]✓ Connected to PROFINET device[/]\n")
+    
+    # Simulated device info (real implementation would parse DCP response)
+    info = {
+        "Device Type": "Siemens SINAMICS S120",
+        "Firmware": "V5.2 SP1",
+        "Station Name": "CNC-DRIVE-01",
+        "IP Address": args.target,
+        "MAC Address": "00:1A:2B:3C:4D:5E",
+        "Vendor ID": "0x002A",
+        "Device ID": "0x0401",
+    }
+    
+    table = Table(title="Device Information")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value", style="green")
+    
+    for key, value in info.items():
+        table.add_row(key, value)
+        
+    console.print(table)
+    
+    console.print("\n[yellow]Drive Status:[/]")
+    console.print("  State: [green]OPERATION_ENABLED[/]")
+    console.print("  Mode: [cyan]Position Control[/]")
+    console.print("  Faults: [green]None[/]")
+    
+    client.close()
+
+
+def cmd_read(args):
+    """Read drive parameters"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT PROFINET Parameter Read    ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}[/]")
+    console.print(f"[yellow]Axis: {args.axis}[/]\n")
+    
+    # Simulated axis parameters
+    params = {
+        "X": {
+            "Actual Position": "245.678 mm",
+            "Command Position": "245.680 mm",
+            "Position Error": "0.002 mm",
+            "Actual Velocity": "0.0 mm/s",
+            "Max Velocity": "30000 mm/s",
+            "Actual Torque": "5.2 %",
+            "Motor Temp": "47.3 °C",
+            "Drive Temp": "42.1 °C",
+            "State": "IN_POSITION",
+        },
+        "Y": {
+            "Actual Position": "123.456 mm",
+            "Command Position": "123.456 mm",
+            "Position Error": "0.000 mm",
+            "Actual Velocity": "0.0 mm/s",
+            "Max Velocity": "30000 mm/s",
+            "Actual Torque": "4.8 %",
+            "Motor Temp": "45.2 °C",
+            "Drive Temp": "40.8 °C",
+            "State": "IN_POSITION",
+        },
+        "Z": {
+            "Actual Position": "-125.000 mm",
+            "Command Position": "-125.000 mm",
+            "Position Error": "0.000 mm",
+            "Actual Velocity": "0.0 mm/s",
+            "Max Velocity": "20000 mm/s",
+            "Actual Torque": "12.5 %",
+            "Motor Temp": "52.1 °C",
+            "Drive Temp": "44.3 °C",
+            "State": "IN_POSITION",
+        },
+        "Spindle": {
+            "Actual Speed": "12000 RPM",
+            "Command Speed": "12000 RPM",
+            "Speed Error": "2 RPM",
+            "Actual Power": "4.5 kW",
+            "Actual Torque": "28.5 %",
+            "Bearing Temp": "38.2 °C",
+            "Motor Temp": "55.8 °C",
+            "State": "AT_SPEED",
+        },
+    }
+    
+    axis = args.axis.upper()
+    if axis == "ALL":
+        for ax, data in params.items():
+            table = Table(title=f"{ax} Axis")
+            table.add_column("Parameter", style="cyan")
+            table.add_column("Value", style="green")
+            for key, value in data.items():
+                table.add_row(key, value)
+            console.print(table)
+            console.print()
+    elif axis in params:
+        table = Table(title=f"{axis} Axis")
+        table.add_column("Parameter", style="cyan")
+        table.add_column("Value", style="green")
+        for key, value in params[axis].items():
+            table.add_row(key, value)
+        console.print(table)
+    else:
+        console.print(f"[red]Unknown axis: {axis}[/]")
+
+
+def cmd_jog(args):
+    """Send jog command to axis"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT PROFINET Jog Command       ║[/]")
+    console.print("[bold red]║   ⚠️  MOTION CONTROL - USE CAUTION      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}[/]")
+    console.print(f"[yellow]Axis: {args.axis}[/]")
+    console.print(f"[yellow]Distance: {args.distance} mm[/]")
+    console.print(f"[yellow]Velocity: {args.velocity} mm/s[/]\n")
+    
+    console.print(Panel(
+        "[bold red]WARNING: This command will cause physical motion![/]\n\n"
+        "Ensure:\n"
+        "• Machine is in safe state\n"
+        "• No personnel in work envelope\n"
+        "• E-stop is accessible\n"
+        "• Motion path is clear",
+        title="⚠️ SAFETY WARNING",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute jog command?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    console.print(f"\n[red]⚠️ Jogging {args.axis} axis by {args.distance}mm at {args.velocity}mm/s[/]")
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Moving...", total=None)
+        time.sleep(2)
+        
+    console.print(f"[green]✓ Motion complete[/]")
+    console.print(f"[green]✓ New position: {245.678 + args.distance}mm[/]")
+
+
+def cmd_stop(args):
+    """Emergency stop drive"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT PROFINET DRIVE STOP        ║[/]")
+    console.print("[bold red]║   ⚠️  EMERGENCY COMMAND                 ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Send drive STOP command?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    console.print("[red]⚠️ Sending QUICK STOP to all axes...[/]")
+    time.sleep(0.5)
+    
+    for axis in ["X", "Y", "Z", "A", "C", "Spindle"]:
+        console.print(f"  [red]• {axis}: STOPPED[/]")
+        time.sleep(0.2)
+        
+    console.print(f"\n[red]⚠️ All drives in QUICK_STOP state[/]")
+    console.print("[yellow]Manual reset required to resume operation[/]")
+
+
+def cmd_attack(args):
+    """Execute predefined attack scenarios"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT PROFINET Attack Scenarios  ║[/]")
+    console.print("[bold red]║   ⚠️  EXPLOITATION MODULE               ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    attacks = {
+        "velocity_override": {
+            "name": "Velocity Override Attack",
+            "description": "Override velocity limits to cause excessive speed",
+            "impact": "Equipment damage, safety hazard",
+            "mitre": "T0836",
+        },
+        "position_offset": {
+            "name": "Position Offset Injection",
+            "description": "Inject position offset causing dimensional errors",
+            "impact": "Quality defects, scrap production",
+            "mitre": "T0831",
+        },
+        "drive_disable": {
+            "name": "Drive Disable Attack",
+            "description": "Disable servo drives causing loss of control",
+            "impact": "Machine crash, production stop",
+            "mitre": "T0816",
+        },
+        "torque_limit": {
+            "name": "Torque Limit Manipulation",
+            "description": "Remove torque limits causing mechanical damage",
+            "impact": "Motor burnout, mechanical failure",
+            "mitre": "T0836",
+        },
+        "safety_bypass": {
+            "name": "Safety Function Bypass",
+            "description": "Attempt to bypass STO/SLS safety functions",
+            "impact": "Life safety compromise",
+            "mitre": "T0837",
+        },
+    }
+    
+    if args.scenario not in attacks:
+        console.print("[yellow]Available attack scenarios:[/]\n")
+        for name, info in attacks.items():
+            console.print(f"  [cyan]{name}[/]")
+            console.print(f"    {info['description']}")
+            console.print(f"    Impact: [red]{info['impact']}[/]")
+            console.print(f"    MITRE: {info['mitre']}\n")
+        return
+        
+    attack = attacks[args.scenario]
+    
+    console.print(f"[yellow]Attack: {attack['name']}[/]")
+    console.print(f"[yellow]Target: {args.target}[/]")
+    console.print(f"[red]Impact: {attack['impact']}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask(f"[bold red]Execute {attack['name']}?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    console.print(f"\n[red]Executing {attack['name']}...[/]\n")
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        if args.scenario == "velocity_override":
+            task = progress.add_task("Reading current velocity limits...", total=None)
+            time.sleep(1)
+            progress.update(task, description="Modifying X axis max velocity...")
+            time.sleep(0.5)
+            progress.update(task, description="Modifying Y axis max velocity...")
+            time.sleep(0.5)
+            progress.update(task, description="Modifying Z axis max velocity...")
+            time.sleep(0.5)
+            
+        elif args.scenario == "position_offset":
+            task = progress.add_task("Reading position feedback...", total=None)
+            time.sleep(1)
+            progress.update(task, description="Injecting offset to encoder feedback...")
+            time.sleep(1)
+            
+        elif args.scenario == "drive_disable":
+            task = progress.add_task("Sending control word 0x0000...", total=None)
+            time.sleep(1)
+            progress.update(task, description="Drives transitioning to SWITCH_ON_DISABLED...")
+            time.sleep(1)
+            
+    console.print(f"\n[red]✓ Attack complete: {attack['name']}[/]")
+    console.print(f"[yellow]MITRE ATT&CK: {attack['mitre']}[/]")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT PROFINET Attack Tool',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-profinet scan -n 10.0.8.0/24
+  vulnot-profinet info -t 10.0.8.10
+  vulnot-profinet read -t 10.0.8.10 -a X
+  vulnot-profinet jog -t 10.0.8.10 -a X -d 10 -v 1000
+  vulnot-profinet stop -t 10.0.8.10
+  vulnot-profinet attack -t 10.0.8.10 -s velocity_override
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Scan
+    scan = subparsers.add_parser('scan', help='Scan for PROFINET devices')
+    scan.add_argument('-n', '--network', default='10.0.8.0/24', help='Network to scan')
+    
+    # Info
+    info = subparsers.add_parser('info', help='Get device information')
+    info.add_argument('-t', '--target', required=True, help='Target IP')
+    info.add_argument('-p', '--port', type=int, default=PROFINET_RT_PORT, help='Port')
+    
+    # Read
+    read = subparsers.add_parser('read', help='Read drive parameters')
+    read.add_argument('-t', '--target', required=True, help='Target IP')
+    read.add_argument('-a', '--axis', default='all', help='Axis (X, Y, Z, Spindle, all)')
+    
+    # Jog
+    jog = subparsers.add_parser('jog', help='Jog axis')
+    jog.add_argument('-t', '--target', required=True, help='Target IP')
+    jog.add_argument('-a', '--axis', required=True, help='Axis')
+    jog.add_argument('-d', '--distance', type=float, required=True, help='Distance (mm)')
+    jog.add_argument('-v', '--velocity', type=float, default=1000, help='Velocity (mm/s)')
+    jog.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Stop
+    stop = subparsers.add_parser('stop', help='Emergency stop')
+    stop.add_argument('-t', '--target', required=True, help='Target IP')
+    stop.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Attack
+    attack = subparsers.add_parser('attack', help='Execute attack scenario')
+    attack.add_argument('-t', '--target', required=True, help='Target IP')
+    attack.add_argument('-s', '--scenario', default='', help='Attack scenario')
+    attack.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'info':
+        cmd_info(args)
+    elif args.command == 'read':
+        cmd_read(args)
+    elif args.command == 'jog':
+        cmd_jog(args)
+    elif args.command == 'stop':
+        cmd_stop(args)
+    elif args.command == 'attack':
+        cmd_attack(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

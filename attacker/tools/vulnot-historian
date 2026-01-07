@@ -1,0 +1,350 @@
+#!/usr/bin/env python3
+"""
+VULNOT OT Historian Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import click
+import json
+from datetime import datetime, timedelta
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+@click.group()
+def cli():
+    """VULNOT OT Historian Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.9.0/24)')
+@click.option('--ports', '-p', default='8080,8443,502,1433,5432', help='Ports to scan')
+def scan(network: str, ports: str):
+    """Scan network for historian servers"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Historian Scanner        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    port_list = [int(p.strip()) for p in ports.split(',')]
+    console.print(f"[yellow]Scanning:[/] {network}")
+    console.print(f"[yellow]Ports:[/] {port_list}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            for port in port_list:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(0.3)
+                    result = sock.connect_ex((ip_str, port))
+                    if result == 0:
+                        service = {
+                            8080: "HTTP",
+                            8443: "HTTPS",
+                            502: "Modbus",
+                            1433: "SQL Server",
+                            5432: "PostgreSQL"
+                        }.get(port, "Unknown")
+                        found.append({'ip': ip_str, 'port': port, 'service': service})
+                    sock.close()
+                except:
+                    pass
+
+    if found:
+        table = Table(title="Discovered Historian Services")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Service", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['service'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No historian services found[/]")
+
+    console.print(f"\n[green]Found {len(found)} service(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+def info(target: str, port: int):
+    """Get historian server information"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Historian Info           ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        sock.connect((target, port))
+        sock.close()
+
+        console.print("[green]Historian server accessible![/]\n")
+
+        # Display simulated info
+        table = Table(title="OT Historian Information")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="white")
+
+        table.add_row("Product", "VULNOT Industrial Historian")
+        table.add_row("Version", "3.5.2")
+        table.add_row("Database", "PostgreSQL 14")
+        table.add_row("Web Interface", f"http://{target}:{port}")
+        table.add_row("Authentication", "[red]Default Credentials[/]")
+        table.add_row("API Access", "[red]Unauthenticated[/]")
+        table.add_row("Tags Configured", "2,547")
+        table.add_row("Data Points/Day", "~50 million")
+        table.add_row("Retention", "365 days")
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • Default credentials (admin/admin)")
+    console.print("  • Unencrypted web interface")
+    console.print("  • SQL injection vulnerabilities")
+    console.print("  • API lacks authentication")
+    console.print("  • Historical data accessible to any client")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+def tags(target: str, port: int):
+    """List historian tags"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Historian Tag List       ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    # Simulated tag list
+    table = Table(title="Historian Tags")
+    table.add_column("Tag ID", style="dim")
+    table.add_column("Tag Name", style="cyan")
+    table.add_column("Description", style="white")
+    table.add_column("Type", style="green")
+    table.add_column("Source", style="yellow")
+
+    tags = [
+        ("1001", "WATER.INTAKE.LEVEL", "Intake tank level", "REAL", "PLC-001"),
+        ("1002", "WATER.INTAKE.FLOW", "Raw water flow rate", "REAL", "PLC-001"),
+        ("1003", "WATER.CHLORINE.DOSE", "Chlorine dosing rate", "REAL", "PLC-002"),
+        ("1004", "WATER.PH.RAW", "Raw water pH", "REAL", "PLC-001"),
+        ("1005", "WATER.PH.TREATED", "Treated water pH", "REAL", "PLC-002"),
+        ("2001", "POWER.GRID.VOLTAGE", "Grid voltage", "REAL", "RTU-001"),
+        ("2002", "POWER.GRID.FREQUENCY", "Grid frequency", "REAL", "RTU-001"),
+        ("2003", "POWER.BREAKER.52-1", "Breaker 52-1 status", "BOOL", "RTU-001"),
+        ("3001", "FACTORY.CONV1.SPEED", "Conveyor 1 speed", "REAL", "PLC-003"),
+        ("3002", "FACTORY.ROBOT1.STATE", "Robot 1 state", "INT", "PLC-003"),
+        ("4001", "REACTOR.TEMP.VESSEL", "Reactor temperature", "REAL", "OPC-001"),
+        ("4002", "REACTOR.PRESSURE", "Reactor pressure", "REAL", "OPC-001"),
+    ]
+
+    for tag_id, name, desc, dtype, source in tags:
+        table.add_row(tag_id, name, desc, dtype, source)
+
+    console.print(table)
+    console.print(f"\n[dim]Showing 12 of 2,547 tags[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+@click.option('--tag', '-T', required=True, help='Tag name to query')
+@click.option('--hours', '-h', default=24, help='Hours of history to retrieve')
+def query(target: str, port: int, tag: str, hours: int):
+    """Query historical data"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Historian Query          ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Tag:[/] {tag}")
+    console.print(f"[yellow]Period:[/] Last {hours} hours\n")
+
+    # Simulated historical data
+    console.print("[green]Query executed successfully![/]\n")
+
+    table = Table(title=f"Historical Data: {tag}")
+    table.add_column("Timestamp", style="dim")
+    table.add_column("Value", style="green")
+    table.add_column("Quality", style="cyan")
+
+    import random
+    base_time = datetime.now()
+    base_value = 75.0
+
+    for i in range(10):
+        timestamp = (base_time - timedelta(hours=hours-i*(hours/10))).strftime("%Y-%m-%d %H:%M:%S")
+        value = base_value + random.uniform(-5, 5)
+        table.add_row(timestamp, f"{value:.2f}", "Good")
+
+    console.print(table)
+    console.print(f"\n[dim]Showing 10 of {hours*60} data points[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+@click.option('--output', '-o', default='historian_dump.json', help='Output file')
+def dump(target: str, port: int, output: str):
+    """Dump historian database (data exfiltration)"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║     VULNOT OT Historian Data Dump      ║[/]")
+    console.print("[bold red]║    FOR TRAINING PURPOSES ONLY          ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Output:[/] {output}\n")
+
+    from rich.prompt import Confirm
+    if not Confirm.ask("[red]This will extract sensitive process data. Continue?[/]"):
+        console.print("[dim]Cancelled[/]")
+        return
+
+    console.print("\n[yellow]Extracting data...[/]")
+
+    with console.status("[bold green]Downloading...") as status:
+        import time
+        time.sleep(2)
+
+    # Simulated dump
+    dump_data = {
+        "historian": target,
+        "dump_time": datetime.now().isoformat(),
+        "tags_extracted": 2547,
+        "data_points": 50000000,
+        "sample_data": {
+            "WATER.CHLORINE.DOSE": [
+                {"timestamp": "2024-01-01T00:00:00", "value": 2.5},
+                {"timestamp": "2024-01-01T00:01:00", "value": 2.6},
+            ],
+            "POWER.GRID.VOLTAGE": [
+                {"timestamp": "2024-01-01T00:00:00", "value": 13800},
+                {"timestamp": "2024-01-01T00:01:00", "value": 13795},
+            ],
+        }
+    }
+
+    console.print(f"[green]Data extracted to:[/] {output}")
+    console.print(f"[yellow]Tags:[/] 2,547")
+    console.print(f"[yellow]Data Points:[/] ~50 million")
+    console.print(f"[yellow]Size:[/] ~2.5 GB")
+
+    console.print("\n[bold red]Impact:[/]")
+    console.print("  • Complete process history exposed")
+    console.print("  • Production patterns revealed")
+    console.print("  • Setpoint history shows operating procedures")
+    console.print("  • Can be used to plan future attacks")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+@click.option('--tag', '-T', required=True, help='Tag to manipulate')
+@click.option('--value', '-v', required=True, help='Value to inject')
+@click.option('--hours', '-h', default=24, help='Hours of history to modify')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def inject(target: str, port: int, tag: str, value: str, hours: int, force: bool):
+    """Inject false historical data"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║    VULNOT OT Historian Data Injection  ║[/]")
+    console.print("[bold red]║    FOR TRAINING PURPOSES ONLY          ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Tag:[/] {tag}\n"
+        f"[cyan]Period:[/] Last {hours} hours\n"
+        f"[red]Injected Value:[/] {value}",
+        title="[bold red]Injection Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[red]This will corrupt historical data. Continue?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[green]Data injection complete![/]")
+    console.print(f"[yellow]Modified:[/] {hours * 60} data points")
+    console.print(f"[yellow]Tag:[/] {tag}")
+    console.print(f"[yellow]New Value:[/] {value}")
+
+    console.print("\n[bold red]Impact:[/]")
+    console.print("  • Historical record falsified")
+    console.print("  • Compliance reports affected")
+    console.print("  • Incident investigation compromised")
+    console.print("  • Trend analysis invalidated")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=8080, help='Historian web port')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['exfil', 'inject', 'delete', 'ransom']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, port: int, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'exfil': {
+            'name': 'Data Exfiltration',
+            'description': 'Extract all historian data including process history',
+            'impact': 'Complete loss of data confidentiality, competitive intelligence'
+        },
+        'inject': {
+            'name': 'History Falsification',
+            'description': 'Inject false data to mask attack evidence',
+            'impact': 'Forensic investigation compromised, compliance violations'
+        },
+        'delete': {
+            'name': 'Data Destruction',
+            'description': 'Delete historical process data',
+            'impact': 'Loss of operational history, compliance failures'
+        },
+        'ransom': {
+            'name': 'Ransomware Simulation',
+            'description': 'Encrypt historian database and demand payment',
+            'impact': 'Complete loss of historian functionality'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║   VULNOT OT Historian Attack Scenario  ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the historian dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+"""
+VULNOT OT Forensics Tool
+For educational OT security training only
+"""
+
+import os
+import json
+import click
+from datetime import datetime, timedelta
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.tree import Tree
+
+console = Console()
+
+@click.group()
+def cli():
+    """VULNOT OT Forensics Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--evidence-dir', '-e', default='/evidence', help='Evidence directory')
+def collect(evidence_dir: str):
+    """Collect forensic evidence from OT systems"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Forensics Collector      ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Evidence Directory:[/] {evidence_dir}\n")
+
+    # Create evidence directory structure
+    os.makedirs(f"{evidence_dir}/network", exist_ok=True)
+    os.makedirs(f"{evidence_dir}/plc", exist_ok=True)
+    os.makedirs(f"{evidence_dir}/historian", exist_ok=True)
+    os.makedirs(f"{evidence_dir}/logs", exist_ok=True)
+    os.makedirs(f"{evidence_dir}/memory", exist_ok=True)
+
+    with console.status("[bold green]Collecting evidence...") as status:
+        import time
+
+        evidence_items = [
+            ("Network capture (PCAP)", "network/capture.pcap"),
+            ("PLC program backup", "plc/program_backup.bin"),
+            ("PLC diagnostic buffer", "plc/diagnostic_buffer.txt"),
+            ("Historian database dump", "historian/db_dump.sql"),
+            ("Historian audit logs", "historian/audit.log"),
+            ("HMI screenshots", "logs/hmi_screenshots/"),
+            ("Windows event logs", "logs/windows_events.evtx"),
+            ("Network device configs", "network/device_configs/"),
+            ("Memory dump", "memory/plc_memory.bin"),
+            ("Alarm history", "logs/alarm_history.csv"),
+        ]
+
+        for item, path in evidence_items:
+            console.print(f"[green]✓[/] Collected: {item}")
+            time.sleep(0.3)
+
+    console.print("\n[green]Evidence collection complete![/]\n")
+
+    # Display evidence tree
+    tree = Tree(f"[bold]{evidence_dir}[/]")
+
+    network = tree.add("[cyan]network/[/]")
+    network.add("capture.pcap (245 MB)")
+    network.add("device_configs/")
+
+    plc = tree.add("[cyan]plc/[/]")
+    plc.add("program_backup.bin (1.2 MB)")
+    plc.add("diagnostic_buffer.txt (45 KB)")
+
+    historian = tree.add("[cyan]historian/[/]")
+    historian.add("db_dump.sql (2.5 GB)")
+    historian.add("audit.log (125 MB)")
+
+    logs = tree.add("[cyan]logs/[/]")
+    logs.add("hmi_screenshots/ (15 files)")
+    logs.add("windows_events.evtx (50 MB)")
+    logs.add("alarm_history.csv (8 MB)")
+
+    memory = tree.add("[cyan]memory/[/]")
+    memory.add("plc_memory.bin (64 KB)")
+
+    console.print(tree)
+
+@cli.command()
+@click.option('--pcap', '-p', required=True, help='PCAP file to analyze')
+def analyze_pcap(pcap: str):
+    """Analyze network capture for OT protocols"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT PCAP Analyzer            ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Analyzing:[/] {pcap}\n")
+
+    # Simulated PCAP analysis
+    console.print("[green]Analysis complete![/]\n")
+
+    # Protocol distribution
+    table = Table(title="Protocol Distribution")
+    table.add_column("Protocol", style="cyan")
+    table.add_column("Packets", style="white")
+    table.add_column("Percentage", style="green")
+
+    protocols = [
+        ("Modbus TCP", "45,234", "35.2%"),
+        ("S7comm", "28,456", "22.1%"),
+        ("DNP3", "18,234", "14.2%"),
+        ("OPC UA", "12,456", "9.7%"),
+        ("HTTP/HTTPS", "10,234", "8.0%"),
+        ("Other", "14,012", "10.8%"),
+    ]
+
+    for proto, packets, pct in protocols:
+        table.add_row(proto, packets, pct)
+
+    console.print(table)
+
+    # Suspicious activity
+    console.print("\n[bold red]Suspicious Activity Detected:[/]\n")
+
+    suspicious = Table(title="Anomalies")
+    suspicious.add_column("Time", style="dim")
+    suspicious.add_column("Source", style="cyan")
+    suspicious.add_column("Destination", style="white")
+    suspicious.add_column("Activity", style="red")
+
+    anomalies = [
+        ("14:23:45", "10.0.1.100", "10.0.1.10", "Modbus function 0x05 (Force Single Coil)"),
+        ("14:24:12", "10.0.1.100", "10.0.1.10", "Modbus function 0x06 (Write Single Register)"),
+        ("14:25:33", "10.0.1.100", "10.0.2.10", "DNP3 Direct Operate command"),
+        ("14:26:01", "10.0.1.100", "10.0.3.10", "S7comm CPU STOP command"),
+        ("14:27:45", "10.0.1.100", "10.0.1.10", "Rapid register writes (150/sec)"),
+    ]
+
+    for time, src, dst, activity in anomalies:
+        suspicious.add_row(time, src, dst, activity)
+
+    console.print(suspicious)
+
+    console.print("\n[bold yellow]Indicators of Compromise (IOCs):[/]")
+    console.print("  • Attack source IP: [red]10.0.1.100[/]")
+    console.print("  • Attack duration: [red]4 minutes 15 seconds[/]")
+    console.print("  • Protocols exploited: Modbus, DNP3, S7comm")
+    console.print("  • Attack pattern: Reconnaissance → Write → Stop")
+    console.print("")
+
+@cli.command()
+@click.option('--logfile', '-l', required=True, help='Log file to analyze')
+def analyze_logs(logfile: str):
+    """Analyze system logs for attack evidence"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Log Analyzer             ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Analyzing:[/] {logfile}\n")
+
+    # Simulated log analysis
+    table = Table(title="Suspicious Log Entries")
+    table.add_column("Timestamp", style="dim")
+    table.add_column("Level", style="cyan")
+    table.add_column("Source", style="white")
+    table.add_column("Message", style="yellow")
+
+    logs = [
+        ("2024-01-01 14:23:42", "[red]ALERT[/]", "IDS", "Unauthorized Modbus write detected"),
+        ("2024-01-01 14:23:45", "[red]ALERT[/]", "PLC-001", "Coil forced by unknown client"),
+        ("2024-01-01 14:24:10", "[yellow]WARN[/]", "PLC-001", "Register value out of range"),
+        ("2024-01-01 14:24:12", "[red]ALERT[/]", "HMI", "Setpoint changed - no operator logged in"),
+        ("2024-01-01 14:25:30", "[red]ALERT[/]", "RTU-001", "DNP3 control operation from unknown master"),
+        ("2024-01-01 14:26:00", "[red]CRIT[/]", "PLC-003", "CPU STOP command received"),
+        ("2024-01-01 14:26:01", "[red]CRIT[/]", "SCADA", "Communication lost with PLC-003"),
+        ("2024-01-01 14:26:15", "[yellow]WARN[/]", "Process", "Production line stopped unexpectedly"),
+    ]
+
+    for timestamp, level, source, message in logs:
+        table.add_row(timestamp, level, source, message)
+
+    console.print(table)
+
+    console.print("\n[bold]Attack Timeline Reconstruction:[/]\n")
+
+    timeline = [
+        ("14:20:00", "Initial reconnaissance - network scanning"),
+        ("14:22:30", "Target identification - PLC discovery"),
+        ("14:23:42", "First malicious action - Modbus coil write"),
+        ("14:24:10", "Process manipulation - setpoint changes"),
+        ("14:25:30", "DNP3 exploitation - breaker control"),
+        ("14:26:00", "Impact - PLC stopped, production halted"),
+        ("14:27:00", "Attack completed - attacker disconnected"),
+    ]
+
+    for time, event in timeline:
+        console.print(f"  [dim]{time}[/] → {event}")
+
+    console.print("")
+
+@cli.command()
+@click.option('--memory-dump', '-m', required=True, help='Memory dump to analyze')
+def analyze_memory(memory_dump: str):
+    """Analyze PLC memory dump"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Memory Analyzer          ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Analyzing:[/] {memory_dump}\n")
+
+    # Simulated memory analysis
+    console.print("[bold]PLC Memory Layout:[/]\n")
+
+    table = Table(title="Memory Regions")
+    table.add_column("Region", style="cyan")
+    table.add_column("Address", style="dim")
+    table.add_column("Size", style="white")
+    table.add_column("Status", style="green")
+
+    regions = [
+        ("Input Image", "0x0000", "256 bytes", "Normal"),
+        ("Output Image", "0x0100", "256 bytes", "[red]Modified[/]"),
+        ("Markers", "0x0200", "512 bytes", "Normal"),
+        ("Timers", "0x0400", "128 bytes", "Normal"),
+        ("Counters", "0x0480", "128 bytes", "[red]Reset[/]"),
+        ("Data Blocks", "0x0500", "4096 bytes", "[red]Modified[/]"),
+        ("Program", "0x1500", "32768 bytes", "Normal"),
+    ]
+
+    for region, addr, size, status in regions:
+        table.add_row(region, addr, size, status)
+
+    console.print(table)
+
+    console.print("\n[bold red]Modified Values Detected:[/]\n")
+
+    modified = Table(title="Changed Memory Locations")
+    modified.add_column("Address", style="dim")
+    modified.add_column("Previous", style="green")
+    modified.add_column("Current", style="red")
+    modified.add_column("Description", style="white")
+
+    changes = [
+        ("0x0104", "0x00", "0x01", "Output Q0.4 forced ON"),
+        ("0x0108", "0x4F", "0x7F", "Analog output increased"),
+        ("0x0500", "0x42C8", "0x4316", "Setpoint: 100.0 → 150.0"),
+        ("0x0504", "0x0064", "0x0000", "Counter reset to 0"),
+    ]
+
+    for addr, prev, curr, desc in changes:
+        modified.add_row(addr, prev, curr, desc)
+
+    console.print(modified)
+
+@cli.command()
+@click.option('--evidence-dir', '-e', default='/evidence', help='Evidence directory')
+@click.option('--output', '-o', default='incident_report.md', help='Output report file')
+def report(evidence_dir: str, output: str):
+    """Generate forensic incident report"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Forensics Report         ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Evidence Directory:[/] {evidence_dir}")
+    console.print(f"[yellow]Output:[/] {output}\n")
+
+    report_content = """# OT Security Incident Report
+
+## Executive Summary
+
+On January 1, 2024, at approximately 14:20 UTC, an unauthorized actor gained access to the
+industrial control system network and executed a series of attacks against multiple PLCs
+and RTUs. The attack resulted in a temporary production shutdown lasting approximately
+2 hours.
+
+## Incident Timeline
+
+| Time (UTC) | Event |
+|------------|-------|
+| 14:20:00 | Initial network scanning from 10.0.1.100 |
+| 14:22:30 | OT device discovery and enumeration |
+| 14:23:42 | First malicious Modbus write command |
+| 14:24:10 | Process setpoint manipulation |
+| 14:25:30 | DNP3 breaker control commands |
+| 14:26:00 | S7comm CPU STOP command issued |
+| 14:26:15 | Production line shutdown detected |
+| 14:27:00 | Attacker disconnection |
+
+## Attack Vector Analysis
+
+### Initial Access
+- Source IP: 10.0.1.100 (attacker workstation on OT network)
+- Method: Direct network access to PLCs (no authentication required)
+
+### Techniques Used
+1. **Reconnaissance**: Network scanning, protocol enumeration
+2. **Exploitation**: Modbus function code abuse, DNP3 direct operate
+3. **Impact**: Process manipulation, equipment shutdown
+
+### Protocols Exploited
+- Modbus TCP (port 502): Register writes, coil forcing
+- DNP3 (port 20000): Direct operate commands
+- S7comm (port 102): CPU stop command
+
+## Indicators of Compromise (IOCs)
+
+### Network IOCs
+- Attacker IP: 10.0.1.100
+- Unusual Modbus function codes: 0x05, 0x06, 0x0F, 0x10
+- High-frequency register writes (>100/second)
+- DNP3 Direct Operate without Select
+
+### Host IOCs
+- PLC diagnostic buffer entries showing unauthorized access
+- Modified data block values
+- Reset production counters
+
+## Impact Assessment
+
+### Operational Impact
+- Production downtime: 2 hours
+- Estimated production loss: 5,000 units
+- Equipment damage: None (safety systems functioned)
+
+### Data Impact
+- Process data integrity compromised
+- Historical data possibly manipulated
+- No data exfiltration confirmed
+
+## Recommendations
+
+### Immediate Actions
+1. Implement network segmentation between IT and OT
+2. Enable authentication on all PLC protocols where supported
+3. Deploy OT-specific intrusion detection
+
+### Long-term Actions
+1. Implement defense-in-depth architecture
+2. Regular security assessments of OT systems
+3. OT security monitoring and SOC integration
+4. Incident response plan specific to OT environments
+
+## Evidence Inventory
+
+| Item | Location | Hash (SHA256) |
+|------|----------|---------------|
+| Network capture | network/capture.pcap | a1b2c3... |
+| PLC program | plc/program_backup.bin | d4e5f6... |
+| Historian dump | historian/db_dump.sql | g7h8i9... |
+| Memory dump | memory/plc_memory.bin | j0k1l2... |
+
+---
+*Report generated by VULNOT OT Forensics Tool*
+*Classification: CONFIDENTIAL*
+"""
+
+    with open(f"{evidence_dir}/{output}", 'w') as f:
+        f.write(report_content)
+
+    console.print("[green]Report generated successfully![/]\n")
+    console.print(f"[cyan]Report saved to:[/] {evidence_dir}/{output}")
+
+    console.print("\n[bold]Report Sections:[/]")
+    console.print("  • Executive Summary")
+    console.print("  • Incident Timeline")
+    console.print("  • Attack Vector Analysis")
+    console.print("  • Indicators of Compromise")
+    console.print("  • Impact Assessment")
+    console.print("  • Recommendations")
+    console.print("  • Evidence Inventory")
+    console.print("")
+
+@cli.command()
+def iocs():
+    """Display common OT attack indicators"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT OT Attack Indicators        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print("[bold]Network-Based Indicators:[/]\n")
+
+    network_iocs = Table()
+    network_iocs.add_column("Protocol", style="cyan")
+    network_iocs.add_column("Indicator", style="white")
+    network_iocs.add_column("Severity", style="red")
+
+    indicators = [
+        ("Modbus", "Function code 0x05/0x06 from unauthorized client", "HIGH"),
+        ("Modbus", "Rapid read requests (>50/sec)", "MEDIUM"),
+        ("Modbus", "Broadcast messages (device 0)", "MEDIUM"),
+        ("DNP3", "Direct Operate without Select", "HIGH"),
+        ("DNP3", "Cold Restart command", "CRITICAL"),
+        ("DNP3", "Unsolicited response disabled", "MEDIUM"),
+        ("S7comm", "CPU STOP/START command", "CRITICAL"),
+        ("S7comm", "Program upload/download", "HIGH"),
+        ("S7comm", "Password brute force attempts", "HIGH"),
+        ("OPC UA", "Anonymous authentication used", "MEDIUM"),
+        ("OPC UA", "Write to protected nodes", "HIGH"),
+        ("EtherNet/IP", "Unregistered session access", "MEDIUM"),
+        ("BACnet", "Who-Is flood", "MEDIUM"),
+        ("BACnet", "Priority override writes", "HIGH"),
+    ]
+
+    for proto, indicator, severity in indicators:
+        color = {"HIGH": "red", "CRITICAL": "bold red", "MEDIUM": "yellow"}.get(severity, "white")
+        network_iocs.add_row(proto, indicator, f"[{color}]{severity}[/]")
+
+    console.print(network_iocs)
+
+    console.print("\n[bold]Host-Based Indicators:[/]\n")
+
+    host_iocs = [
+        "Unexpected PLC mode changes (RUN → STOP)",
+        "Program modifications without change management",
+        "Setpoint changes outside normal operating hours",
+        "Counter/timer resets",
+        "Forced I/O values",
+        "Diagnostic buffer anomalies",
+        "Communication timeout patterns",
+        "New network connections from PLCs",
+    ]
+
+    for ioc in host_iocs:
+        console.print(f"  • {ioc}")
+
+    console.print("")
+
+if __name__ == '__main__':
+    cli()

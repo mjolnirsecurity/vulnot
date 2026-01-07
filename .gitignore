@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+*.log
+*.pid
+*.seed
+
+# Docker
+.docker/
+
+# Test artifacts
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Credentials (never commit)
+*.pem
+*.key
+credentials.json
+service-account.json
+secrets/
+
+# Data volumes
+data/
+influxdb-data/
+redis-data/
+grafana-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# OS files
+Thumbs.db
+.Spotlight-V100
+.Trashes

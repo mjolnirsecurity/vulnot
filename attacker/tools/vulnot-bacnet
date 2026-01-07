@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+"""
+VULNOT BACnet Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# BACnet Constants
+BACNET_PORT = 47808
+BVLC_TYPE_IP = 0x81
+BVLC_FUNC_UNICAST = 0x0A
+BVLC_FUNC_BROADCAST = 0x0B
+BVLC_FUNC_ORIGINAL_BROADCAST = 0x0B
+
+# BACnet Services
+BACNET_WHO_IS = 0x08
+BACNET_I_AM = 0x00
+BACNET_READ_PROPERTY = 0x0C
+BACNET_WRITE_PROPERTY = 0x0F
+
+def build_who_is() -> bytes:
+    """Build BACnet Who-Is broadcast packet"""
+    # BVLC Header
+    bvlc_type = bytes([BVLC_TYPE_IP])
+    bvlc_function = bytes([BVLC_FUNC_ORIGINAL_BROADCAST])
+
+    # NPDU
+    npdu_version = bytes([0x01])
+    npdu_control = bytes([0x20])  # Expecting reply
+
+    # APDU - Who-Is (unconfirmed)
+    apdu_type = bytes([0x10])  # Unconfirmed request
+    service_choice = bytes([BACNET_WHO_IS])
+
+    payload = npdu_version + npdu_control + apdu_type + service_choice
+    length = struct.pack('>H', 4 + len(payload))
+
+    return bvlc_type + bvlc_function + length + payload
+
+def build_read_property(device_id: int, object_type: int, instance: int, property_id: int) -> bytes:
+    """Build BACnet Read Property request"""
+    # BVLC Header
+    bvlc_type = bytes([BVLC_TYPE_IP])
+    bvlc_function = bytes([BVLC_FUNC_UNICAST])
+
+    # NPDU
+    npdu_version = bytes([0x01])
+    npdu_control = bytes([0x04])  # Expecting reply
+
+    # APDU - Confirmed Request
+    apdu_type = bytes([0x00])  # Confirmed request
+    max_resp = bytes([0x04])  # Max response segments
+    invoke_id = bytes([0x01])
+    service_choice = bytes([BACNET_READ_PROPERTY])
+
+    # Object Identifier (context tag 0)
+    obj_id = (object_type << 22) | instance
+    obj_tag = bytes([0x0C])  # Context tag 0, length 4
+    obj_value = struct.pack('>I', obj_id)
+
+    # Property Identifier (context tag 1)
+    prop_tag = bytes([0x19])  # Context tag 1, length 1
+    prop_value = bytes([property_id])
+
+    payload = npdu_version + npdu_control + apdu_type + max_resp + invoke_id + \
+              service_choice + obj_tag + obj_value + prop_tag + prop_value
+
+    length = struct.pack('>H', 4 + len(payload))
+
+    return bvlc_type + bvlc_function + length + payload
+
+def send_bacnet_udp(ip: str, port: int, data: bytes, timeout: float = 2.0) -> bytes:
+    """Send BACnet UDP packet"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(timeout)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    try:
+        sock.sendto(data, (ip, port))
+        response, addr = sock.recvfrom(4096)
+        return response
+    except socket.timeout:
+        return None
+    finally:
+        sock.close()
+
+@click.group()
+def cli():
+    """VULNOT BACnet Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network broadcast address (e.g., 10.0.5.255)')
+@click.option('--port', '-p', default=47808, help='BACnet port (default: 47808)')
+def discover(network: str, port: int):
+    """Discover BACnet devices using Who-Is broadcast"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT BACnet Device Discovery    ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Broadcasting Who-Is to:[/] {network}:{port}\n")
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(3.0)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.bind(('', port))
+
+        # Send Who-Is
+        who_is = build_who_is()
+        sock.sendto(who_is, (network, port))
+
+        console.print("[yellow]Listening for I-Am responses...[/]\n")
+
+        found = []
+        try:
+            while True:
+                response, addr = sock.recvfrom(4096)
+                found.append({
+                    'ip': addr[0],
+                    'port': addr[1],
+                    'device_id': 'Unknown'
+                })
+        except socket.timeout:
+            pass
+
+        sock.close()
+
+        if found:
+            table = Table(title="Discovered BACnet Devices")
+            table.add_column("IP Address", style="cyan")
+            table.add_column("Port", style="white")
+            table.add_column("Device ID", style="green")
+
+            for dev in found:
+                table.add_row(dev['ip'], str(dev['port']), dev['device_id'])
+
+            console.print(table)
+        else:
+            console.print("[yellow]No BACnet devices responded[/]")
+            console.print("[dim]Try scanning individual IPs with 'vulnot-bacnet scan'[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print(f"\n[green]Discovery complete[/]\n")
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.5.0/24)')
+@click.option('--port', '-p', default=47808, help='BACnet port (default: 47808)')
+def scan(network: str, port: int):
+    """Scan network for BACnet devices"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT BACnet Network Scanner     ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.settimeout(0.3)
+
+                who_is = build_who_is()
+                sock.sendto(who_is, (ip_str, port))
+
+                try:
+                    response, addr = sock.recvfrom(4096)
+                    found.append({'ip': ip_str, 'port': port, 'status': 'BACnet'})
+                except socket.timeout:
+                    pass
+
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered BACnet Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Status", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['status'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No BACnet devices found[/]")
+
+    console.print(f"\n[green]Found {len(found)} BACnet device(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=47808, help='BACnet port')
+def info(target: str, port: int):
+    """Get BACnet device information"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT BACnet Device Info         ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        who_is = build_who_is()
+        response = send_bacnet_udp(target, port, who_is)
+
+        if response:
+            console.print("[green]Device responded![/]\n")
+
+            # Display simulated device info
+            table = Table(title="BACnet Device Information")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value", style="white")
+
+            table.add_row("Device ID", "500001")
+            table.add_row("Object Name", "HVAC-Controller-1")
+            table.add_row("Vendor Name", "Building Automation Corp")
+            table.add_row("Model Name", "BAS-5000")
+            table.add_row("Firmware Revision", "3.2.1")
+            table.add_row("Application Software", "HVAC Control v2.0")
+            table.add_row("Location", "Building A - Floor 3")
+            table.add_row("System Status", "[green]Operational[/]")
+
+            console.print(table)
+        else:
+            console.print("[red]No response received[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • BACnet has no built-in authentication")
+    console.print("  • All objects readable without credentials")
+    console.print("  • Write access typically unrestricted")
+    console.print("  • Broadcast discovery reveals all devices")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=47808, help='BACnet port')
+def objects(target: str, port: int):
+    """List BACnet objects on device"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT BACnet Object List         ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        who_is = build_who_is()
+        response = send_bacnet_udp(target, port, who_is)
+
+        if response:
+            console.print("[green]Reading object list...[/]\n")
+
+            # Display simulated object list
+            table = Table(title="BACnet Objects")
+            table.add_column("Object Type", style="cyan")
+            table.add_column("Instance", style="white")
+            table.add_column("Name", style="green")
+            table.add_column("Value", style="yellow")
+
+            objects = [
+                ("Analog Input", "0", "Zone1_Temperature", "72.5 °F"),
+                ("Analog Input", "1", "Zone2_Temperature", "74.2 °F"),
+                ("Analog Input", "2", "Zone3_Temperature", "71.8 °F"),
+                ("Analog Input", "3", "Outside_Air_Temp", "85.0 °F"),
+                ("Analog Input", "4", "Supply_Air_Temp", "55.0 °F"),
+                ("Analog Value", "0", "Zone1_Setpoint", "72.0 °F"),
+                ("Analog Value", "1", "Zone2_Setpoint", "72.0 °F"),
+                ("Analog Value", "2", "Zone3_Setpoint", "72.0 °F"),
+                ("Analog Output", "0", "Cooling_Valve", "75.0 %"),
+                ("Analog Output", "1", "Heating_Valve", "0.0 %"),
+                ("Analog Output", "2", "Damper_Position", "50.0 %"),
+                ("Binary Input", "0", "Occupancy_Sensor", "Occupied"),
+                ("Binary Input", "1", "Fire_Alarm", "Normal"),
+                ("Binary Output", "0", "AHU_Fan", "ON"),
+                ("Binary Output", "1", "Exhaust_Fan", "ON"),
+                ("Binary Value", "0", "Occupied_Mode", "TRUE"),
+            ]
+
+            for obj_type, instance, name, value in objects:
+                table.add_row(obj_type, instance, name, value)
+
+            console.print(table)
+        else:
+            console.print("[red]No response received[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=47808, help='BACnet port')
+@click.option('--object-type', '-o', required=True, help='Object type (e.g., analog-value)')
+@click.option('--instance', '-i', required=True, type=int, help='Object instance')
+@click.option('--value', '-v', required=True, help='Value to write')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def write(target: str, port: int, object_type: str, instance: int, value: str, force: bool):
+    """Write to BACnet object"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT BACnet Object Writer       ║[/]")
+    console.print("[bold red]║     FOR TRAINING PURPOSES ONLY         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Object Type:[/] {object_type}\n"
+        f"[cyan]Instance:[/] {instance}\n"
+        f"[red]Value:[/] {value}",
+        title="[bold red]Write Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        console.print("\n[green]Write command sent![/]")
+        console.print(f"[yellow]{object_type}:{instance} = {value}[/]")
+        console.print("\n[bold]Check the BAS dashboard to observe the impact![/]\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=47808, help='BACnet port')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['freeze', 'overheat', 'disable_alarms', 'unlock_doors']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, port: int, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'freeze': {
+            'name': 'Freeze Attack',
+            'description': 'Set all zone setpoints to minimum (50°F)',
+            'impact': 'Building becomes uncomfortably cold, potential pipe freezing'
+        },
+        'overheat': {
+            'name': 'Overheat Attack',
+            'description': 'Set all zone setpoints to maximum (90°F), disable cooling',
+            'impact': 'Building overheats, occupant discomfort, equipment damage'
+        },
+        'disable_alarms': {
+            'name': 'Alarm Suppression',
+            'description': 'Disable fire and security alarm reporting',
+            'impact': 'Safety systems compromised, no alert capability'
+        },
+        'unlock_doors': {
+            'name': 'Access Control Override',
+            'description': 'Unlock all access-controlled doors',
+            'impact': 'Physical security breach, unauthorized access'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT BACnet Attack Scenario     ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the BAS dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

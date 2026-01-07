@@ -1,0 +1,348 @@
+#!/usr/bin/env python3
+"""
+VULNOT EtherNet/IP Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# EtherNet/IP Constants
+ENIP_PORT = 44818
+ENIP_COMMAND_NOP = 0x0000
+ENIP_COMMAND_LIST_SERVICES = 0x0004
+ENIP_COMMAND_LIST_IDENTITY = 0x0063
+ENIP_COMMAND_LIST_INTERFACES = 0x0064
+ENIP_COMMAND_REGISTER_SESSION = 0x0065
+ENIP_COMMAND_UNREGISTER_SESSION = 0x0066
+ENIP_COMMAND_SEND_RR_DATA = 0x006F
+ENIP_COMMAND_SEND_UNIT_DATA = 0x0070
+
+def build_enip_header(command: int, session: int = 0, data: bytes = b'') -> bytes:
+    """Build EtherNet/IP encapsulation header"""
+    header = struct.pack('<H', command)  # Command
+    header += struct.pack('<H', len(data))  # Length
+    header += struct.pack('<I', session)  # Session Handle
+    header += struct.pack('<I', 0)  # Status
+    header += b'\x00' * 8  # Sender Context
+    header += struct.pack('<I', 0)  # Options
+    return header + data
+
+def build_list_identity() -> bytes:
+    """Build List Identity request"""
+    return build_enip_header(ENIP_COMMAND_LIST_IDENTITY)
+
+def build_register_session() -> bytes:
+    """Build Register Session request"""
+    data = struct.pack('<H', 1)  # Protocol Version
+    data += struct.pack('<H', 0)  # Options Flags
+    return build_enip_header(ENIP_COMMAND_REGISTER_SESSION, 0, data)
+
+def send_enip(ip: str, port: int, data: bytes, timeout: float = 5.0) -> bytes:
+    """Send EtherNet/IP packet and receive response"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+
+    try:
+        sock.connect((ip, port))
+        sock.send(data)
+        response = sock.recv(4096)
+        return response
+    finally:
+        sock.close()
+
+@click.group()
+def cli():
+    """VULNOT EtherNet/IP Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.6.0/24)')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port (default: 44818)')
+def scan(network: str, port: int):
+    """Scan network for EtherNet/IP devices"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT EtherNet/IP Device Scanner   ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip_str, port))
+                if result == 0:
+                    found.append({'ip': ip_str, 'port': port, 'status': 'EtherNet/IP'})
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered EtherNet/IP Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Status", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['status'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No EtherNet/IP devices found[/]")
+
+    console.print(f"\n[green]Found {len(found)} EtherNet/IP device(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port')
+def identity(target: str, port: int):
+    """Get EtherNet/IP device identity"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT EtherNet/IP Device Identity  ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        list_identity = build_list_identity()
+        response = send_enip(target, port, list_identity)
+
+        if response:
+            console.print("[green]Device responded![/]\n")
+
+            # Display simulated device identity
+            table = Table(title="EtherNet/IP Device Identity")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value", style="white")
+
+            table.add_row("Vendor ID", "1 (Rockwell Automation)")
+            table.add_row("Device Type", "14 (Programmable Logic Controller)")
+            table.add_row("Product Code", "55")
+            table.add_row("Major Revision", "30")
+            table.add_row("Minor Revision", "11")
+            table.add_row("Serial Number", "0x12345678")
+            table.add_row("Product Name", "1756-L83E/B ControlLogix")
+            table.add_row("State", "[green]Operational[/]")
+
+            console.print(table)
+        else:
+            console.print("[red]No response received[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • Device identity exposed to any client")
+    console.print("  • No authentication for CIP connections")
+    console.print("  • Read/write access to tags without credentials")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port')
+def tags(target: str, port: int):
+    """List controller tags"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT EtherNet/IP Tag Browser      ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        # Register session first
+        register = build_register_session()
+        response = send_enip(target, port, register)
+
+        if response:
+            console.print("[green]Session established, reading tags...[/]\n")
+
+            # Display simulated tags
+            table = Table(title="Controller Tags (Packaging Line)")
+            table.add_column("Tag Name", style="cyan")
+            table.add_column("Type", style="white")
+            table.add_column("Value", style="green")
+            table.add_column("Access", style="yellow")
+
+            tags = [
+                ("Conveyor_Speed", "REAL", "2.5 m/s", "R/W"),
+                ("Conveyor_Running", "BOOL", "TRUE", "R/W"),
+                ("Box_Count", "DINT", "15423", "R/W"),
+                ("Shift_Target", "DINT", "20000", "R/W"),
+                ("Label_Position", "REAL", "45.2 mm", "R/W"),
+                ("Seal_Temp", "REAL", "185.0 °C", "R/W"),
+                ("Reject_Count", "DINT", "23", "R/W"),
+                ("E_Stop_Active", "BOOL", "FALSE", "R/W"),
+                ("Auto_Mode", "BOOL", "TRUE", "R/W"),
+                ("Alarm_Active", "BOOL", "FALSE", "R/O"),
+                ("Line_Efficiency", "REAL", "94.5 %", "R/O"),
+                ("Last_Maintenance", "DINT", "20240101", "R/W"),
+            ]
+
+            for name, dtype, value, access in tags:
+                table.add_row(name, dtype, value, access)
+
+            console.print(table)
+        else:
+            console.print("[red]Failed to establish session[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port')
+@click.option('--tag', '-T', required=True, help='Tag name to read')
+def read(target: str, port: int, tag: str):
+    """Read EtherNet/IP tag value"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT EtherNet/IP Tag Reader       ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Tag:[/] {tag}\n")
+
+    try:
+        register = build_register_session()
+        response = send_enip(target, port, register)
+
+        if response:
+            console.print("[green]Tag value read![/]\n")
+
+            # Simulated tag values
+            values = {
+                "Conveyor_Speed": ("2.5", "m/s", "REAL"),
+                "Conveyor_Running": ("TRUE", "", "BOOL"),
+                "Box_Count": ("15423", "", "DINT"),
+                "E_Stop_Active": ("FALSE", "", "BOOL"),
+            }
+
+            # Find matching tag
+            for name, (value, unit, dtype) in values.items():
+                if name.lower() == tag.lower():
+                    table = Table(title=f"Tag: {tag}")
+                    table.add_column("Property", style="cyan")
+                    table.add_column("Value", style="white")
+
+                    table.add_row("Tag Name", tag)
+                    table.add_row("Data Type", dtype)
+                    table.add_row("Value", f"{value} {unit}".strip())
+                    table.add_row("Quality", "[green]Good[/]")
+
+                    console.print(table)
+                    return
+
+            console.print(f"[yellow]Tag {tag} not found[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port')
+@click.option('--tag', '-T', required=True, help='Tag name to write')
+@click.option('--value', '-v', required=True, help='Value to write')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def write(target: str, port: int, tag: str, value: str, force: bool):
+    """Write to EtherNet/IP tag"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║    VULNOT EtherNet/IP Tag Writer       ║[/]")
+    console.print("[bold red]║    FOR TRAINING PURPOSES ONLY          ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Tag:[/] {tag}\n"
+        f"[red]Value:[/] {value}",
+        title="[bold red]Write Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        register = build_register_session()
+        response = send_enip(target, port, register)
+
+        if response:
+            console.print("\n[green]Write command sent![/]")
+            console.print(f"[yellow]{tag} = {value}[/]")
+            console.print("\n[bold]Check the HMI dashboard to observe the impact![/]\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=44818, help='EtherNet/IP port')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['stop_line', 'speed_max', 'reset_counter', 'disable_safety']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, port: int, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'stop_line': {
+            'name': 'Production Line Stop',
+            'description': 'Set Conveyor_Running to FALSE, stopping the line',
+            'impact': 'Complete halt of packaging operations'
+        },
+        'speed_max': {
+            'name': 'Speed Manipulation',
+            'description': 'Set conveyor speed to maximum (10 m/s)',
+            'impact': 'Product damage, jams, potential safety hazard'
+        },
+        'reset_counter': {
+            'name': 'Counter Reset',
+            'description': 'Reset Box_Count to zero',
+            'impact': 'Loss of production tracking, inventory discrepancy'
+        },
+        'disable_safety': {
+            'name': 'Safety Bypass',
+            'description': 'Disable safety interlocks and sensors',
+            'impact': 'Safety systems compromised, injury risk'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║   VULNOT EtherNet/IP Attack Scenario   ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the HMI dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

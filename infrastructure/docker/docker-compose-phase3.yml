@@ -1,0 +1,440 @@
+version: '3.8'
+
+# VULNOT Phase 3 - Complete OT Security Training Platform
+# 6 Scenarios: Water, Power, Factory, Reactor, Building, Packaging
+
+services:
+  # ============================================================================
+  # CORE INFRASTRUCTURE
+  # ============================================================================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - vulnot-backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: vulnot-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=vulnot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnot123
+      - DOCKER_INFLUXDB_INIT_ORG=mjolnir
+      - DOCKER_INFLUXDB_INIT_BUCKET=ot_data
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - vulnot-backend
+
+  # ============================================================================
+  # SCENARIO 1: WATER TREATMENT (Modbus TCP)
+  # ============================================================================
+  
+  water-process:
+    build: ../../simulators/water-treatment
+    container_name: vulnot-water-process
+    environment:
+      - REDIS_HOST=redis
+      - SIMULATION_RATE=100
+    depends_on:
+      - redis
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+
+  plc-intake:
+    build: ../../simulators/water-treatment
+    container_name: vulnot-plc-intake
+    environment:
+      - REDIS_HOST=redis
+      - MODBUS_PORT=502
+      - PLC_ZONE=intake
+    ports:
+      - "10502:502"
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.10
+
+  plc-treatment:
+    build: ../../simulators/water-treatment
+    container_name: vulnot-plc-treatment
+    environment:
+      - REDIS_HOST=redis
+      - MODBUS_PORT=502
+      - PLC_ZONE=treatment
+    ports:
+      - "10503:502"
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.11
+
+  plc-distribution:
+    build: ../../simulators/water-treatment
+    container_name: vulnot-plc-distribution
+    environment:
+      - REDIS_HOST=redis
+      - MODBUS_PORT=502
+      - PLC_ZONE=distribution
+    ports:
+      - "10504:502"
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.12
+
+  attacker-water:
+    build: ../../attacker
+    container_name: vulnot-attacker-water
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.100
+
+  # ============================================================================
+  # SCENARIO 2: POWER GRID (DNP3)
+  # ============================================================================
+  
+  substation-1:
+    build: ../../simulators/dnp3-power
+    container_name: vulnot-substation-1
+    environment:
+      - REDIS_HOST=redis
+      - DNP3_PORT=20000
+      - DNP3_ADDRESS=10
+      - SUBSTATION_ID=SUB-1
+    ports:
+      - "20000:20000"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.10
+
+  substation-2:
+    build: ../../simulators/dnp3-power
+    container_name: vulnot-substation-2
+    environment:
+      - REDIS_HOST=redis
+      - DNP3_PORT=20000
+      - DNP3_ADDRESS=11
+      - SUBSTATION_ID=SUB-2
+    ports:
+      - "20001:20000"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.11
+
+  attacker-power:
+    build: ../../attacker
+    container_name: vulnot-attacker-power
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.100
+
+  # ============================================================================
+  # SCENARIO 3: MANUFACTURING (S7comm)
+  # ============================================================================
+  
+  factory-line1:
+    build: ../../simulators/s7-factory
+    container_name: vulnot-factory-line1
+    environment:
+      - REDIS_HOST=redis
+      - S7_PORT=102
+      - S7_RACK=0
+      - S7_SLOT=1
+      - LINE_ID=LINE-1
+    ports:
+      - "10102:102"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.10
+
+  factory-line2:
+    build: ../../simulators/s7-factory
+    container_name: vulnot-factory-line2
+    environment:
+      - REDIS_HOST=redis
+      - S7_PORT=102
+      - S7_RACK=0
+      - S7_SLOT=2
+      - LINE_ID=LINE-2
+    ports:
+      - "10103:102"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.11
+
+  attacker-factory:
+    build: ../../attacker
+    container_name: vulnot-attacker-factory
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.100
+
+  # ============================================================================
+  # SCENARIO 4: CHEMICAL REACTOR (OPC UA)
+  # ============================================================================
+  
+  reactor-1:
+    build: ../../simulators/opcua-industrial
+    container_name: vulnot-reactor-1
+    environment:
+      - REDIS_HOST=redis
+      - OPCUA_PORT=4840
+      - REACTOR_ID=REACTOR-1
+    ports:
+      - "4840:4840"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-reactor:
+        ipv4_address: 10.0.4.10
+
+  reactor-2:
+    build: ../../simulators/opcua-industrial
+    container_name: vulnot-reactor-2
+    environment:
+      - REDIS_HOST=redis
+      - OPCUA_PORT=4840
+      - REACTOR_ID=REACTOR-2
+    ports:
+      - "4841:4840"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-reactor:
+        ipv4_address: 10.0.4.11
+
+  attacker-opcua:
+    build: ../../attacker
+    container_name: vulnot-attacker-opcua
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-reactor:
+        ipv4_address: 10.0.4.100
+
+  # ============================================================================
+  # SCENARIO 5: BUILDING AUTOMATION (BACnet)
+  # ============================================================================
+  
+  building-1:
+    build: ../../simulators/bacnet-building
+    container_name: vulnot-building-1
+    environment:
+      - REDIS_HOST=redis
+      - BACNET_PORT=47808
+      - BUILDING_ID=BLDG-1
+    ports:
+      - "47808:47808/udp"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-building:
+        ipv4_address: 10.0.5.10
+
+  attacker-bacnet:
+    build: ../../attacker
+    container_name: vulnot-attacker-bacnet
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-building:
+        ipv4_address: 10.0.5.100
+
+  # ============================================================================
+  # SCENARIO 6: PACKAGING LINE (EtherNet/IP)
+  # ============================================================================
+  
+  packaging-line1:
+    build: ../../simulators/ethernet-ip
+    container_name: vulnot-packaging-line1
+    environment:
+      - REDIS_HOST=redis
+      - ENIP_PORT=44818
+      - LINE_ID=PKG-1
+    ports:
+      - "44818:44818"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-packaging:
+        ipv4_address: 10.0.6.10
+
+  packaging-line2:
+    build: ../../simulators/ethernet-ip
+    container_name: vulnot-packaging-line2
+    environment:
+      - REDIS_HOST=redis
+      - ENIP_PORT=44818
+      - LINE_ID=PKG-2
+    ports:
+      - "44819:44818"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-packaging:
+        ipv4_address: 10.0.6.11
+
+  attacker-enip:
+    build: ../../attacker
+    container_name: vulnot-attacker-enip
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-packaging:
+        ipv4_address: 10.0.6.100
+
+  # ============================================================================
+  # DEFENSE SERVICES
+  # ============================================================================
+  
+  ids:
+    build:
+      context: ../../defense/ids
+      dockerfile: Dockerfile
+    container_name: vulnot-ids
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+      - vulnot-ot-power
+      - vulnot-ot-factory
+      - vulnot-ot-reactor
+      - vulnot-ot-building
+      - vulnot-ot-packaging
+
+  # ============================================================================
+  # APPLICATION SERVICES
+  # ============================================================================
+  
+  api:
+    build: ../../apps/api
+    container_name: vulnot-api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - INFLUXDB_URL=http://influxdb:8086
+    depends_on:
+      - redis
+      - influxdb
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+      - vulnot-ot-power
+      - vulnot-ot-factory
+      - vulnot-ot-reactor
+      - vulnot-ot-building
+      - vulnot-ot-packaging
+
+  dashboard:
+    build: ../../apps/dashboard
+    container_name: vulnot-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - vulnot-backend
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: vulnot-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - vulnot-backend
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+
+networks:
+  vulnot-backend:
+    driver: bridge
+    
+  vulnot-ot-water:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+          
+  vulnot-ot-power:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+          
+  vulnot-ot-factory:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+          
+  vulnot-ot-reactor:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.4.0/24
+          
+  vulnot-ot-building:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.5.0/24
+          
+  vulnot-ot-packaging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.6.0/24
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+
+volumes:
+  influxdb-data:
+  grafana-data:

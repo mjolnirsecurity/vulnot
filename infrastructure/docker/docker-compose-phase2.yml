@@ -1,0 +1,399 @@
+version: '3.8'
+
+name: vulnot-phase2
+
+services:
+  # =============================================================================
+  # CORE INFRASTRUCTURE
+  # =============================================================================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - vulnot-backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: vulnot-influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=vulnot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnot_password
+      - DOCKER_INFLUXDB_INIT_ORG=mjolnir
+      - DOCKER_INFLUXDB_INIT_BUCKET=process_data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=vulnot-super-secret-token
+    networks:
+      - vulnot-backend
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # SCENARIO 1: WATER TREATMENT (Modbus TCP)
+  # =============================================================================
+  
+  water-process:
+    build:
+      context: ../../simulators/process-engine
+      dockerfile: Dockerfile
+    container_name: vulnot-water-process
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SIMULATION_RATE=100
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+    restart: unless-stopped
+
+  plc-intake:
+    build:
+      context: ../../simulators/modbus-water
+      dockerfile: Dockerfile
+    container_name: vulnot-plc-intake
+    environment:
+      - PLC_NAME=PLC-INTAKE
+      - PLC_ID=1
+      - MODBUS_PORT=502
+      - REDIS_HOST=redis
+      - UNIT_ID=1
+    ports:
+      - "10502:502"
+    depends_on:
+      - redis
+      - water-process
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.10
+      vulnot-backend:
+    restart: unless-stopped
+
+  plc-treatment:
+    build:
+      context: ../../simulators/modbus-water
+      dockerfile: Dockerfile
+    container_name: vulnot-plc-treatment
+    environment:
+      - PLC_NAME=PLC-TREATMENT
+      - PLC_ID=2
+      - MODBUS_PORT=502
+      - REDIS_HOST=redis
+      - UNIT_ID=2
+    ports:
+      - "10503:502"
+    depends_on:
+      - redis
+      - water-process
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.11
+      vulnot-backend:
+    restart: unless-stopped
+
+  plc-distribution:
+    build:
+      context: ../../simulators/modbus-water
+      dockerfile: Dockerfile
+    container_name: vulnot-plc-distribution
+    environment:
+      - PLC_NAME=PLC-DISTRIBUTION
+      - PLC_ID=3
+      - MODBUS_PORT=502
+      - REDIS_HOST=redis
+      - UNIT_ID=3
+    ports:
+      - "10504:502"
+    depends_on:
+      - redis
+      - water-process
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.12
+      vulnot-backend:
+    restart: unless-stopped
+
+  # =============================================================================
+  # SCENARIO 2: POWER GRID SUBSTATION (DNP3)
+  # =============================================================================
+  
+  substation-1:
+    build:
+      context: ../../simulators/dnp3-power
+      dockerfile: Dockerfile
+    container_name: vulnot-substation-1
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DNP3_PORT=20000
+      - DNP3_ADDRESS=10
+      - SIMULATION_RATE=100
+    ports:
+      - "20000:20000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.10
+      vulnot-backend:
+    restart: unless-stopped
+
+  substation-2:
+    build:
+      context: ../../simulators/dnp3-power
+      dockerfile: Dockerfile
+    container_name: vulnot-substation-2
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DNP3_PORT=20000
+      - DNP3_ADDRESS=11
+      - SIMULATION_RATE=100
+    ports:
+      - "20001:20000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.11
+      vulnot-backend:
+    restart: unless-stopped
+
+  # =============================================================================
+  # SCENARIO 3: MANUFACTURING (S7comm)
+  # =============================================================================
+  
+  factory-line1:
+    build:
+      context: ../../simulators/s7-factory
+      dockerfile: Dockerfile
+    container_name: vulnot-factory-line1
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - S7_PORT=102
+      - S7_RACK=0
+      - S7_SLOT=1
+      - SIMULATION_RATE=100
+    ports:
+      - "10102:102"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.10
+      vulnot-backend:
+    restart: unless-stopped
+
+  factory-line2:
+    build:
+      context: ../../simulators/s7-factory
+      dockerfile: Dockerfile
+    container_name: vulnot-factory-line2
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - S7_PORT=102
+      - S7_RACK=0
+      - S7_SLOT=2
+      - SIMULATION_RATE=100
+    ports:
+      - "10103:102"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.11
+      vulnot-backend:
+    restart: unless-stopped
+
+  # =============================================================================
+  # API & DASHBOARD
+  # =============================================================================
+
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    container_name: vulnot-api
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_ORG=mjolnir
+      - INFLUXDB_BUCKET=process_data
+      - CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+      - vulnot-ot-power
+      - vulnot-ot-factory
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ../../apps/dashboard
+      dockerfile: Dockerfile
+    container_name: vulnot-dashboard
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+  # =============================================================================
+  # ATTACKER WORKSTATIONS
+  # =============================================================================
+  
+  attacker-water:
+    build:
+      context: ../../attacker
+      dockerfile: Dockerfile
+    container_name: vulnot-attacker-water
+    stdin_open: true
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - SCENARIO=water
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.100
+    volumes:
+      - attacker_data:/root/workspace
+    restart: unless-stopped
+
+  attacker-power:
+    build:
+      context: ../../attacker
+      dockerfile: Dockerfile
+    container_name: vulnot-attacker-power
+    stdin_open: true
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - SCENARIO=power
+    networks:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.100
+    volumes:
+      - attacker_data:/root/workspace
+    restart: unless-stopped
+
+  attacker-factory:
+    build:
+      context: ../../attacker
+      dockerfile: Dockerfile
+    container_name: vulnot-attacker-factory
+    stdin_open: true
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - SCENARIO=factory
+    networks:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.100
+    volumes:
+      - attacker_data:/root/workspace
+    restart: unless-stopped
+
+  # =============================================================================
+  # MONITORING
+  # =============================================================================
+  
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: vulnot-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  vulnot-backend:
+    driver: bridge
+  
+  # Water Treatment OT Network
+  vulnot-ot-water:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+          gateway: 10.0.1.1
+
+  # Power Grid OT Network
+  vulnot-ot-power:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+          gateway: 10.0.2.1
+
+  # Manufacturing OT Network
+  vulnot-ot-factory:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+          gateway: 10.0.3.1
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  redis_data:
+  influxdb_data:
+  grafana_data:
+  attacker_data:

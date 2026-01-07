@@ -1,0 +1,47 @@
+# VULNOT Sumo Logic Collector - Docker Compose
+# Add this service to your main docker-compose.yml or run standalone
+
+version: '3.8'
+
+services:
+  sumo-collector:
+    build: .
+    container_name: vulnot-sumo-collector
+    environment:
+      - SUMO_HTTP_SOURCE_URL=${SUMO_HTTP_SOURCE_URL}
+      - SUMO_SOURCE_CATEGORY=${SUMO_SOURCE_CATEGORY:-vulnot/ot/security}
+      - SUMO_SOURCE_NAME=${SUMO_SOURCE_NAME:-vulnot-collector}
+      - SUMO_SOURCE_HOST=${SUMO_SOURCE_HOST:-vulnot-lab}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - FLUSH_INTERVAL=${FLUSH_INTERVAL:-5}
+    depends_on:
+      - redis
+    networks:
+      - vulnot-core
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Include Redis if running standalone
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis-sumo
+    ports:
+      - "6379:6379"
+    networks:
+      - vulnot-core
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+networks:
+  vulnot-core:
+    driver: bridge
+
+volumes:
+  redis-data:

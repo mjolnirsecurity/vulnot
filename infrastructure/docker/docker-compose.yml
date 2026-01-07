@@ -1,0 +1,457 @@
+version: '3.8'
+
+# ============================================================================
+# VULNOT v1.0 - Vulnerable OT Security Training Platform
+# ============================================================================
+# 
+# Developed by Milind Bhargava at Mjolnir Security
+# https://github.com/mjolnirsecurity/vulnot
+#
+# 9 Scenarios | 8 Protocols | 17+ Attack Tools | 9 Training Labs
+# CTF Platform | Compliance Framework | Forensics | Enterprise View
+#
+# Quick Start:
+#   docker-compose up -d
+#
+# Access Points:
+#   Dashboard:  http://localhost:8080
+#   Grafana:    http://localhost:8081
+#   API:        http://localhost:9000
+#   Historian:  http://localhost:8443
+#
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # CORE INFRASTRUCTURE
+  # ==========================================================================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis
+    ports:
+      - "6399:6379"
+    networks:
+      - vulnot-backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: vulnot-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=vulnot
+      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnot123
+      - DOCKER_INFLUXDB_INIT_ORG=mjolnir
+      - DOCKER_INFLUXDB_INIT_BUCKET=ot_data
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 1: WATER TREATMENT (Modbus TCP)
+  # ==========================================================================
+  
+  process-engine:
+    build: ../../simulators/process-engine
+    container_name: vulnot-process-engine
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_ORG=mjolnir
+      - INFLUXDB_BUCKET=process_data
+      - SIMULATION_RATE=100
+    depends_on:
+      - redis
+      - influxdb
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+  water-plc:
+    build: ../../simulators/modbus-water
+    container_name: vulnot-water-plc
+    environment:
+      - REDIS_HOST=redis
+      - MODBUS_PORT=502
+    ports:
+      - "10502:502"
+    depends_on:
+      - redis
+      - process-engine
+    networks:
+      vulnot-backend:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 2: POWER GRID (DNP3)
+  # ==========================================================================
+  
+  power-rtu:
+    build: ../../simulators/dnp3-power
+    container_name: vulnot-power-rtu
+    environment:
+      - REDIS_HOST=redis
+      - DNP3_PORT=20000
+    ports:
+      - "20000:20000"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 3: MANUFACTURING (S7comm)
+  # ==========================================================================
+  
+  factory-plc:
+    build: ../../simulators/s7-factory
+    container_name: vulnot-factory-plc
+    environment:
+      - REDIS_HOST=redis
+      - S7_PORT=102
+    ports:
+      - "10102:102"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 4: CHEMICAL REACTOR (OPC UA)
+  # ==========================================================================
+  
+  reactor-opcua:
+    build: ../../simulators/opcua-industrial
+    container_name: vulnot-reactor-opcua
+    environment:
+      - REDIS_HOST=redis
+      - OPCUA_PORT=4840
+    ports:
+      - "4840:4840"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-reactor:
+        ipv4_address: 10.0.4.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 5: BUILDING AUTOMATION (BACnet)
+  # ==========================================================================
+  
+  building-bas:
+    build: ../../simulators/bacnet-building
+    container_name: vulnot-building-bas
+    environment:
+      - REDIS_HOST=redis
+      - BACNET_PORT=47808
+    ports:
+      - "47808:47808/udp"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-building:
+        ipv4_address: 10.0.5.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 6: PACKAGING LINE (EtherNet/IP)
+  # ==========================================================================
+  
+  packaging-plc:
+    build: ../../simulators/ethernet-ip
+    container_name: vulnot-packaging-plc
+    environment:
+      - REDIS_HOST=redis
+      - ENIP_PORT=44818
+    ports:
+      - "44818:44818"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-packaging:
+        ipv4_address: 10.0.6.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 7: IIoT/MQTT (Smart Factory)
+  # ==========================================================================
+  
+  mqtt-broker:
+    build: ../../simulators/mqtt-iiot
+    container_name: vulnot-mqtt-broker
+    environment:
+      - REDIS_HOST=redis
+      - MQTT_PORT=1883
+    ports:
+      - "1883:1883"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-iiot:
+        ipv4_address: 10.0.7.5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 8: CNC MOTION CONTROL (PROFINET)
+  # ==========================================================================
+  
+  cnc-machine:
+    build: ../../simulators/profinet-motion
+    container_name: vulnot-cnc-machine
+    environment:
+      - REDIS_HOST=redis
+      - PROFINET_PORT=34964
+    ports:
+      - "34964:34964"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-motion:
+        ipv4_address: 10.0.8.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 9: OT HISTORIAN
+  # ==========================================================================
+  
+  historian:
+    build: ../../simulators/historian
+    container_name: vulnot-historian
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - "8553:8080"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-historian:
+        ipv4_address: 10.0.9.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # DEFENSE SERVICES
+  # ==========================================================================
+  
+  ids:
+    build:
+      context: ../../defense/ids
+      dockerfile: Dockerfile
+    container_name: vulnot-ids
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+      - vulnot-ot-power
+      - vulnot-ot-factory
+      - vulnot-ot-reactor
+      - vulnot-ot-building
+      - vulnot-ot-packaging
+      - vulnot-ot-iiot
+      - vulnot-ot-motion
+      - vulnot-ot-historian
+    restart: unless-stopped
+
+  # ==========================================================================
+  # ATTACKER WORKSTATIONS
+  # ==========================================================================
+  
+  redteam:
+    build: ../../attacker
+    container_name: vulnot-redteam
+    stdin_open: true
+    tty: true
+    volumes:
+      - ../../attacker/apt:/opt/apt
+      - ../../defense/playbooks:/opt/playbooks:ro
+      - forensics-evidence:/evidence
+    environment:
+      - ROLE=redteam
+    networks:
+      - vulnot-backend
+      - vulnot-ot-water
+      - vulnot-ot-power
+      - vulnot-ot-factory
+      - vulnot-ot-reactor
+      - vulnot-ot-building
+      - vulnot-ot-packaging
+      - vulnot-ot-iiot
+      - vulnot-ot-motion
+      - vulnot-ot-historian
+
+  attacker-water:
+    build: ../../attacker
+    container_name: vulnot-attacker-water
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-water:
+        ipv4_address: 10.0.1.100
+
+  attacker-power:
+    build: ../../attacker
+    container_name: vulnot-attacker-power
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-power:
+        ipv4_address: 10.0.2.100
+
+  attacker-factory:
+    build: ../../attacker
+    container_name: vulnot-attacker-factory
+    stdin_open: true
+    tty: true
+    networks:
+      vulnot-ot-factory:
+        ipv4_address: 10.0.3.100
+
+  # ==========================================================================
+  # APPLICATION SERVICES
+  # ==========================================================================
+  
+  api:
+    build: ../../apps/api
+    container_name: vulnot-api
+    ports:
+      - "9000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - INFLUXDB_URL=http://influxdb:8086
+    depends_on:
+      - redis
+      - influxdb
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ../../apps/dashboard
+      args:
+        - NEXT_PUBLIC_WS_URL=ws://localhost:9000
+    container_name: vulnot-dashboard
+    ports:
+      - "8080:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:9000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:9000
+    depends_on:
+      - api
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: vulnot-grafana
+    ports:
+      - "8081:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - vulnot-backend
+    restart: unless-stopped
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+
+networks:
+  vulnot-backend:
+    driver: bridge
+    
+  vulnot-ot-water:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+          
+  vulnot-ot-power:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.2.0/24
+          
+  vulnot-ot-factory:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.3.0/24
+          
+  vulnot-ot-reactor:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.4.0/24
+          
+  vulnot-ot-building:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.5.0/24
+          
+  vulnot-ot-packaging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.6.0/24
+          
+  vulnot-ot-iiot:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.7.0/24
+        
+  vulnot-ot-motion:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.8.0/24
+        
+  vulnot-ot-historian:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.9.0/24
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+
+volumes:
+  influxdb-data:
+  grafana-data:
+  forensics-evidence:

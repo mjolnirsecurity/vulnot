@@ -1,0 +1,195 @@
+version: '3.8'
+
+name: vulnot
+
+services:
+  # ===========================================
+  # Frontend - React/Next.js Dashboard
+  # ===========================================
+  frontend:
+    build:
+      context: ./docker/frontend
+      dockerfile: Dockerfile
+    container_name: vulnot-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Backend - FastAPI with WebSocket
+  # ===========================================
+  backend:
+    build:
+      context: ./docker/backend
+      dockerfile: Dockerfile
+    container_name: vulnot-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_ORG=vulnot
+      - INFLUXDB_BUCKET=process_data
+      - MODBUS_HOST=modbus-simulator
+      - MODBUS_PORT=502
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - influxdb
+      - modbus-simulator
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Modbus PLC Simulator
+  # ===========================================
+  modbus-simulator:
+    build:
+      context: ./docker/simulators
+      dockerfile: Dockerfile.modbus
+    container_name: vulnot-modbus
+    ports:
+      - "502:502"      # Modbus TCP
+      - "5020:5020"    # Secondary Modbus port
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MODBUS_PORT=502
+      - UNIT_ID=1
+    volumes:
+      - ./simulators:/app
+    depends_on:
+      - redis
+    networks:
+      vulnot-network:
+        ipv4_address: 172.30.0.10
+    restart: unless-stopped
+
+  # ===========================================
+  # Process Simulator (Water Treatment)
+  # ===========================================
+  process-simulator:
+    build:
+      context: ./docker/simulators
+      dockerfile: Dockerfile.process
+    container_name: vulnot-process
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_ORG=vulnot
+      - INFLUXDB_BUCKET=process_data
+      - SIMULATION_SPEED=1.0
+    volumes:
+      - ./simulators:/app
+    depends_on:
+      - redis
+      - influxdb
+      - modbus-simulator
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Redis - Real-time message broker
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # ===========================================
+  # InfluxDB - Time-series historian
+  # ===========================================
+  influxdb:
+    image: influxdb:2.7
+    container_name: vulnot-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnotpassword
+      - DOCKER_INFLUXDB_INIT_ORG=vulnot
+      - DOCKER_INFLUXDB_INIT_BUCKET=process_data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=vulnot-super-secret-token
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Grafana - Advanced analytics (optional)
+  # ===========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vulnot-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - influxdb
+    networks:
+      - vulnot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Attacker Workstation
+  # ===========================================
+  attacker:
+    build:
+      context: ./docker/attacker
+      dockerfile: Dockerfile
+    container_name: vulnot-attacker
+    stdin_open: true
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./tools:/tools
+      - attacker-data:/root
+    networks:
+      vulnot-network:
+        ipv4_address: 172.30.0.100
+    restart: unless-stopped
+
+networks:
+  vulnot-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+
+volumes:
+  redis-data:
+  influxdb-data:
+  grafana-data:
+  attacker-data:

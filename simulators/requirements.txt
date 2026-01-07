@@ -1,0 +1,4 @@
+pymodbus==3.6.3
+redis==5.0.1
+influxdb-client==1.40.0
+asyncio==3.4.3

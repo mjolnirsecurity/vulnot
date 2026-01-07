@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""
+VULNOT OPC UA Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.tree import Tree
+
+console = Console()
+
+# OPC UA Message Types
+OPC_UA_HELLO = b'HEL'
+OPC_UA_ACKNOWLEDGE = b'ACK'
+OPC_UA_ERROR = b'ERR'
+OPC_UA_OPEN = b'OPN'
+OPC_UA_CLOSE = b'CLO'
+OPC_UA_MESSAGE = b'MSG'
+
+def build_hello_message(endpoint_url: str) -> bytes:
+    """Build OPC UA Hello message"""
+    url_bytes = endpoint_url.encode('utf-8')
+
+    # Hello message body
+    protocol_version = struct.pack('<I', 0)  # Version 0
+    receive_buffer_size = struct.pack('<I', 65535)
+    send_buffer_size = struct.pack('<I', 65535)
+    max_message_size = struct.pack('<I', 0)  # No limit
+    max_chunk_count = struct.pack('<I', 0)  # No limit
+    endpoint_url_length = struct.pack('<I', len(url_bytes))
+
+    body = protocol_version + receive_buffer_size + send_buffer_size + \
+           max_message_size + max_chunk_count + endpoint_url_length + url_bytes
+
+    # Header
+    message_type = OPC_UA_HELLO
+    chunk_type = b'F'  # Final
+    message_size = struct.pack('<I', 8 + len(body))
+
+    return message_type + chunk_type + message_size + body
+
+def send_opcua(ip: str, port: int, data: bytes, timeout: float = 5.0) -> bytes:
+    """Send OPC UA message and receive response"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+
+    try:
+        sock.connect((ip, port))
+        sock.send(data)
+        response = sock.recv(4096)
+        return response
+    finally:
+        sock.close()
+
+@click.group()
+def cli():
+    """VULNOT OPC UA Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.4.0/24)')
+@click.option('--port', '-p', default=4840, help='OPC UA port (default: 4840)')
+def scan(network: str, port: int):
+    """Scan network for OPC UA servers"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT OPC UA Server Scanner      ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip_str, port))
+                if result == 0:
+                    found.append({'ip': ip_str, 'port': port, 'status': 'OPC UA'})
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered OPC UA Servers")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Status", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['status'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No OPC UA servers found[/]")
+
+    console.print(f"\n[green]Found {len(found)} OPC UA server(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=4840, help='OPC UA port (default: 4840)')
+def info(target: str, port: int):
+    """Get OPC UA server information"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT OPC UA Server Info         ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        endpoint = f"opc.tcp://{target}:{port}"
+        hello = build_hello_message(endpoint)
+        response = send_opcua(target, port, hello)
+
+        if response:
+            console.print("[green]Server responded![/]\n")
+
+            # Parse acknowledge message (simplified)
+            if response[:3] == OPC_UA_ACKNOWLEDGE:
+                console.print("[green]Received OPC UA Acknowledge[/]\n")
+
+            # Display simulated server info
+            table = Table(title="OPC UA Server Information")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value", style="white")
+
+            table.add_row("Application Name", "Chemical Reactor Control")
+            table.add_row("Application URI", f"urn:{target}:OPC:ReactorServer")
+            table.add_row("Product URI", "urn:MjolnirSecurity:VULNOT:Server")
+            table.add_row("Server Type", "Server")
+            table.add_row("Security Mode", "[red]None[/]")
+            table.add_row("Security Policy", "[red]None[/]")
+            table.add_row("Anonymous Login", "[red]Enabled[/]")
+
+            console.print(table)
+        else:
+            console.print("[red]No response received[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • Anonymous authentication enabled")
+    console.print("  • No message security (unencrypted)")
+    console.print("  • Full read/write access to nodes")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=4840, help='OPC UA port')
+def browse(target: str, port: int):
+    """Browse OPC UA server address space"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT OPC UA Node Browser        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        endpoint = f"opc.tcp://{target}:{port}"
+        hello = build_hello_message(endpoint)
+        response = send_opcua(target, port, hello)
+
+        if response:
+            console.print("[green]Connected - Browsing address space...[/]\n")
+
+            # Display simulated address space tree for training
+            tree = Tree("[bold]Root[/]")
+
+            objects = tree.add("[cyan]Objects[/]")
+            server = objects.add("Server")
+            server.add("ServerStatus")
+            server.add("Capabilities")
+
+            reactor = objects.add("[bold yellow]ChemicalReactor[/]")
+
+            process = reactor.add("ProcessVariables")
+            process.add("[green]Temperature[/] (REAL) = 185.5 °C")
+            process.add("[green]Pressure[/] (REAL) = 45.2 bar")
+            process.add("[green]Level[/] (REAL) = 78.5 %")
+            process.add("[green]FlowRate[/] (REAL) = 125.0 L/min")
+            process.add("[green]pH[/] (REAL) = 7.2")
+            process.add("[green]AgitatorSpeed[/] (INT) = 450 RPM")
+
+            setpoints = reactor.add("Setpoints")
+            setpoints.add("[red]TemperatureSP[/] (REAL) = 180.0 °C")
+            setpoints.add("[red]PressureSP[/] (REAL) = 40.0 bar")
+            setpoints.add("[red]LevelSP[/] (REAL) = 80.0 %")
+            setpoints.add("[red]FlowRateSP[/] (REAL) = 120.0 L/min")
+
+            controls = reactor.add("Controls")
+            controls.add("[red]EmergencyStop[/] (BOOL) = FALSE")
+            controls.add("[red]HeaterEnable[/] (BOOL) = TRUE")
+            controls.add("[red]CoolingEnable[/] (BOOL) = FALSE")
+            controls.add("[red]AgitatorEnable[/] (BOOL) = TRUE")
+
+            alarms = reactor.add("Alarms")
+            alarms.add("HighTempAlarm (BOOL) = FALSE")
+            alarms.add("HighPressureAlarm (BOOL) = FALSE")
+            alarms.add("LowLevelAlarm (BOOL) = FALSE")
+
+            console.print(tree)
+
+            console.print("\n[dim]Legend: [green]Read-Only[/] [red]Read-Write[/][/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=4840, help='OPC UA port')
+@click.option('--node', '-n', required=True, help='Node ID to read')
+def read(target: str, port: int, node: str):
+    """Read OPC UA node value"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT OPC UA Node Reader         ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Node:[/] {node}\n")
+
+    try:
+        endpoint = f"opc.tcp://{target}:{port}"
+        hello = build_hello_message(endpoint)
+        response = send_opcua(target, port, hello)
+
+        if response:
+            console.print("[green]Node value read![/]\n")
+
+            # Simulated values for training
+            values = {
+                "Temperature": ("185.5", "°C", "REAL"),
+                "Pressure": ("45.2", "bar", "REAL"),
+                "Level": ("78.5", "%", "REAL"),
+                "FlowRate": ("125.0", "L/min", "REAL"),
+                "TemperatureSP": ("180.0", "°C", "REAL"),
+                "EmergencyStop": ("FALSE", "", "BOOL"),
+            }
+
+            # Find matching node
+            for name, (value, unit, dtype) in values.items():
+                if name.lower() in node.lower():
+                    table = Table(title=f"Node: {node}")
+                    table.add_column("Property", style="cyan")
+                    table.add_column("Value", style="white")
+
+                    table.add_row("Node ID", node)
+                    table.add_row("Data Type", dtype)
+                    table.add_row("Value", f"{value} {unit}")
+                    table.add_row("Status", "[green]Good[/]")
+                    table.add_row("Timestamp", "2024-01-01T12:00:00Z")
+
+                    console.print(table)
+                    return
+
+            console.print(f"[yellow]Node {node} not found in address space[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=4840, help='OPC UA port')
+@click.option('--node', '-n', required=True, help='Node ID to write')
+@click.option('--value', '-v', required=True, help='Value to write')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def write(target: str, port: int, node: str, value: str, force: bool):
+    """Write to OPC UA node"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT OPC UA Node Writer         ║[/]")
+    console.print("[bold red]║     FOR TRAINING PURPOSES ONLY         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Node:[/] {node}\n"
+        f"[red]Value:[/] {value}",
+        title="[bold red]Write Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        endpoint = f"opc.tcp://{target}:{port}"
+        hello = build_hello_message(endpoint)
+        response = send_opcua(target, port, hello)
+
+        if response:
+            console.print("\n[green]Write command sent![/]")
+            console.print(f"[yellow]{node} = {value}[/]")
+            console.print("\n[bold]Check the HMI dashboard to observe the impact![/]\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=4840, help='OPC UA port')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['estop', 'overheat', 'overpressure', 'drain']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, port: int, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'estop': {
+            'name': 'Emergency Stop Trigger',
+            'description': 'Trigger reactor emergency stop',
+            'impact': 'All reactor operations halt immediately'
+        },
+        'overheat': {
+            'name': 'Temperature Manipulation',
+            'description': 'Disable cooling and maximize heater output',
+            'impact': 'Reactor temperature rises to dangerous levels'
+        },
+        'overpressure': {
+            'name': 'Pressure Attack',
+            'description': 'Close relief valves and increase pressure setpoint',
+            'impact': 'Reactor pressure exceeds safe limits'
+        },
+        'drain': {
+            'name': 'Reactor Drain',
+            'description': 'Open drain valve and stop feed pumps',
+            'impact': 'Loss of reactor contents, process disruption'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT OPC UA Attack Scenario     ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the HMI dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

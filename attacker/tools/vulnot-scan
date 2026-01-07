@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""
+VULNOT Network Scanner
+Discovers Modbus devices on the OT network
+"""
+
+import socket
+import struct
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+import click
+
+console = Console()
+
+# Modbus function codes
+FC_READ_COILS = 0x01
+FC_READ_DISCRETE_INPUTS = 0x02
+FC_READ_HOLDING_REGISTERS = 0x03
+FC_READ_INPUT_REGISTERS = 0x04
+FC_DEVICE_INFO = 0x2B
+
+def build_modbus_request(unit_id: int, function_code: int, start_addr: int = 0, count: int = 1) -> bytes:
+    """Build a Modbus TCP request packet"""
+    # Transaction ID, Protocol ID, Length, Unit ID, Function Code, Start Address, Count
+    transaction_id = 1
+    protocol_id = 0
+    
+    if function_code == FC_DEVICE_INFO:
+        # Device Information request (MEI type 0x0E, Read Device ID 0x01)
+        data = struct.pack('>B B B', 0x0E, 0x01, 0x00)
+        length = 2 + len(data)
+    else:
+        data = struct.pack('>H H', start_addr, count)
+        length = 2 + len(data)
+    
+    header = struct.pack('>H H H B B', transaction_id, protocol_id, length, unit_id, function_code)
+    return header + data
+
+def probe_modbus(ip: str, port: int = 502, timeout: float = 2.0) -> dict:
+    """Probe a single IP for Modbus service"""
+    result = {
+        'ip': ip,
+        'port': port,
+        'open': False,
+        'modbus': False,
+        'unit_ids': [],
+        'device_info': None,
+        'error': None
+    }
+    
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ip, port))
+        result['open'] = True
+        
+        # Try common unit IDs
+        for unit_id in [1, 2, 3, 0, 255]:
+            try:
+                # Try reading holding register 0
+                request = build_modbus_request(unit_id, FC_READ_HOLDING_REGISTERS, 0, 1)
+                sock.send(request)
+                response = sock.recv(1024)
+                
+                if len(response) >= 9:
+                    # Check if it's a valid Modbus response
+                    resp_fc = response[7]
+                    if resp_fc == FC_READ_HOLDING_REGISTERS:
+                        result['modbus'] = True
+                        result['unit_ids'].append(unit_id)
+                    elif resp_fc == (FC_READ_HOLDING_REGISTERS | 0x80):
+                        # Exception response - still means Modbus is there
+                        result['modbus'] = True
+            except:
+                pass
+        
+        # Try to get device info
+        if result['modbus'] and result['unit_ids']:
+            try:
+                request = build_modbus_request(result['unit_ids'][0], FC_DEVICE_INFO)
+                sock.send(request)
+                response = sock.recv(1024)
+                if len(response) > 9:
+                    result['device_info'] = 'Device responds to ID request'
+            except:
+                pass
+        
+        sock.close()
+        
+    except socket.timeout:
+        result['error'] = 'Timeout'
+    except ConnectionRefusedError:
+        result['error'] = 'Connection refused'
+    except Exception as e:
+        result['error'] = str(e)
+    
+    return result
+
+def scan_network(network: str, port: int = 502, threads: int = 20):
+    """Scan a network range for Modbus devices"""
+    # Parse network (simple /24 support)
+    if '/' in network:
+        base_ip = network.split('/')[0]
+        prefix = network.split('/')[1]
+        base_parts = base_ip.split('.')
+        
+        if prefix == '24':
+            ips = [f"{base_parts[0]}.{base_parts[1]}.{base_parts[2]}.{i}" for i in range(1, 255)]
+        else:
+            ips = [base_ip]
+    else:
+        ips = [network]
+    
+    results = []
+    
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Scanning network...", total=len(ips))
+        
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = {executor.submit(probe_modbus, ip, port): ip for ip in ips}
+            
+            for future in as_completed(futures):
+                result = future.result()
+                if result['open'] or result['modbus']:
+                    results.append(result)
+                progress.update(task, advance=1)
+    
+    return results
+
+@click.command()
+@click.option('--network', '-n', default='10.0.1.0/24', help='Network to scan (CIDR notation)')
+@click.option('--port', '-p', default=502, help='Modbus port (default: 502)')
+@click.option('--threads', '-t', default=20, help='Number of threads')
+def main(network: str, port: int, threads: int):
+    """VULNOT Network Scanner - Discover Modbus devices"""
+    
+    console.print("\n[bold blue]╔═══════════════════════════════════════╗[/]")
+    console.print("[bold blue]║    VULNOT Modbus Network Scanner      ║[/]")
+    console.print("[bold blue]╚═══════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target Network:[/] {network}")
+    console.print(f"[yellow]Port:[/] {port}")
+    console.print(f"[yellow]Threads:[/] {threads}\n")
+    
+    results = scan_network(network, port, threads)
+    
+    # Display results
+    table = Table(title="Discovered Modbus Devices")
+    table.add_column("IP Address", style="cyan")
+    table.add_column("Port", style="green")
+    table.add_column("Status", style="yellow")
+    table.add_column("Unit IDs", style="magenta")
+    table.add_column("Notes", style="white")
+    
+    modbus_count = 0
+    for r in results:
+        if r['modbus']:
+            modbus_count += 1
+            status = "[green]MODBUS[/]"
+            unit_ids = ', '.join(map(str, r['unit_ids']))
+        elif r['open']:
+            status = "[yellow]OPEN[/]"
+            unit_ids = "-"
+        else:
+            continue
+        
+        notes = r.get('device_info', '') or r.get('error', '')
+        table.add_row(r['ip'], str(r['port']), status, unit_ids, notes)
+    
+    console.print(table)
+    console.print(f"\n[bold green]Found {modbus_count} Modbus device(s)[/]\n")
+    
+    # Print exploitation hints
+    if modbus_count > 0:
+        console.print("[bold yellow]Next Steps:[/]")
+        console.print("  1. Read registers: vulnot-read -t <IP> -u <UNIT_ID>")
+        console.print("  2. Monitor process: vulnot-monitor -t <IP>")
+        console.print("  3. Write registers: vulnot-write -t <IP> -u <UNIT_ID> -r <REG> -v <VALUE>")
+        console.print("")
+
+if __name__ == '__main__':
+    main()

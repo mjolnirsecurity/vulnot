@@ -1,0 +1,486 @@
+#!/usr/bin/env python3
+"""
+VULNOT OT Forensics Toolkit
+Tools for investigating OT security incidents
+
+Capabilities:
+- PLC memory acquisition
+- Network traffic analysis
+- Historian log analysis
+- Timeline reconstruction
+- IOC extraction
+- Evidence preservation
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+import hashlib
+import sqlite3
+from datetime import datetime
+from typing import Dict, List, Optional
+from dataclasses import dataclass, asdict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.tree import Tree
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+console = Console()
+
+
+@dataclass
+class ForensicArtifact:
+    """Forensic artifact"""
+    id: str
+    artifact_type: str
+    source: str
+    timestamp: float
+    description: str
+    data: dict
+    hash_sha256: str
+    
+    
+@dataclass
+class TimelineEvent:
+    """Timeline event"""
+    timestamp: float
+    event_type: str
+    source: str
+    description: str
+    severity: str
+    iocs: List[str]
+
+
+class ForensicsCollector:
+    """Forensic evidence collector"""
+    
+    def __init__(self, case_id: str):
+        self.case_id = case_id
+        self.artifacts: List[ForensicArtifact] = []
+        self.timeline: List[TimelineEvent] = []
+        self.evidence_dir = f"/tmp/vulnot_forensics/{case_id}"
+        os.makedirs(self.evidence_dir, exist_ok=True)
+        
+    def compute_hash(self, data: bytes) -> str:
+        """Compute SHA-256 hash"""
+        return hashlib.sha256(data).hexdigest()
+        
+    def add_artifact(self, artifact: ForensicArtifact):
+        """Add artifact to collection"""
+        self.artifacts.append(artifact)
+        
+        # Save to disk
+        filename = f"{self.evidence_dir}/{artifact.id}.json"
+        with open(filename, 'w') as f:
+            json.dump(asdict(artifact), f, indent=2)
+            
+    def add_event(self, event: TimelineEvent):
+        """Add event to timeline"""
+        self.timeline.append(event)
+        
+    def generate_report(self) -> str:
+        """Generate forensic report"""
+        report = {
+            "case_id": self.case_id,
+            "generated": datetime.now().isoformat(),
+            "artifact_count": len(self.artifacts),
+            "event_count": len(self.timeline),
+            "artifacts": [asdict(a) for a in self.artifacts],
+            "timeline": sorted([asdict(e) for e in self.timeline], key=lambda x: x['timestamp']),
+        }
+        
+        filename = f"{self.evidence_dir}/report.json"
+        with open(filename, 'w') as f:
+            json.dump(report, f, indent=2)
+            
+        return filename
+
+
+def cmd_acquire_plc(args):
+    """Acquire PLC memory dump"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT PLC Memory Acquisition     ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}[/]")
+    console.print(f"[yellow]Protocol: {args.protocol}[/]")
+    console.print(f"[yellow]Case ID: {args.case}[/]\n")
+    
+    collector = ForensicsCollector(args.case)
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        # Simulate acquisition steps
+        task = progress.add_task("Connecting to PLC...", total=None)
+        time.sleep(1)
+        
+        progress.update(task, description="Reading CPU information...")
+        time.sleep(0.5)
+        
+        progress.update(task, description="Dumping program memory...")
+        time.sleep(1.5)
+        
+        progress.update(task, description="Dumping data blocks...")
+        time.sleep(1)
+        
+        progress.update(task, description="Reading diagnostic buffer...")
+        time.sleep(0.5)
+        
+        progress.update(task, description="Computing hashes...")
+        time.sleep(0.5)
+        
+    # Create artifacts
+    artifacts = [
+        ForensicArtifact(
+            id=f"plc_cpu_info_{int(time.time())}",
+            artifact_type="PLC_CPU_INFO",
+            source=args.target,
+            timestamp=time.time(),
+            description="PLC CPU identification and status",
+            data={
+                "cpu_type": "S7-1500",
+                "firmware": "V2.8.4",
+                "serial": "S7-1500-XXXXXX",
+                "mode": "RUN",
+                "cycle_time": "12ms",
+            },
+            hash_sha256=hashlib.sha256(b"cpu_info").hexdigest()
+        ),
+        ForensicArtifact(
+            id=f"plc_program_{int(time.time())}",
+            artifact_type="PLC_PROGRAM",
+            source=args.target,
+            timestamp=time.time(),
+            description="PLC program blocks (OB, FC, FB, DB)",
+            data={
+                "ob_count": 5,
+                "fc_count": 12,
+                "fb_count": 8,
+                "db_count": 25,
+                "total_size": "256KB",
+            },
+            hash_sha256=hashlib.sha256(b"program_dump").hexdigest()
+        ),
+        ForensicArtifact(
+            id=f"plc_diagnostics_{int(time.time())}",
+            artifact_type="PLC_DIAGNOSTICS",
+            source=args.target,
+            timestamp=time.time(),
+            description="PLC diagnostic buffer entries",
+            data={
+                "entries": [
+                    {"time": "2024-01-15 14:32:15", "event": "CPU STOP", "source": "OB1"},
+                    {"time": "2024-01-15 14:32:10", "event": "Write to DB1", "source": "External"},
+                    {"time": "2024-01-15 14:30:00", "event": "New connection from 10.0.3.100", "source": "Network"},
+                ]
+            },
+            hash_sha256=hashlib.sha256(b"diagnostics").hexdigest()
+        ),
+    ]
+    
+    for artifact in artifacts:
+        collector.add_artifact(artifact)
+        
+    console.print(f"\n[green]✓ Acquired {len(artifacts)} artifacts[/]")
+    console.print(f"[green]✓ Evidence saved to: {collector.evidence_dir}[/]\n")
+    
+    # Show artifacts
+    table = Table(title="Collected Artifacts")
+    table.add_column("ID", style="cyan")
+    table.add_column("Type", style="yellow")
+    table.add_column("SHA-256 (first 16)", style="green")
+    
+    for a in artifacts:
+        table.add_row(a.id, a.artifact_type, a.hash_sha256[:16] + "...")
+        
+    console.print(table)
+
+
+def cmd_analyze_pcap(args):
+    """Analyze network capture"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT OT PCAP Analysis           ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]PCAP File: {args.pcap}[/]")
+    console.print(f"[yellow]Case ID: {args.case}[/]\n")
+    
+    # Simulated analysis results
+    console.print("[cyan]Analyzing OT protocols...[/]\n")
+    
+    protocols = {
+        "Modbus TCP": {"packets": 1523, "sources": ["10.0.1.100"], "targets": ["10.0.1.10", "10.0.1.11"]},
+        "DNP3": {"packets": 892, "sources": ["10.0.2.100"], "targets": ["10.0.2.10"]},
+        "S7comm": {"packets": 456, "sources": ["10.0.3.100"], "targets": ["10.0.3.10"]},
+        "OPC UA": {"packets": 234, "sources": ["10.0.4.100"], "targets": ["10.0.4.10"]},
+    }
+    
+    table = Table(title="OT Protocol Summary")
+    table.add_column("Protocol", style="cyan")
+    table.add_column("Packets", style="green")
+    table.add_column("Sources", style="yellow")
+    table.add_column("Targets", style="red")
+    
+    for proto, data in protocols.items():
+        table.add_row(
+            proto,
+            str(data["packets"]),
+            ", ".join(data["sources"]),
+            ", ".join(data["targets"])
+        )
+        
+    console.print(table)
+    
+    # Suspicious activity
+    console.print("\n[bold red]Suspicious Activity Detected:[/]\n")
+    
+    suspicious = [
+        {"time": "14:30:05", "proto": "S7comm", "src": "10.0.3.100", "action": "CPU STOP command"},
+        {"time": "14:30:10", "proto": "S7comm", "src": "10.0.3.100", "action": "Program download"},
+        {"time": "14:32:00", "proto": "DNP3", "src": "10.0.2.100", "action": "Direct operate - breaker TRIP"},
+        {"time": "14:35:00", "proto": "Modbus", "src": "10.0.1.100", "action": "Write coil - pump OFF"},
+    ]
+    
+    for s in suspicious:
+        console.print(f"  [red]•[/] [{s['time']}] {s['proto']}: {s['src']} → {s['action']}")
+        
+    # IOCs
+    console.print("\n[bold yellow]Indicators of Compromise (IOCs):[/]\n")
+    
+    iocs = [
+        {"type": "IP", "value": "10.0.3.100", "context": "S7comm attack source"},
+        {"type": "IP", "value": "10.0.2.100", "context": "DNP3 attack source"},
+        {"type": "IP", "value": "10.0.1.100", "context": "Modbus attack source"},
+        {"type": "User-Agent", "value": "vulnot-s7/1.0", "context": "Attack tool signature"},
+    ]
+    
+    for ioc in iocs:
+        console.print(f"  [yellow]{ioc['type']}:[/] {ioc['value']} - {ioc['context']}")
+
+
+def cmd_analyze_historian(args):
+    """Analyze historian data for anomalies"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT Historian Analysis         ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Historian: {args.historian}[/]")
+    console.print(f"[yellow]Time Range: {args.start} to {args.end}[/]\n")
+    
+    # Simulated anomalies
+    anomalies = [
+        {
+            "tag": "REACTOR.TEMP",
+            "time": "14:30:15",
+            "type": "Sudden Change",
+            "expected": "85.2°C",
+            "actual": "150.0°C",
+            "severity": "CRITICAL"
+        },
+        {
+            "tag": "POWER.SUB1.BREAKER_1",
+            "time": "14:32:00",
+            "type": "State Change",
+            "expected": "CLOSED",
+            "actual": "OPEN",
+            "severity": "CRITICAL"
+        },
+        {
+            "tag": "WATER.CHLORINE.RESIDUAL",
+            "time": "14:35:00",
+            "type": "Value Manipulation",
+            "expected": "1.5 mg/L",
+            "actual": "0.0 mg/L",
+            "severity": "HIGH"
+        },
+        {
+            "tag": "FACTORY.LINE1.SPEED",
+            "time": "14:28:00",
+            "type": "Rate of Change",
+            "expected": "1000 units/min",
+            "actual": "2500 units/min",
+            "severity": "HIGH"
+        },
+    ]
+    
+    table = Table(title="Detected Anomalies")
+    table.add_column("Time", style="cyan")
+    table.add_column("Tag", style="white")
+    table.add_column("Anomaly Type", style="yellow")
+    table.add_column("Expected", style="green")
+    table.add_column("Actual", style="red")
+    table.add_column("Severity", style="magenta")
+    
+    for a in anomalies:
+        table.add_row(
+            a["time"], a["tag"], a["type"],
+            a["expected"], a["actual"], a["severity"]
+        )
+        
+    console.print(table)
+    
+    # Data integrity check
+    console.print("\n[bold yellow]Data Integrity Analysis:[/]\n")
+    console.print("  [red]•[/] Gap detected: 14:30:00 - 14:35:00 (5 minutes missing)")
+    console.print("  [red]•[/] Out-of-order timestamps found: 3 records")
+    console.print("  [red]•[/] Quality code anomalies: 12 BAD quality insertions")
+    console.print("  [yellow]•[/] Unusual write pattern: 45 writes/sec (normal: 2/sec)")
+
+
+def cmd_timeline(args):
+    """Reconstruct attack timeline"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT Attack Timeline            ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Case ID: {args.case}[/]\n")
+    
+    # Simulated timeline
+    timeline = [
+        ("14:25:00", "RECON", "Network scan detected from 10.0.0.100", "LOW"),
+        ("14:26:30", "RECON", "S7comm port scan on 10.0.3.0/24", "MEDIUM"),
+        ("14:27:00", "INITIAL_ACCESS", "S7comm connection established to 10.0.3.10", "MEDIUM"),
+        ("14:27:30", "DISCOVERY", "PLC CPU information read", "LOW"),
+        ("14:28:00", "COLLECTION", "Data block values read", "MEDIUM"),
+        ("14:29:00", "IMPACT", "Speed setpoint modified: 1000 → 2500", "HIGH"),
+        ("14:30:00", "IMPACT", "CPU STOP command sent", "CRITICAL"),
+        ("14:30:05", "IMPACT", "Program download initiated", "CRITICAL"),
+        ("14:31:00", "LATERAL_MOVEMENT", "DNP3 connection to 10.0.2.10", "HIGH"),
+        ("14:32:00", "IMPACT", "Breaker TRIP command", "CRITICAL"),
+        ("14:33:00", "LATERAL_MOVEMENT", "Modbus connection to 10.0.1.10", "HIGH"),
+        ("14:35:00", "IMPACT", "Pump shutdown command", "HIGH"),
+        ("14:36:00", "DEFENSE_EVASION", "Historian records deleted", "HIGH"),
+    ]
+    
+    tree = Tree("[bold]Attack Timeline[/]")
+    
+    current_phase = None
+    phase_branch = None
+    
+    for time_str, phase, description, severity in timeline:
+        if phase != current_phase:
+            current_phase = phase
+            phase_branch = tree.add(f"[yellow]{phase}[/]")
+            
+        sev_color = {"LOW": "dim", "MEDIUM": "yellow", "HIGH": "red", "CRITICAL": "bold red"}
+        phase_branch.add(f"[cyan]{time_str}[/] [{sev_color.get(severity, 'white')}]{description}[/]")
+        
+    console.print(tree)
+    
+    # MITRE ATT&CK mapping
+    console.print("\n[bold]MITRE ATT&CK for ICS Mapping:[/]\n")
+    
+    techniques = [
+        ("T0846", "Remote System Discovery"),
+        ("T0867", "Lateral Tool Transfer"),
+        ("T0843", "Program Download"),
+        ("T0821", "Modify Controller Tasking"),
+        ("T0831", "Manipulation of Control"),
+        ("T0882", "Theft of Operational Information"),
+    ]
+    
+    for tid, name in techniques:
+        console.print(f"  [cyan]{tid}[/]: {name}")
+
+
+def cmd_preserve(args):
+    """Create forensic evidence package"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT Evidence Preservation      ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Case ID: {args.case}[/]")
+    console.print(f"[yellow]Output: {args.output}[/]\n")
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Collecting artifacts...", total=None)
+        time.sleep(1)
+        
+        progress.update(task, description="Computing hashes...")
+        time.sleep(0.5)
+        
+        progress.update(task, description="Creating chain of custody...")
+        time.sleep(0.5)
+        
+        progress.update(task, description="Generating report...")
+        time.sleep(0.5)
+        
+        progress.update(task, description="Creating archive...")
+        time.sleep(1)
+        
+    console.print(f"\n[green]✓ Evidence package created: {args.output}[/]")
+    console.print(f"[green]✓ SHA-256: {hashlib.sha256(b'evidence').hexdigest()}[/]")
+    console.print(f"[green]✓ Chain of custody initialized[/]\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT OT Forensics Toolkit',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-forensics acquire-plc -t 10.0.3.10 -p s7comm -c CASE-001
+  vulnot-forensics analyze-pcap -f capture.pcap -c CASE-001
+  vulnot-forensics analyze-historian -H 10.0.9.10 -s 2024-01-15T14:00:00 -e 2024-01-15T15:00:00
+  vulnot-forensics timeline -c CASE-001
+  vulnot-forensics preserve -c CASE-001 -o evidence.zip
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Acquire PLC
+    acq = subparsers.add_parser('acquire-plc', help='Acquire PLC memory')
+    acq.add_argument('-t', '--target', required=True, help='Target IP')
+    acq.add_argument('-p', '--protocol', default='s7comm', choices=['s7comm', 'modbus', 'enip'])
+    acq.add_argument('-c', '--case', required=True, help='Case ID')
+    
+    # Analyze PCAP
+    pcap = subparsers.add_parser('analyze-pcap', help='Analyze network capture')
+    pcap.add_argument('-f', '--pcap', required=True, help='PCAP file')
+    pcap.add_argument('-c', '--case', required=True, help='Case ID')
+    
+    # Analyze Historian
+    hist = subparsers.add_parser('analyze-historian', help='Analyze historian data')
+    hist.add_argument('-H', '--historian', required=True, help='Historian IP/URL')
+    hist.add_argument('-s', '--start', required=True, help='Start time')
+    hist.add_argument('-e', '--end', required=True, help='End time')
+    hist.add_argument('-c', '--case', default='CASE-001', help='Case ID')
+    
+    # Timeline
+    tl = subparsers.add_parser('timeline', help='Reconstruct timeline')
+    tl.add_argument('-c', '--case', required=True, help='Case ID')
+    
+    # Preserve
+    pres = subparsers.add_parser('preserve', help='Create evidence package')
+    pres.add_argument('-c', '--case', required=True, help='Case ID')
+    pres.add_argument('-o', '--output', required=True, help='Output file')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'acquire-plc':
+        cmd_acquire_plc(args)
+    elif args.command == 'analyze-pcap':
+        cmd_analyze_pcap(args)
+    elif args.command == 'analyze-historian':
+        cmd_analyze_historian(args)
+    elif args.command == 'timeline':
+        cmd_timeline(args)
+    elif args.command == 'preserve':
+        cmd_preserve(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

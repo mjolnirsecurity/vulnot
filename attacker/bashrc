@@ -1,0 +1,82 @@
+# VULNOT Attacker Workstation - Bash Configuration
+
+# Display MOTD on login
+cat /etc/motd
+
+# Color prompt
+PS1='\[\033[01;31m\]vulnot-attacker\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+# Environment
+export PATH="/opt/venv/bin:/opt/tools/vulnot-scripts:$PATH"
+export TERM=xterm-256color
+
+# Target PLCs
+export PLC_INTAKE="10.0.1.10"
+export PLC_TREATMENT="10.0.1.11"
+export PLC_DISTRIBUTION="10.0.1.12"
+export MODBUS_PORT="502"
+
+# Aliases for quick access
+alias plc1='echo "PLC-INTAKE: $PLC_INTAKE:$MODBUS_PORT"'
+alias plc2='echo "PLC-TREATMENT: $PLC_TREATMENT:$MODBUS_PORT"'
+alias plc3='echo "PLC-DISTRIBUTION: $PLC_DISTRIBUTION:$MODBUS_PORT"'
+
+# Nmap shortcuts
+alias nmap-modbus='nmap -p 502 --script modbus-discover'
+alias nmap-plcs='nmap -p 502 -sV 10.0.1.10-12'
+
+# Modbus CLI shortcuts
+alias mb-read='modbus read'
+alias mb-write='modbus write'
+
+# Wireshark/tcpdump
+alias capture-modbus='tcpdump -i eth0 -w /root/workspace/modbus_capture.pcap port 502'
+alias watch-modbus='tcpdump -i eth0 -nn port 502'
+
+# VULNOT tools
+alias scan='vulnot-scan'
+alias read-plc='vulnot-read'
+alias write-plc='vulnot-write'
+alias monitor='vulnot-monitor'
+
+# Metasploit shortcut
+alias msf='msfconsole -q'
+
+# Help function
+help-vulnot() {
+    echo ""
+    echo "╔═══════════════════════════════════════════════════════════════╗"
+    echo "║                    VULNOT Quick Reference                      ║"
+    echo "╠═══════════════════════════════════════════════════════════════╣"
+    echo "║ DISCOVERY:                                                     ║"
+    echo "║   vulnot-scan                    Scan for Modbus devices       ║"
+    echo "║   nmap-plcs                      Nmap scan of target PLCs      ║"
+    echo "║   nmap-modbus 10.0.1.10          Modbus discovery script       ║"
+    echo "║                                                                ║"
+    echo "║ READING DATA:                                                  ║"
+    echo "║   vulnot-read -t 10.0.1.10       Read all registers from PLC   ║"
+    echo "║   vulnot-read -t 10.0.1.10 -r 0  Read specific register        ║"
+    echo "║   vulnot-monitor -t 10.0.1.10    Real-time monitoring          ║"
+    echo "║                                                                ║"
+    echo "║ WRITING DATA:                                                  ║"
+    echo "║   vulnot-write -t 10.0.1.10 -r 0 -v 100   Write to register    ║"
+    echo "║   vulnot-write -t 10.0.1.10 -c 0 -v 1     Set coil ON          ║"
+    echo "║                                                                ║"
+    echo "║ PACKET CAPTURE:                                                ║"
+    echo "║   watch-modbus                   Live Modbus traffic           ║"
+    echo "║   capture-modbus                 Capture to PCAP file          ║"
+    echo "║                                                                ║"
+    echo "║ METASPLOIT:                                                    ║"
+    echo "║   msf                            Launch Metasploit             ║"
+    echo "║   use auxiliary/scanner/scada/modbusclient                     ║"
+    echo "║                                                                ║"
+    echo "║ ENVIRONMENT VARIABLES:                                         ║"
+    echo "║   \$PLC_INTAKE      = $PLC_INTAKE                              ║"
+    echo "║   \$PLC_TREATMENT   = $PLC_TREATMENT                           ║"
+    echo "║   \$PLC_DISTRIBUTION = $PLC_DISTRIBUTION                       ║"
+    echo "╚═══════════════════════════════════════════════════════════════╝"
+    echo ""
+}
+
+# Workspace
+cd /root/workspace

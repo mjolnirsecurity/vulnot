@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""
+VULNOT Modbus Register Reader
+Read holding registers and coils from Modbus devices
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# PLC Register Maps (for VULNOT Water Treatment scenario)
+PLC_MAPS = {
+    1: {  # PLC-INTAKE
+        'name': 'PLC-INTAKE',
+        'description': 'Raw Water Intake & Pumping',
+        'holding_registers': {
+            0: ('Intake Level', '%', 100),
+            1: ('Raw Water Flow', 'GPM', 1),
+            2: ('Pump P101 Speed', '%', 100),
+            3: ('Pump P102 Speed', '%', 100),
+            4: ('Intake Pressure', 'PSI', 100),
+            5: ('Raw Turbidity', 'NTU', 100),
+            6: ('Raw pH', 'pH', 100),
+            7: ('Temperature', '°C', 100),
+        },
+        'coils': {
+            0: 'Pump P101 Run',
+            1: 'Pump P102 Run',
+            2: 'Intake Valve Open',
+            3: 'Emergency Stop',
+        }
+    },
+    2: {  # PLC-TREATMENT
+        'name': 'PLC-TREATMENT',
+        'description': 'Water Treatment Process',
+        'holding_registers': {
+            0: ('Flash Mix Level', '%', 100),
+            1: ('Floc Basin Level', '%', 100),
+            2: ('Sed Basin Level', '%', 100),
+            3: ('Chlorine Contact Level', '%', 100),
+            4: ('Chlorine Flow', 'GPH', 100),
+            5: ('Alum Flow', 'GPH', 100),
+            6: ('Treated pH', 'pH', 100),
+            7: ('Chlorine Residual', 'mg/L', 100),
+            8: ('Filtered Turbidity', 'NTU', 1000),
+            9: ('Chemical Valve Position', '%', 100),
+        },
+        'coils': {
+            0: 'Transfer Pump P201 Run',
+            1: 'Transfer Pump P202 Run',
+            2: 'Chlorine Pump Run',
+            3: 'Alum Pump Run',
+            4: 'Mixer M101 Run',
+            5: 'Emergency Stop',
+        }
+    },
+    3: {  # PLC-DISTRIBUTION
+        'name': 'PLC-DISTRIBUTION',
+        'description': 'Clearwell & Distribution',
+        'holding_registers': {
+            0: ('Clearwell Level', '%', 100),
+            1: ('Distribution Flow', 'GPM', 1),
+            2: ('Distribution Pressure', 'PSI', 100),
+            3: ('Pump P301 Speed', '%', 100),
+            4: ('Pump P302 Speed', '%', 100),
+            5: ('Treated Flow', 'GPM', 1),
+            6: ('Filter DP', 'PSI', 100),
+            7: ('Distribution Valve Position', '%', 100),
+        },
+        'coils': {
+            0: 'Dist Pump P301 Run',
+            1: 'Dist Pump P302 Run',
+            2: 'Distribution Valve Open',
+            3: 'Backwash Valve Open',
+            4: 'Emergency Stop',
+        }
+    }
+}
+
+def read_holding_registers(ip: str, port: int, unit_id: int, start: int, count: int, timeout: float = 2.0) -> list:
+    """Read holding registers from Modbus device"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    
+    try:
+        sock.connect((ip, port))
+        
+        # Build Modbus request
+        transaction_id = 1
+        protocol_id = 0
+        length = 6
+        function_code = 0x03  # Read Holding Registers
+        
+        request = struct.pack('>H H H B B H H', 
+                             transaction_id, protocol_id, length,
+                             unit_id, function_code, start, count)
+        
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 9:
+            # Parse response
+            resp_fc = response[7]
+            if resp_fc == function_code:
+                byte_count = response[8]
+                values = []
+                for i in range(0, byte_count, 2):
+                    value = struct.unpack('>H', response[9+i:11+i])[0]
+                    values.append(value)
+                return values
+            elif resp_fc == (function_code | 0x80):
+                exception_code = response[8]
+                raise Exception(f"Modbus exception: {exception_code}")
+        
+        return []
+        
+    finally:
+        sock.close()
+
+def read_coils(ip: str, port: int, unit_id: int, start: int, count: int, timeout: float = 2.0) -> list:
+    """Read coils from Modbus device"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    
+    try:
+        sock.connect((ip, port))
+        
+        # Build Modbus request
+        transaction_id = 1
+        protocol_id = 0
+        length = 6
+        function_code = 0x01  # Read Coils
+        
+        request = struct.pack('>H H H B B H H', 
+                             transaction_id, protocol_id, length,
+                             unit_id, function_code, start, count)
+        
+        sock.send(request)
+        response = sock.recv(1024)
+        
+        if len(response) >= 9:
+            resp_fc = response[7]
+            if resp_fc == function_code:
+                byte_count = response[8]
+                coil_bytes = response[9:9+byte_count]
+                
+                # Convert bytes to individual coil values
+                coils = []
+                for byte in coil_bytes:
+                    for bit in range(8):
+                        if len(coils) < count:
+                            coils.append((byte >> bit) & 1)
+                return coils
+        
+        return []
+        
+    finally:
+        sock.close()
+
+@click.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=502, help='Modbus port (default: 502)')
+@click.option('--unit', '-u', default=1, help='Unit ID (default: 1)')
+@click.option('--register', '-r', default=0, help='Start register (default: 0)')
+@click.option('--count', '-c', default=10, help='Number of registers (default: 10)')
+@click.option('--coils', is_flag=True, help='Read coils instead of holding registers')
+@click.option('--raw', is_flag=True, help='Show raw values without interpretation')
+def main(target: str, port: int, unit: int, register: int, count: int, coils: bool, raw: bool):
+    """VULNOT Modbus Register Reader"""
+    
+    console.print("\n[bold blue]╔═══════════════════════════════════════╗[/]")
+    console.print("[bold blue]║     VULNOT Modbus Register Reader     ║[/]")
+    console.print("[bold blue]╚═══════════════════════════════════════╝[/]\n")
+    
+    # Get PLC info if known
+    plc_info = PLC_MAPS.get(unit, {})
+    if plc_info:
+        console.print(Panel(
+            f"[cyan]{plc_info['name']}[/] - {plc_info['description']}",
+            title="Device Info"
+        ))
+    
+    console.print(f"[yellow]Target:[/] {target}:{port}")
+    console.print(f"[yellow]Unit ID:[/] {unit}")
+    console.print(f"[yellow]Reading:[/] {'Coils' if coils else 'Holding Registers'} {register}-{register+count-1}\n")
+    
+    try:
+        if coils:
+            values = read_coils(target, port, unit, register, count)
+            
+            table = Table(title=f"Coils from {target}")
+            table.add_column("Address", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Value", style="green")
+            table.add_column("Status", style="yellow")
+            
+            coil_map = plc_info.get('coils', {})
+            
+            for i, val in enumerate(values):
+                addr = register + i
+                name = coil_map.get(i, f"Coil {addr}")
+                status = "[green]ON[/]" if val else "[red]OFF[/]"
+                table.add_row(str(addr), name, str(val), status)
+            
+            console.print(table)
+            
+        else:
+            values = read_holding_registers(target, port, unit, register, count)
+            
+            table = Table(title=f"Holding Registers from {target}")
+            table.add_column("Address", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Raw", style="blue")
+            table.add_column("Scaled", style="green")
+            table.add_column("Unit", style="yellow")
+            
+            reg_map = plc_info.get('holding_registers', {})
+            
+            for i, val in enumerate(values):
+                addr = register + i
+                
+                if addr in reg_map and not raw:
+                    name, unit_str, scale = reg_map[addr]
+                    scaled = val / scale if scale > 1 else val
+                    table.add_row(str(addr), name, str(val), f"{scaled:.2f}", unit_str)
+                else:
+                    table.add_row(str(addr), f"HR{addr}", str(val), str(val), "-")
+            
+            console.print(table)
+        
+        console.print("\n[bold green]Read successful![/]\n")
+        
+        # Exploitation hints
+        if not raw and plc_info:
+            console.print("[bold yellow]💡 Exploitation Tips:[/]")
+            console.print("  • Coils control equipment ON/OFF state (pumps, valves)")
+            console.print("  • Holding registers contain setpoints and process values")
+            console.print("  • No authentication required - anyone can read/write!")
+            console.print(f"  • Try: vulnot-write -t {target} -u {unit} -r 0 -v <VALUE>")
+            console.print("")
+            
+    except Exception as e:
+        console.print(f"[red]Error:[/] {e}\n")
+
+if __name__ == '__main__':
+    main()

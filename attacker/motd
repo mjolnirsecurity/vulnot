@@ -1,0 +1,32 @@
+
+██╗   ██╗██╗   ██╗██╗     ███╗   ██╗ ██████╗ ████████╗
+██║   ██║██║   ██║██║     ████╗  ██║██╔═══██╗╚══██╔══╝
+██║   ██║██║   ██║██║     ██╔██╗ ██║██║   ██║   ██║   
+╚██╗ ██╔╝██║   ██║██║     ██║╚██╗██║██║   ██║   ██║   
+ ╚████╔╝ ╚██████╔╝███████╗██║ ╚████║╚██████╔╝   ██║   
+  ╚═══╝   ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝    ╚═╝   
+                                                       
+  ⚡ ATTACKER WORKSTATION - OT Security Training ⚡
+
+╔══════════════════════════════════════════════════════════════╗
+║  SCENARIO: Municipal Water Treatment Plant                   ║
+║  PROTOCOL: Modbus TCP (No Authentication)                    ║
+╠══════════════════════════════════════════════════════════════╣
+║  TARGET PLCs:                                                ║
+║    • PLC-INTAKE      10.0.1.10:502  (Raw Water Pumping)     ║
+║    • PLC-TREATMENT   10.0.1.11:502  (Chemical Dosing)       ║
+║    • PLC-DISTRIBUTION 10.0.1.12:502 (Clearwell & Dist)      ║
+╠══════════════════════════════════════════════════════════════╣
+║  TOOLS AVAILABLE:                                            ║
+║    vulnot-scan   - Discover Modbus devices on network        ║
+║    vulnot-read   - Read registers from PLCs                  ║
+║    vulnot-write  - Write values to PLC registers             ║
+║    vulnot-monitor - Monitor real-time process values         ║
+║    nmap          - Network scanner (use --script modbus*)    ║
+║    msfconsole    - Metasploit with ICS modules              ║
+╠══════════════════════════════════════════════════════════════╣
+║  ⚠️  FOR TRAINING PURPOSES ONLY - DO NOT USE ON REAL ICS    ║
+╚══════════════════════════════════════════════════════════════╝
+
+Type 'help-vulnot' for quick command reference.
+

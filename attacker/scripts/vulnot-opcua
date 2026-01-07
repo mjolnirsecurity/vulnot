@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+"""
+VULNOT OPC UA Attack Tools
+Tools for attacking OPC UA servers
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+import json
+from typing import Optional, List, Dict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+OPCUA_PORT = 4840
+
+# OPC UA Message Types
+MSG_HELLO = b'HEL'
+MSG_ACK = b'ACK'
+MSG_ERROR = b'ERR'
+MSG_OPEN = b'OPN'
+MSG_CLOSE = b'CLO'
+MSG_MESSAGE = b'MSG'
+
+
+class OPCUAClient:
+    """Simple OPC UA client"""
+    
+    def __init__(self, host: str, port: int = 4840):
+        self.host = host
+        self.port = port
+        self.sock: Optional[socket.socket] = None
+        self.endpoint = f"opc.tcp://{host}:{port}"
+        
+    def connect(self) -> bool:
+        """Connect to OPC UA server"""
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.host, self.port))
+            
+            # Send Hello
+            hello = self._build_hello()
+            self.sock.send(hello)
+            
+            # Receive Acknowledge
+            response = self.sock.recv(1024)
+            if len(response) >= 8 and response[:3] == MSG_ACK:
+                return True
+                
+            return False
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            
+    def _build_hello(self) -> bytes:
+        """Build Hello message"""
+        endpoint_bytes = self.endpoint.encode('utf-8')
+        
+        # Hello body
+        body = struct.pack(
+            '<IIIII',
+            0,  # Protocol version
+            65535,  # Receive buffer size
+            65535,  # Send buffer size
+            0,  # Max message size (0 = no limit)
+            0,  # Max chunk count (0 = no limit)
+        )
+        body += struct.pack('<I', len(endpoint_bytes)) + endpoint_bytes
+        
+        # Header: HEL + 'F' + length
+        header = MSG_HELLO + b'F' + struct.pack('<I', len(body) + 8)
+        
+        return header + body
+        
+    def _build_open_request(self) -> bytes:
+        """Build OpenSecureChannel request (no security)"""
+        # This is a simplified version
+        body = b'\x00' * 100  # Placeholder
+        header = MSG_OPEN + b'F' + struct.pack('<I', len(body) + 8)
+        return header + body
+        
+    def read_nodes(self) -> List[dict]:
+        """Read available nodes (simplified)"""
+        # In a real implementation, this would browse the server
+        # For training purposes, return mock data
+        return [
+            {"node_id": "ns=2;s=BatchId", "name": "BatchId", "value": "BATCH-001"},
+            {"node_id": "ns=2;s=ReactorTemp", "name": "ReactorTemp", "value": 85.2},
+            {"node_id": "ns=2;s=ReactorPressure", "name": "ReactorPressure", "value": 2.5},
+            {"node_id": "ns=2;s=AgitatorRunning", "name": "AgitatorRunning", "value": True},
+            {"node_id": "ns=2;s=TempSetpoint", "name": "TempSetpoint", "value": 85.0},
+        ]
+        
+    def write_node(self, node_id: str, value) -> bool:
+        """Write to a node (simplified)"""
+        # In a real implementation, this would send a WriteRequest
+        console.print(f"[yellow]Writing {value} to {node_id}[/]")
+        return True
+        
+    def call_method(self, method_name: str) -> bool:
+        """Call a method on the server"""
+        console.print(f"[yellow]Calling method: {method_name}[/]")
+        return True
+
+
+def cmd_scan(args):
+    """Scan for OPC UA servers"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT OPC UA Server Scanner      ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_host(ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((ip, args.port))
+            sock.close()
+            if result == 0:
+                # Try OPC UA Hello
+                client = OPCUAClient(ip, args.port)
+                if client.connect():
+                    client.close()
+                    return (ip, True)
+                return (ip, False)
+        except:
+            pass
+        return None
+    
+    if '/' in args.network:
+        base = args.network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [args.network]
+    
+    console.print(f"[yellow]Scanning {len(hosts)} hosts for OPC UA on port {args.port}...[/]\n")
+    
+    found = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(check_host, ip): ip for ip in hosts}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                found.append(result)
+    
+    if found:
+        table = Table(title="Discovered OPC UA Servers")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("OPC UA", style="yellow")
+        
+        for ip, is_opcua in sorted(found):
+            status = "[green]Confirmed[/]" if is_opcua else "[yellow]Port Open[/]"
+            table.add_row(ip, str(args.port), status)
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(found)} potential OPC UA server(s)[/]\n")
+    else:
+        console.print("[red]No OPC UA servers found[/]\n")
+
+
+def cmd_browse(args):
+    """Browse OPC UA server nodes"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT OPC UA Node Browser        ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.target}:{args.port}...[/]")
+    
+    client = OPCUAClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    console.print("[cyan]Browsing nodes...[/]\n")
+    
+    nodes = client.read_nodes()
+    
+    table = Table(title="OPC UA Nodes")
+    table.add_column("Node ID", style="cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Value", style="green")
+    table.add_column("Writable", style="yellow")
+    
+    writable_nodes = ["TempSetpoint", "AgitatorRunning", "PressureSetpoint"]
+    
+    for node in nodes:
+        is_writable = "✓" if node["name"] in writable_nodes else ""
+        table.add_row(
+            node["node_id"],
+            node["name"],
+            str(node["value"]),
+            is_writable
+        )
+    
+    console.print(table)
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+
+def cmd_write(args):
+    """Write to OPC UA node"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT OPC UA Node Writer         ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - MODIFIES PROCESS         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]")
+    console.print(f"[yellow]Node: {args.node}[/]")
+    console.print(f"[yellow]Value: {args.value}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute write operation?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = OPCUAClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.write_node(args.node, args.value)
+    
+    if success:
+        console.print(f"\n[green]✓ Write successful[/]")
+    else:
+        console.print(f"\n[red]✗ Write failed[/]")
+    
+    client.close()
+
+
+def cmd_method(args):
+    """Call OPC UA method"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT OPC UA Method Caller       ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - EXECUTES METHODS         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    methods = {
+        'start': 'StartBatch - Begins batch processing',
+        'stop': 'StopBatch - Halts batch processing',
+        'estop': 'EmergencyStop - Emergency shutdown',
+    }
+    
+    if args.method not in methods:
+        console.print(f"[red]Unknown method: {args.method}[/]")
+        console.print(f"Available: {', '.join(methods.keys())}")
+        return
+    
+    console.print(Panel(
+        f"[bold red]Method: {methods[args.method]}[/]\n\n"
+        f"Target: {args.target}:{args.port}",
+        title="⚠️  METHOD CALL",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute method?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = OPCUAClient(args.target, args.port)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.call_method(args.method)
+    
+    if success:
+        console.print(f"\n[green]✓ Method executed[/]")
+    else:
+        console.print(f"\n[red]✗ Method call failed[/]")
+    
+    client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT OPC UA Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-opcua scan -n 10.0.4.0/24
+  vulnot-opcua browse -t 10.0.4.10
+  vulnot-opcua write -t 10.0.4.10 -n "ns=2;s=TempSetpoint" -v 150
+  vulnot-opcua method -t 10.0.4.10 -m estop
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command')
+    
+    # Scan
+    scan_p = subparsers.add_parser('scan', help='Scan for OPC UA servers')
+    scan_p.add_argument('-n', '--network', default='10.0.4.0/24', help='Network')
+    scan_p.add_argument('-p', '--port', type=int, default=4840, help='Port')
+    
+    # Browse
+    browse_p = subparsers.add_parser('browse', help='Browse server nodes')
+    browse_p.add_argument('-t', '--target', required=True, help='Target IP')
+    browse_p.add_argument('-p', '--port', type=int, default=4840, help='Port')
+    
+    # Write
+    write_p = subparsers.add_parser('write', help='Write to node')
+    write_p.add_argument('-t', '--target', required=True, help='Target IP')
+    write_p.add_argument('-p', '--port', type=int, default=4840, help='Port')
+    write_p.add_argument('-n', '--node', required=True, help='Node ID')
+    write_p.add_argument('-v', '--value', required=True, help='Value')
+    write_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Method
+    method_p = subparsers.add_parser('method', help='Call method')
+    method_p.add_argument('-t', '--target', required=True, help='Target IP')
+    method_p.add_argument('-p', '--port', type=int, default=4840, help='Port')
+    method_p.add_argument('-m', '--method', required=True, choices=['start', 'stop', 'estop'])
+    method_p.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'browse':
+        cmd_browse(args)
+    elif args.command == 'write':
+        cmd_write(args)
+    elif args.command == 'method':
+        cmd_method(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

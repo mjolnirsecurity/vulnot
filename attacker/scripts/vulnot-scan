@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""
+VULNOT Modbus Scanner
+Discovers Modbus devices on the network
+"""
+
+import argparse
+import socket
+import struct
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+
+console = Console()
+
+def create_modbus_request(unit_id=1, function_code=3, start_address=0, quantity=1):
+    """Create a Modbus TCP request packet"""
+    transaction_id = 1
+    protocol_id = 0
+    length = 6
+    
+    # Modbus TCP header
+    header = struct.pack('>HHHBB', 
+        transaction_id,
+        protocol_id, 
+        length,
+        unit_id,
+        function_code
+    )
+    
+    # PDU for read holding registers
+    pdu = struct.pack('>HH', start_address, quantity)
+    
+    return header + pdu
+
+def check_modbus(ip, port=502, timeout=2):
+    """Check if a host responds to Modbus"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ip, port))
+        
+        # Send read holding register request
+        request = create_modbus_request()
+        sock.send(request)
+        
+        # Receive response
+        response = sock.recv(256)
+        sock.close()
+        
+        if len(response) >= 9:
+            # Parse response
+            unit_id = response[6]
+            function_code = response[7]
+            
+            # Check for valid response or exception
+            if function_code in [3, 131]:  # Normal response or exception
+                return {
+                    'ip': ip,
+                    'port': port,
+                    'unit_id': unit_id,
+                    'responsive': True,
+                    'exception': function_code > 127
+                }
+        
+        return None
+        
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return None
+
+def scan_network(network, port=502, threads=50):
+    """Scan a network range for Modbus devices"""
+    results = []
+    
+    # Parse network (simple /24 support)
+    if '/' in network:
+        base = network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [network]
+    
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Scanning...", total=len(hosts))
+        
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = {executor.submit(check_modbus, ip, port): ip for ip in hosts}
+            
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    results.append(result)
+                progress.update(task, advance=1)
+    
+    return results
+
+def main():
+    parser = argparse.ArgumentParser(description='VULNOT Modbus Scanner')
+    parser.add_argument('-n', '--network', default='10.0.1.0/24',
+                        help='Network to scan (default: 10.0.1.0/24)')
+    parser.add_argument('-p', '--port', type=int, default=502,
+                        help='Modbus port (default: 502)')
+    parser.add_argument('-t', '--threads', type=int, default=50,
+                        help='Number of threads (default: 50)')
+    
+    args = parser.parse_args()
+    
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║     VULNOT Modbus Device Scanner       ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target:[/] {args.network}")
+    console.print(f"[yellow]Port:[/] {args.port}")
+    console.print("")
+    
+    results = scan_network(args.network, args.port, args.threads)
+    
+    if results:
+        table = Table(title="Discovered Modbus Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Unit ID", style="yellow")
+        table.add_column("Status", style="magenta")
+        
+        for r in results:
+            status = "[red]Exception[/]" if r['exception'] else "[green]Responsive[/]"
+            table.add_row(r['ip'], str(r['port']), str(r['unit_id']), status)
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(results)} Modbus device(s)[/]\n")
+    else:
+        console.print("[red]No Modbus devices found[/]\n")
+
+if __name__ == '__main__':
+    main()

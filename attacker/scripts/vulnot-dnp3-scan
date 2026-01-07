@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""
+VULNOT DNP3 Scanner
+Discovers DNP3 outstations on the network
+
+DNP3 Protocol: Port 20000 (default), addresses 0-65519
+"""
+
+import argparse
+import socket
+import struct
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+
+console = Console()
+
+# DNP3 Frame constants
+DNP3_START = b'\x05\x64'
+DNP3_LINK_CONTROL_PRM = 0x40  # Primary message
+DNP3_LINK_CONTROL_FCB = 0x20  # Frame count bit
+DNP3_LINK_FUNC_LINK_STATUS = 0x09
+
+def calculate_crc(data: bytes) -> int:
+    """Calculate DNP3 CRC-16"""
+    crc = 0
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 1:
+                crc = (crc >> 1) ^ 0xA6BC
+            else:
+                crc >>= 1
+    return crc ^ 0xFFFF
+
+def build_link_status_request(dest_addr: int, src_addr: int = 1) -> bytes:
+    """Build DNP3 link layer status request"""
+    # Data link layer header
+    length = 5  # Fixed for link status request
+    control = DNP3_LINK_CONTROL_PRM | DNP3_LINK_FUNC_LINK_STATUS
+    
+    header = struct.pack('<2sBBHH',
+        DNP3_START,
+        length,
+        control,
+        dest_addr,
+        src_addr
+    )
+    
+    # Add CRC for header block
+    crc = calculate_crc(header[2:])
+    frame = header + struct.pack('<H', crc)
+    
+    return frame
+
+def build_read_request(dest_addr: int, src_addr: int = 1) -> bytes:
+    """Build DNP3 read request for class 0 data"""
+    # Link layer
+    control = 0x44  # DIR=0, PRM=1, FCB=0, FCV=0, FUNC=4 (User Data)
+    
+    # Transport layer
+    transport = 0xC0  # FIN=1, FIR=1, SEQ=0
+    
+    # Application layer
+    app_control = 0xC0  # FIR=1, FIN=1, CON=0, UNS=0, SEQ=0
+    func_code = 0x01  # Read
+    
+    # Object header: Read class 0 (static data)
+    obj_header = bytes([
+        0x3C, 0x01,  # Object 60 (Class Data), Variation 1
+        0x06,        # Qualifier: All points
+    ])
+    
+    # Build application fragment
+    app_data = bytes([app_control, func_code]) + obj_header
+    
+    # Build transport fragment
+    transport_data = bytes([transport]) + app_data
+    
+    # Build link frame
+    length = 5 + len(transport_data)
+    
+    header = struct.pack('<2sBBHH',
+        DNP3_START,
+        length,
+        control,
+        dest_addr,
+        src_addr
+    )
+    
+    # Add CRC for header
+    header_crc = calculate_crc(header[2:])
+    
+    # Build complete frame with data CRCs
+    frame = header + struct.pack('<H', header_crc)
+    
+    # Add data blocks with CRCs (16 bytes per block)
+    data = transport_data
+    while data:
+        block = data[:16]
+        data = data[16:]
+        block_crc = calculate_crc(block)
+        frame += block + struct.pack('<H', block_crc)
+    
+    return frame
+
+def check_dnp3(ip: str, port: int = 20000, address: int = 10, timeout: float = 2.0) -> dict:
+    """Check if host responds to DNP3"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect((ip, port))
+        
+        # Send link status request
+        request = build_link_status_request(address)
+        sock.send(request)
+        
+        # Receive response
+        response = sock.recv(256)
+        sock.close()
+        
+        if len(response) >= 10 and response[0:2] == DNP3_START:
+            # Parse response
+            resp_len = response[2]
+            resp_ctrl = response[3]
+            resp_dest = struct.unpack('<H', response[4:6])[0]
+            resp_src = struct.unpack('<H', response[6:8])[0]
+            
+            return {
+                'ip': ip,
+                'port': port,
+                'address': resp_src,
+                'destination': resp_dest,
+                'control': resp_ctrl,
+                'responsive': True
+            }
+        
+        return None
+        
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return None
+
+def scan_network(network: str, port: int = 20000, start_addr: int = 1, 
+                 end_addr: int = 20, threads: int = 20) -> list:
+    """Scan network for DNP3 devices"""
+    results = []
+    
+    # Parse network
+    if '/' in network:
+        base = network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [network]
+    
+    # Create all scan combinations
+    scans = [(host, port, addr) for host in hosts for addr in range(start_addr, end_addr + 1)]
+    
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Scanning for DNP3 devices...", total=len(scans))
+        
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            futures = {
+                executor.submit(check_dnp3, ip, p, addr): (ip, addr) 
+                for ip, p, addr in scans
+            }
+            
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    results.append(result)
+                progress.update(task, advance=1)
+    
+    return results
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT DNP3 Scanner - Discover DNP3 outstations',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-dnp3-scan -n 10.0.2.0/24           # Scan network
+  vulnot-dnp3-scan -t 10.0.2.10 -p 20000    # Scan single host
+  vulnot-dnp3-scan -t 10.0.2.10 -a 1 -e 100 # Scan address range
+        """
+    )
+    parser.add_argument('-n', '--network', default='10.0.2.0/24',
+                        help='Network to scan (default: 10.0.2.0/24)')
+    parser.add_argument('-t', '--target',
+                        help='Single target IP')
+    parser.add_argument('-p', '--port', type=int, default=20000,
+                        help='DNP3 port (default: 20000)')
+    parser.add_argument('-a', '--start-addr', type=int, default=1,
+                        help='Start DNP3 address (default: 1)')
+    parser.add_argument('-e', '--end-addr', type=int, default=20,
+                        help='End DNP3 address (default: 20)')
+    parser.add_argument('--threads', type=int, default=20,
+                        help='Number of threads (default: 20)')
+    
+    args = parser.parse_args()
+    
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║       VULNOT DNP3 Device Scanner       ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    target = args.target if args.target else args.network
+    console.print(f"[yellow]Target:[/] {target}")
+    console.print(f"[yellow]Port:[/] {args.port}")
+    console.print(f"[yellow]Address Range:[/] {args.start_addr} - {args.end_addr}")
+    console.print("")
+    
+    results = scan_network(
+        args.target if args.target else args.network,
+        args.port,
+        args.start_addr,
+        args.end_addr,
+        args.threads
+    )
+    
+    if results:
+        table = Table(title="Discovered DNP3 Outstations")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("DNP3 Address", style="yellow")
+        table.add_column("Control", style="magenta")
+        
+        for r in results:
+            table.add_row(
+                r['ip'],
+                str(r['port']),
+                str(r['address']),
+                f"0x{r['control']:02X}"
+            )
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(results)} DNP3 outstation(s)[/]\n")
+    else:
+        console.print("[red]No DNP3 outstations found[/]\n")
+
+if __name__ == '__main__':
+    main()

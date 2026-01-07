@@ -1,0 +1,515 @@
+#!/usr/bin/env python3
+"""
+VULNOT Assessment Report Generator
+Generates professional OT security assessment reports
+
+Output Formats:
+- Markdown
+- HTML
+- JSON (for integration)
+"""
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime
+from typing import Dict, List, Optional
+from dataclasses import dataclass, field, asdict
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+console = Console()
+
+
+@dataclass
+class Finding:
+    """Security finding"""
+    id: str
+    title: str
+    severity: str  # critical, high, medium, low, info
+    cvss: float
+    description: str
+    affected_assets: List[str]
+    protocol: str
+    evidence: str
+    recommendation: str
+    mitre_technique: str = ""
+    compliance_mapping: List[str] = field(default_factory=list)
+
+
+@dataclass
+class AssessmentReport:
+    """Complete assessment report"""
+    title: str = "OT Security Assessment Report"
+    client: str = "Mjolnir Training"
+    assessor: str = "Mjolnir Security"
+    date: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    
+    executive_summary: str = ""
+    scope: List[str] = field(default_factory=list)
+    methodology: str = ""
+    findings: List[Finding] = field(default_factory=list)
+    
+    # Metrics
+    total_assets: int = 0
+    critical_findings: int = 0
+    high_findings: int = 0
+    medium_findings: int = 0
+    low_findings: int = 0
+    
+    # Compliance
+    iec62443_score: float = 0.0
+    nist_csf_score: float = 0.0
+    
+    def calculate_metrics(self):
+        """Calculate report metrics"""
+        self.critical_findings = sum(1 for f in self.findings if f.severity == "critical")
+        self.high_findings = sum(1 for f in self.findings if f.severity == "high")
+        self.medium_findings = sum(1 for f in self.findings if f.severity == "medium")
+        self.low_findings = sum(1 for f in self.findings if f.severity == "low")
+
+
+# Sample findings from VULNOT assessment
+SAMPLE_FINDINGS = [
+    Finding(
+        id="VULN-001",
+        title="Modbus TCP No Authentication",
+        severity="critical",
+        cvss=9.8,
+        description="Modbus TCP protocol does not implement authentication, allowing any network client to read and write PLC registers without credentials.",
+        affected_assets=["PLC-INTAKE (10.0.1.10)", "PLC-TREATMENT (10.0.1.11)", "PLC-DISTRIBUTION (10.0.1.12)"],
+        protocol="Modbus TCP",
+        evidence="Successfully read holding registers and wrote coils without authentication using vulnot-read and vulnot-write tools.",
+        recommendation="Implement network segmentation to restrict Modbus access. Deploy OT firewall with allowlisting. Consider Modbus/TCP Security extension where supported.",
+        mitre_technique="T0831 - Manipulation of Control",
+        compliance_mapping=["IEC 62443 SR 1.1", "IEC 62443 SR 1.2", "NIST CSF PR.AC-1"],
+    ),
+    Finding(
+        id="VULN-002",
+        title="DNP3 Secure Authentication Disabled",
+        severity="critical",
+        cvss=9.5,
+        description="DNP3 Secure Authentication (SA) is not enabled on RTUs, allowing unauthenticated control commands including breaker operations.",
+        affected_assets=["RTU-SUB1 (10.0.2.10)", "RTU-SUB2 (10.0.2.11)"],
+        protocol="DNP3",
+        evidence="Executed Direct Operate command to trip breaker without authentication using vulnot-dnp3 control command.",
+        recommendation="Enable DNP3 Secure Authentication Version 5 (SA5) on all RTUs and master stations. Implement bump-in-the-wire encryption where device upgrade is not feasible.",
+        mitre_technique="T0831 - Manipulation of Control",
+        compliance_mapping=["IEC 62443 SR 1.1", "IEC 62443 SR 3.1", "NERC CIP-005"],
+    ),
+    Finding(
+        id="VULN-003",
+        title="S7comm CPU Stop Without Authentication",
+        severity="critical",
+        cvss=9.1,
+        description="Siemens S7 PLCs allow CPU stop and program download commands without proper access protection levels configured.",
+        affected_assets=["S7-1500-LINE1 (10.0.3.10)", "S7-1500-LINE2 (10.0.3.11)"],
+        protocol="S7comm",
+        evidence="Successfully stopped PLC CPU using vulnot-s7 stop command. Downloaded program blocks without authentication.",
+        recommendation="Configure TIA Portal access protection levels. Enable 'Full access with password' or 'Read access only'. Implement CPU password protection.",
+        mitre_technique="T0816 - Device Restart/Shutdown",
+        compliance_mapping=["IEC 62443 SR 1.1", "IEC 62443 SR 2.1"],
+    ),
+    Finding(
+        id="VULN-004",
+        title="MQTT Broker Anonymous Access",
+        severity="high",
+        cvss=8.6,
+        description="MQTT broker accepts anonymous connections, allowing unauthorized subscribe and publish operations to all topics including control commands.",
+        affected_assets=["MQTT-BROKER (10.0.7.5)"],
+        protocol="MQTT",
+        evidence="Connected to broker without credentials. Subscribed to # wildcard topic. Published control commands to factory/control/+/cmd topics.",
+        recommendation="Enable MQTT username/password authentication. Implement TLS encryption. Configure topic-level ACLs.",
+        mitre_technique="T0869 - Standard Application Layer Protocol",
+        compliance_mapping=["IEC 62443 SR 1.1", "IEC 62443 SR 4.3"],
+    ),
+    Finding(
+        id="VULN-005",
+        title="Historian SQL Injection",
+        severity="high",
+        cvss=8.0,
+        description="OT Historian web API is vulnerable to SQL injection in tag query parameters, allowing database enumeration and data manipulation.",
+        affected_assets=["HISTORIAN (10.0.9.10)"],
+        protocol="HTTP",
+        evidence="Executed UNION-based SQL injection via /api/history endpoint. Extracted database schema and tag definitions.",
+        recommendation="Implement parameterized queries. Add input validation and sanitization. Deploy WAF with SQL injection rules.",
+        mitre_technique="T0890 - Exploitation for Credential Access",
+        compliance_mapping=["IEC 62443 SR 3.5", "NIST CSF PR.DS-5"],
+    ),
+    Finding(
+        id="VULN-006",
+        title="No Network Segmentation",
+        severity="high",
+        cvss=7.5,
+        description="OT network is flat with no segmentation between different process zones. Attacker with access to one zone can reach all OT assets.",
+        affected_assets=["All OT Networks"],
+        protocol="N/A",
+        evidence="From single attacker workstation, successfully accessed PLCs across all 9 OT network segments without restriction.",
+        recommendation="Implement Purdue Model network architecture. Deploy firewalls at zone boundaries. Create separate VLANs for each process area.",
+        mitre_technique="T0867 - Lateral Tool Transfer",
+        compliance_mapping=["IEC 62443 SR 5.1", "IEC 62443 SR 5.2", "NIST CSF PR.AC-5"],
+    ),
+    Finding(
+        id="VULN-007",
+        title="Default Gateway Credentials",
+        severity="high",
+        cvss=7.8,
+        description="Edge gateways in IIoT network use default credentials (admin/admin123), allowing complete device compromise.",
+        affected_assets=["GW-LINE1 (10.0.7.10)", "GW-LINE2 (10.0.7.11)", "GW-UTILITY (10.0.7.12)"],
+        protocol="MQTT",
+        evidence="Retrieved default credentials from MQTT config topic. Logged into gateway management interface.",
+        recommendation="Change all default credentials immediately. Implement centralized credential management. Enable account lockout policies.",
+        mitre_technique="T0859 - Valid Accounts",
+        compliance_mapping=["IEC 62443 SR 1.5", "IEC 62443 SR 1.7"],
+    ),
+    Finding(
+        id="VULN-008",
+        title="OPC UA Anonymous Access",
+        severity="high",
+        cvss=8.2,
+        description="OPC UA server allows anonymous connections without certificate validation, exposing reactor control variables.",
+        affected_assets=["OPCUA-REACTOR (10.0.4.10)"],
+        protocol="OPC UA",
+        evidence="Connected anonymously and browsed complete address space. Read and wrote reactor temperature setpoints.",
+        recommendation="Configure OPC UA security policy to require SignAndEncrypt. Implement application certificates. Disable anonymous authentication.",
+        mitre_technique="T0836 - Modify Parameter",
+        compliance_mapping=["IEC 62443 SR 1.1", "IEC 62443 SR 4.3"],
+    ),
+]
+
+
+def generate_markdown_report(report: AssessmentReport) -> str:
+    """Generate Markdown report"""
+    report.calculate_metrics()
+    
+    md = f"""# {report.title}
+
+**Client:** {report.client}  
+**Assessor:** {report.assessor}  
+**Date:** {report.date}
+
+---
+
+## Executive Summary
+
+{report.executive_summary}
+
+### Key Metrics
+
+| Metric | Value |
+|--------|-------|
+| Total Assets Assessed | {report.total_assets} |
+| Critical Findings | {report.critical_findings} |
+| High Findings | {report.high_findings} |
+| Medium Findings | {report.medium_findings} |
+| Low Findings | {report.low_findings} |
+| IEC 62443 Compliance | {report.iec62443_score}% |
+| NIST CSF Maturity | {report.nist_csf_score}% |
+
+### Risk Rating
+
+Based on the findings identified during this assessment, the overall security posture of the OT environment is rated as **CRITICAL RISK**.
+
+---
+
+## Scope
+
+The following systems were included in this assessment:
+
+"""
+    
+    for item in report.scope:
+        md += f"- {item}\n"
+    
+    md += f"""
+
+---
+
+## Methodology
+
+{report.methodology}
+
+---
+
+## Findings
+
+"""
+    
+    for finding in sorted(report.findings, key=lambda x: {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}[x.severity]):
+        severity_badge = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵", "info": "⚪"}[finding.severity]
+        
+        md += f"""### {finding.id}: {finding.title}
+
+**Severity:** {severity_badge} {finding.severity.upper()} (CVSS {finding.cvss})  
+**Protocol:** {finding.protocol}  
+**MITRE ATT&CK:** {finding.mitre_technique}
+
+#### Description
+
+{finding.description}
+
+#### Affected Assets
+
+"""
+        for asset in finding.affected_assets:
+            md += f"- {asset}\n"
+        
+        md += f"""
+
+#### Evidence
+
+{finding.evidence}
+
+#### Recommendation
+
+{finding.recommendation}
+
+#### Compliance Mapping
+
+"""
+        for mapping in finding.compliance_mapping:
+            md += f"- {mapping}\n"
+        
+        md += "\n---\n\n"
+    
+    md += """## Remediation Roadmap
+
+| Priority | Finding | Remediation | Timeline |
+|----------|---------|-------------|----------|
+"""
+    
+    priority = 1
+    for finding in sorted(report.findings, key=lambda x: x.cvss, reverse=True)[:10]:
+        timeline = "30 days" if finding.severity == "critical" else "60 days" if finding.severity == "high" else "90 days"
+        md += f"| P{priority} | {finding.title} | {finding.recommendation[:50]}... | {timeline} |\n"
+        priority += 1
+    
+    md += """
+
+---
+
+## Appendix A: MITRE ATT&CK for ICS Mapping
+
+| Technique ID | Technique Name | Findings |
+|--------------|----------------|----------|
+"""
+    
+    techniques = {}
+    for finding in report.findings:
+        if finding.mitre_technique:
+            tid = finding.mitre_technique.split(" - ")[0]
+            if tid not in techniques:
+                techniques[tid] = {"name": finding.mitre_technique, "findings": []}
+            techniques[tid]["findings"].append(finding.id)
+    
+    for tid, data in techniques.items():
+        md += f"| {tid} | {data['name']} | {', '.join(data['findings'])} |\n"
+    
+    md += f"""
+
+---
+
+## Appendix B: Tool Reference
+
+The following tools were used during this assessment:
+
+- `vulnot-scan` - Network discovery
+- `vulnot-read` / `vulnot-write` - Modbus exploitation
+- `vulnot-dnp3` - DNP3 protocol testing
+- `vulnot-s7` - Siemens S7 testing
+- `vulnot-opcua` - OPC UA testing
+- `vulnot-mqtt` - MQTT testing
+- `vulnot-historian` - Historian attacks
+- `vulnot-forensics` - Evidence collection
+
+---
+
+*Report generated by VULNOT Assessment Report Generator*  
+*{datetime.now().isoformat()}*
+"""
+    
+    return md
+
+
+def generate_html_report(report: AssessmentReport) -> str:
+    """Generate HTML report"""
+    md_content = generate_markdown_report(report)
+    
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{report.title}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }}
+        h1, h2, h3 {{ color: #00d4ff; }}
+        table {{ 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 20px 0;
+        }}
+        th, td {{ 
+            border: 1px solid #333; 
+            padding: 10px; 
+            text-align: left; 
+        }}
+        th {{ background: #16213e; }}
+        code {{ 
+            background: #16213e; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+        }}
+        hr {{ border: 1px solid #333; margin: 30px 0; }}
+        .critical {{ color: #ff4444; }}
+        .high {{ color: #ff8c00; }}
+        .medium {{ color: #ffd700; }}
+        .low {{ color: #4da6ff; }}
+    </style>
+</head>
+<body>
+    <div id="content"></div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const markdown = {json.dumps(md_content)};
+        document.getElementById('content').innerHTML = marked.parse(markdown);
+    </script>
+</body>
+</html>
+"""
+    return html
+
+
+def cmd_generate(args):
+    """Generate assessment report"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║    VULNOT Assessment Report Generator  ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    report = AssessmentReport(
+        title=args.title or "OT Security Assessment Report",
+        client=args.client or "Mjolnir Training",
+        assessor=args.assessor or "Mjolnir Security",
+        executive_summary="""This report presents the findings from an OT security assessment conducted against the client's industrial control systems environment. The assessment identified **multiple critical vulnerabilities** that could allow an attacker to gain unauthorized access to process control systems, manipulate industrial processes, and potentially cause physical damage or safety incidents.
+
+**Key Findings:**
+- All assessed OT protocols lack authentication
+- Network segmentation is insufficient
+- Default credentials in use on edge devices
+- Historian vulnerable to SQL injection
+
+**Immediate action is required** to address the critical findings before they can be exploited by malicious actors.""",
+        scope=[
+            "Water Treatment Plant (Modbus TCP) - 10.0.1.0/24",
+            "Power Substation (DNP3) - 10.0.2.0/24",
+            "Manufacturing Facility (S7comm) - 10.0.3.0/24",
+            "Chemical Reactor (OPC UA) - 10.0.4.0/24",
+            "Building Automation (BACnet) - 10.0.5.0/24",
+            "Packaging Line (EtherNet/IP) - 10.0.6.0/24",
+            "IIoT Sensor Network (MQTT) - 10.0.7.0/24",
+            "CNC Motion Control (PROFINET) - 10.0.8.0/24",
+            "OT Historian - 10.0.9.0/24",
+        ],
+        methodology="""The assessment was conducted using the following methodology:
+
+1. **Reconnaissance** - Network discovery and asset identification using protocol-specific scanning tools
+2. **Vulnerability Assessment** - Testing for authentication bypass, default credentials, and protocol weaknesses
+3. **Exploitation** - Controlled exploitation to demonstrate impact (with authorization)
+4. **Forensic Analysis** - Evidence collection and timeline reconstruction
+5. **Compliance Mapping** - Mapping findings to IEC 62443 and NIST CSF frameworks
+
+All testing was performed from isolated attacker workstations within the OT network segments.""",
+        findings=SAMPLE_FINDINGS,
+        total_assets=45,
+        iec62443_score=42,
+        nist_csf_score=38,
+    )
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Collecting findings...", total=None)
+        
+        progress.update(task, description="Calculating metrics...")
+        report.calculate_metrics()
+        
+        progress.update(task, description=f"Generating {args.format.upper()} report...")
+        
+        if args.format == "markdown":
+            content = generate_markdown_report(report)
+            ext = "md"
+        elif args.format == "html":
+            content = generate_html_report(report)
+            ext = "html"
+        else:
+            content = json.dumps(asdict(report), indent=2, default=str)
+            ext = "json"
+        
+        output_file = args.output or f"vulnot_assessment_report.{ext}"
+        
+        progress.update(task, description="Writing report...")
+        with open(output_file, 'w') as f:
+            f.write(content)
+    
+    console.print(f"\n[green]✓ Report generated: {output_file}[/]")
+    console.print(f"[green]✓ {len(report.findings)} findings documented[/]")
+    console.print(f"[green]✓ Risk Rating: CRITICAL[/]\n")
+    
+    # Summary table
+    table = Table(title="Finding Summary")
+    table.add_column("Severity", style="cyan")
+    table.add_column("Count", style="white")
+    
+    table.add_row("🔴 Critical", str(report.critical_findings))
+    table.add_row("🟠 High", str(report.high_findings))
+    table.add_row("🟡 Medium", str(report.medium_findings))
+    table.add_row("🔵 Low", str(report.low_findings))
+    
+    console.print(table)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT Assessment Report Generator',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-report generate -f markdown -o report.md
+  vulnot-report generate -f html -o report.html --client "ACME Corp"
+  vulnot-report generate -f json -o findings.json
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Generate
+    gen = subparsers.add_parser('generate', help='Generate report')
+    gen.add_argument('-f', '--format', default='markdown', choices=['markdown', 'html', 'json'])
+    gen.add_argument('-o', '--output', help='Output file')
+    gen.add_argument('--title', help='Report title')
+    gen.add_argument('--client', help='Client name')
+    gen.add_argument('--assessor', help='Assessor name')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'generate':
+        cmd_generate(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

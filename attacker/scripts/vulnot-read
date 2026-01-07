@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""
+VULNOT Modbus Reader
+Read registers and coils from Modbus devices
+"""
+
+import argparse
+import sys
+from pymodbus.client import ModbusTcpClient
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# Register mappings for known PLCs
+PLC_MAPPINGS = {
+    1: {  # PLC-INTAKE
+        'name': 'PLC-INTAKE',
+        'description': 'Raw Water Intake & Pumping',
+        'holding_registers': {
+            0: ('Intake Level', '%', 100),
+            1: ('Raw Water Flow', 'GPM', 1),
+            2: ('Pump P101 Speed', '%', 100),
+            3: ('Pump P102 Speed', '%', 100),
+            4: ('Intake Pressure', 'PSI', 100),
+            5: ('Raw Turbidity', 'NTU', 100),
+            6: ('Raw pH', 'pH', 100),
+            7: ('Temperature', '°C', 100),
+        },
+        'coils': {
+            0: 'Pump P101 Run',
+            1: 'Pump P102 Run',
+            2: 'Intake Valve Open',
+            3: 'Emergency Stop',
+        }
+    },
+    2: {  # PLC-TREATMENT
+        'name': 'PLC-TREATMENT',
+        'description': 'Water Treatment Process',
+        'holding_registers': {
+            0: ('Flash Mix Level', '%', 100),
+            1: ('Floc Basin Level', '%', 100),
+            2: ('Sed Basin Level', '%', 100),
+            3: ('Chlorine Contact Level', '%', 100),
+            4: ('Chlorine Flow', 'GPH', 100),
+            5: ('Alum Flow', 'GPH', 100),
+            6: ('Treated pH', 'pH', 100),
+            7: ('Chlorine Residual', 'mg/L', 100),
+            8: ('Filtered Turbidity', 'NTU', 1000),
+            9: ('Chemical Valve Position', '%', 100),
+        },
+        'coils': {
+            0: 'Transfer Pump P201 Run',
+            1: 'Transfer Pump P202 Run',
+            2: 'Chlorine Pump Run',
+            3: 'Alum Pump Run',
+            4: 'Mixer M101 Run',
+            5: 'Emergency Stop',
+        }
+    },
+    3: {  # PLC-DISTRIBUTION
+        'name': 'PLC-DISTRIBUTION',
+        'description': 'Clearwell & Distribution',
+        'holding_registers': {
+            0: ('Clearwell Level', '%', 100),
+            1: ('Distribution Flow', 'GPM', 1),
+            2: ('Distribution Pressure', 'PSI', 100),
+            3: ('Pump P301 Speed', '%', 100),
+            4: ('Pump P302 Speed', '%', 100),
+            5: ('Treated Flow', 'GPM', 1),
+            6: ('Filter DP', 'PSI', 100),
+            7: ('Distribution Valve Position', '%', 100),
+        },
+        'coils': {
+            0: 'Dist Pump P301 Run',
+            1: 'Dist Pump P302 Run',
+            2: 'Distribution Valve Open',
+            3: 'Backwash Valve Open',
+            4: 'Emergency Stop',
+        }
+    }
+}
+
+def read_holding_registers(client, unit_id, start=0, count=10):
+    """Read holding registers from device"""
+    try:
+        result = client.read_holding_registers(start, count, slave=unit_id)
+        if result.isError():
+            return None
+        return result.registers
+    except Exception as e:
+        console.print(f"[red]Error reading registers: {e}[/]")
+        return None
+
+def read_coils(client, unit_id, start=0, count=8):
+    """Read coils from device"""
+    try:
+        result = client.read_coils(start, count, slave=unit_id)
+        if result.isError():
+            return None
+        return result.bits[:count]
+    except Exception as e:
+        console.print(f"[red]Error reading coils: {e}[/]")
+        return None
+
+def main():
+    parser = argparse.ArgumentParser(description='VULNOT Modbus Reader')
+    parser.add_argument('-t', '--target', required=True,
+                        help='Target IP address')
+    parser.add_argument('-p', '--port', type=int, default=502,
+                        help='Modbus port (default: 502)')
+    parser.add_argument('-u', '--unit', type=int, default=1,
+                        help='Unit ID (default: 1)')
+    parser.add_argument('-r', '--register', type=int,
+                        help='Specific register to read')
+    parser.add_argument('-c', '--coil', type=int,
+                        help='Specific coil to read')
+    parser.add_argument('--raw', action='store_true',
+                        help='Show raw values without interpretation')
+    
+    args = parser.parse_args()
+    
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT Modbus Register Reader     ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    # Connect to device
+    console.print(f"[yellow]Connecting to {args.target}:{args.port} (Unit {args.unit})...[/]")
+    
+    client = ModbusTcpClient(args.target, port=args.port)
+    if not client.connect():
+        console.print("[red]Failed to connect to target[/]")
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    # Get PLC mapping if available
+    mapping = PLC_MAPPINGS.get(args.unit, None)
+    
+    if mapping:
+        console.print(Panel(
+            f"[bold]{mapping['name']}[/]\n{mapping['description']}",
+            title="Device Info",
+            border_style="cyan"
+        ))
+    
+    # Read specific register if requested
+    if args.register is not None:
+        registers = read_holding_registers(client, args.unit, args.register, 1)
+        if registers:
+            value = registers[0]
+            if mapping and args.register in mapping['holding_registers'] and not args.raw:
+                name, unit, scale = mapping['holding_registers'][args.register]
+                scaled_value = value / scale
+                console.print(f"\n[green]HR[{args.register}][/] {name}: [bold]{scaled_value:.2f} {unit}[/] (raw: {value})")
+            else:
+                console.print(f"\n[green]HR[{args.register}][/]: [bold]{value}[/]")
+    
+    # Read specific coil if requested
+    elif args.coil is not None:
+        coils = read_coils(client, args.unit, args.coil, 1)
+        if coils:
+            value = coils[0]
+            if mapping and args.coil in mapping['coils'] and not args.raw:
+                name = mapping['coils'][args.coil]
+                status = "[green]ON[/]" if value else "[red]OFF[/]"
+                console.print(f"\n[green]COIL[{args.coil}][/] {name}: {status}")
+            else:
+                console.print(f"\n[green]COIL[{args.coil}][/]: {value}")
+    
+    # Read all registers
+    else:
+        # Read holding registers
+        registers = read_holding_registers(client, args.unit, 0, 10)
+        
+        if registers:
+            table = Table(title="Holding Registers")
+            table.add_column("Address", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Value", style="green")
+            table.add_column("Raw", style="dim")
+            
+            for i, value in enumerate(registers):
+                if mapping and i in mapping['holding_registers'] and not args.raw:
+                    name, unit, scale = mapping['holding_registers'][i]
+                    scaled = value / scale
+                    table.add_row(f"HR[{i}]", name, f"{scaled:.2f} {unit}", str(value))
+                else:
+                    table.add_row(f"HR[{i}]", "-", str(value), str(value))
+            
+            console.print(table)
+        
+        # Read coils
+        coils = read_coils(client, args.unit, 0, 8)
+        
+        if coils:
+            table = Table(title="Coils")
+            table.add_column("Address", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Status", style="green")
+            
+            for i, value in enumerate(coils):
+                if mapping and i in mapping['coils'] and not args.raw:
+                    name = mapping['coils'][i]
+                    status = "[green]ON[/]" if value else "[red]OFF[/]"
+                    table.add_row(f"COIL[{i}]", name, status)
+                else:
+                    table.add_row(f"COIL[{i}]", "-", str(value))
+            
+            console.print(table)
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+if __name__ == '__main__':
+    main()

