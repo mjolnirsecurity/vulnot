@@ -451,5 +451,5 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 <p align="center">
   <strong>Built for OT Security Professionals</strong><br>
-  <em>© 2025 Mjolnir Security. All rights reserved.</em>
+  <em>© 2026 Mjolnir Security. All rights reserved.</em>
 </p>
