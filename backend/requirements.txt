@@ -8,3 +8,4 @@ pydantic-settings==2.1.0
 pymodbus==3.6.3
 python-multipart==0.0.6
 httpx==0.26.0
+slowapi==0.1.9

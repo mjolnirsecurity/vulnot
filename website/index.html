@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>VULNOT - OT/ICS Security Training Platform | Mjolnir Security</title>
+    <meta name="description" content="VULNOT: Industrial control system security training with 9 OT scenarios, 8 protocols, real attack simulation, and SIEM integration by Mjolnir Security.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero">
+    <div class="container">
+        <h1>V<em>U</em>LNOT</h1>
+        <p class="tagline">Vulnerable OT/ICS Security Training Platform</p>
+        <p class="sub">Built by Mjolnir Security &mdash; Attack, Defend, and Forensicate Industrial Control Systems</p>
+        <div class="stats">
+            <div class="stat"><div class="num">9</div><div class="lbl">OT Scenarios</div></div>
+            <div class="stat"><div class="num">8</div><div class="lbl">Protocols</div></div>
+            <div class="stat"><div class="num">17+</div><div class="lbl">Attack Tools</div></div>
+            <div class="stat"><div class="num">5</div><div class="lbl">SIEM Integrations</div></div>
+        </div>
+        <a href="https://github.com/mjolnirsecurity/vulnot" class="cta-btn">Get Started</a>
+        <a href="dashboards.html" class="cta-btn-outline">Explore Dashboards</a>
+    </div>
+</section>
+
+<!-- ============================================================
+     ABOUT MJOLNIR SECURITY
+     ============================================================ -->
+<section id="about">
+    <div class="container">
+        <div class="about-grid">
+            <div class="about-text">
+                <h3>About <span class="accent-cyan">Mjolnir Security</span></h3>
+                <p>Mjolnir Security is a 100% Canadian-owned, pure-play cybersecurity firm with over 580 DFIR engagements completed. We hold SOC 2 Type 2 certification and specialize in operational technology and industrial control system security, helping critical infrastructure operators defend against nation-state threats and sophisticated adversaries.</p>
+                <p>VULNOT is our flagship training platform &mdash; born from lessons learned across hundreds of real-world engagements. A fully containerized OT lab environment providing hands-on experience with real industrial protocols, attack techniques, and defensive tooling, published to give back to the security community.</p>
+                <div class="about-features">
+                    <div class="about-feat"><strong>580+ DFIR Engagements</strong><span>Real-world incident response experience across critical infrastructure</span></div>
+                    <div class="about-feat"><strong>100% Canadian-Owned</strong><span>Pure-play cybersecurity firm with SOC 2 Type 2 certification</span></div>
+                    <div class="about-feat"><strong>Red &amp; Blue Team</strong><span>OT attack simulation, IDS, SIEM, compliance, and incident response</span></div>
+                    <div class="about-feat"><strong>Real-World Lessons</strong><span>Publishing tools from real engagement experience for community benefit</span></div>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <img src="img/ms_sec-logo.png" alt="Mjolnir Security" style="max-width:280px; opacity:0.85;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     PLATFORM OVERVIEW (9 Protocols)
+     ============================================================ -->
+<section id="platform">
+    <div class="container">
+        <div class="section-header">
+            <h2>Platform <span class="accent-cyan">Overview</span></h2>
+            <p>Nine fully simulated industrial scenarios spanning the most common OT/ICS protocols.</p>
+        </div>
+        <div class="protocol-grid">
+            <div class="proto-card">
+                <div class="icon">&#9881;</div>
+                <h4>Modbus TCP</h4>
+                <div class="port">:502</div>
+                <p>Water treatment plant with PLC register manipulation and SCADA control</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#9889;</div>
+                <h4>DNP3</h4>
+                <div class="port">:20000</div>
+                <p>Power grid substation with RTU commands, breaker control, and load management</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#9874;</div>
+                <h4>S7comm</h4>
+                <div class="port">:102</div>
+                <p>Manufacturing line with Siemens PLC data blocks and CPU control</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#9879;</div>
+                <h4>OPC UA</h4>
+                <div class="port">:4840</div>
+                <p>Chemical reactor with real-time node browsing and method calls</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#127970;</div>
+                <h4>BACnet</h4>
+                <div class="port">:47808</div>
+                <p>Building automation with HVAC zones, AHU control, and energy monitoring</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#128230;</div>
+                <h4>EtherNet/IP</h4>
+                <div class="port">:44818</div>
+                <p>Packaging line with CIP connections and high-speed conveyor control</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#128225;</div>
+                <h4>MQTT</h4>
+                <div class="port">:1883</div>
+                <p>IIoT smart factory with sensor telemetry, gateways, and topic hijacking</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#128736;</div>
+                <h4>PROFINET</h4>
+                <div class="port">:34964</div>
+                <p>CNC motion control with 5-axis positioning, spindle RPM, and tool magazine</p>
+            </div>
+            <div class="proto-card">
+                <div class="icon">&#128202;</div>
+                <h4>Historian</h4>
+                <div class="port">:8553</div>
+                <p>OT data historian with time-series analytics, tag browsing, and SQL queries</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     CONTACT / CTA
+     ============================================================ -->
+<section id="contact">
+    <div class="container contact-cta">
+        <h2>Ready to <span class="accent-cyan">Train</span>?</h2>
+        <p style="color:#888;max-width:500px;margin:0 auto;">Deploy VULNOT in minutes with Docker Compose. Explore all 9 scenarios, run red team exercises, and build your SOC playbooks.</p>
+        <div style="margin-top:32px;">
+            <a href="https://github.com/mjolnirsecurity/vulnot" class="cta-btn">View on GitHub</a>
+            <a href="contact.html" class="cta-btn-outline">Contact Us</a>
+        </div>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+</body>
+</html>

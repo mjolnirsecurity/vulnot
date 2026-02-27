@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>Defensive Arsenal - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="Blue team defensive tools for OT/ICS security: intrusion detection, SIEM correlation, IEC 62443 compliance, IR playbooks, threat intelligence, and network monitoring.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>Defensive <span class="accent-green">Arsenal</span></h1>
+        <p class="tagline">Blue team tools for monitoring, detection, compliance, and incident response.</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+
+        <!-- 1. OT Intrusion Detection System -->
+        <div class="tool-detail defense">
+            <h3>OT Intrusion Detection System</h3>
+            <div class="tool-proto">ALL PROTOCOLS &mdash; Modbus &bull; DNP3 &bull; S7comm &bull; OPC UA &bull; BACnet &bull; EtherNet/IP &bull; MQTT &bull; PROFINET</div>
+            <p>Protocol-aware deep packet inspection engine covering all 8 industrial protocols. Parses OT-specific payloads at the application layer to detect unauthorized commands, anomalous values, and known attack signatures in real time.</p>
+
+            <h4>Capabilities</h4>
+            <ul>
+                <li>20+ pre-built detection rules across all supported protocols</li>
+                <li>Real-time alerting with configurable severity levels</li>
+                <li>Protocol anomaly detection for malformed or unexpected packets</li>
+                <li>Signature-based and behavioral detection modes</li>
+                <li>Integration with SIEM platforms (Splunk, Elastic, QRadar, Sentinel)</li>
+            </ul>
+
+            <h4>Example Detection Rules</h4>
+            <pre>ALERT  modbus_write_coil       "Modbus function code 0x05 (Force Single Coil) detected"
+ALERT  dnp3_cold_restart       "DNP3 cold restart command issued to outstation"
+ALERT  s7comm_cpu_stop         "S7comm CPU STOP command sent to PLC"
+ALERT  opcua_anon_auth         "OPC UA anonymous authentication attempt on secure endpoint"
+ALERT  bacnet_write_property   "BACnet WriteProperty to critical HVAC setpoint"
+ALERT  enip_unconnected_send   "EtherNet/IP unconnected send to unknown CIP class"
+ALERT  mqtt_topic_wildcard     "MQTT subscription with wildcard '#' on control topic"
+ALERT  profinet_dcp_set        "PROFINET DCP Set request &mdash; device rename attempt"</pre>
+        </div>
+
+        <!-- 2. SIEM Correlation Rules -->
+        <div class="tool-detail defense">
+            <h3>SIEM Correlation Rules</h3>
+            <div class="tool-proto">CROSS-PROTOCOL &mdash; Sigma Format &bull; Splunk &bull; Elastic &bull; QRadar &bull; Sentinel</div>
+            <p>20 pre-built correlation rules designed for multi-protocol OT attack detection. Rules are written in Sigma format for portability and can be automatically converted for deployment on major SIEM platforms.</p>
+
+            <h4>Capabilities</h4>
+            <ul>
+                <li>Cross-protocol correlation to detect multi-stage attacks</li>
+                <li>Multi-stage attack detection with kill-chain mapping</li>
+                <li>Sigma rule format for SIEM-agnostic deployment</li>
+                <li>Threshold-based alerting with tunable sensitivity</li>
+                <li>Automatic enrichment with asset context and protocol metadata</li>
+            </ul>
+
+            <h4>Example Correlation Rules</h4>
+            <pre>RULE  recon_sweep             "Reconnaissance: 3+ protocol scans within 5 minutes"
+RULE  plc_change_after_read   "PLC value change detected after unauthorized register read"
+RULE  ot_brute_force          "Brute force attempt on OT service credentials (5+ failures)"
+RULE  lateral_it_to_ot        "Lateral movement detected from IT zone to OT network segment"
+RULE  multi_protocol_enum     "Multi-protocol enumeration from single source IP"
+RULE  after_hours_plc_write   "PLC write command issued outside maintenance window"</pre>
+        </div>
+
+        <!-- 3. IEC 62443 Compliance -->
+        <div class="tool-detail defense">
+            <h3>IEC 62443 Compliance</h3>
+            <div class="tool-proto">COMPLIANCE &mdash; Zone/Conduit Modeling &bull; Security Level Assessment &bull; Gap Analysis</div>
+            <p>Comprehensive IEC 62443 compliance framework with zone and conduit network modeling and security level assessment. Map your OT network architecture, evaluate security levels, identify gaps, and track remediation progress.</p>
+
+            <h4>Capabilities</h4>
+            <ul>
+                <li>Zone/conduit network modeling with visual topology mapping</li>
+                <li>Security Level (SL) 1&ndash;4 assessment across all foundational requirements</li>
+                <li>Gap analysis reports with prioritized remediation recommendations</li>
+                <li>Remediation tracking dashboard with progress metrics</li>
+                <li>Exportable compliance reports for auditors and stakeholders</li>
+            </ul>
+
+            <h4>Security Level Coverage</h4>
+            <ul>
+                <li><strong>SL-T (Target):</strong> Define the desired security level for each zone based on risk assessment and threat modeling</li>
+                <li><strong>SL-C (Capability):</strong> Evaluate the inherent security capability of deployed devices, systems, and network components</li>
+                <li><strong>SL-A (Achieved):</strong> Measure the actual security level achieved after configuration, policies, and compensating controls are applied</li>
+            </ul>
+        </div>
+
+        <!-- 4. IR Playbooks -->
+        <div class="tool-detail defense">
+            <h3>IR Playbooks</h3>
+            <div class="tool-proto">INCIDENT RESPONSE &mdash; OT-Specific &bull; NIST 800-82 Aligned &bull; 4 Core Playbooks</div>
+            <p>OT-specific incident response playbooks designed for industrial environments where safety and process continuity are paramount. Each playbook follows a structured workflow from detection through recovery, with OT-safe containment procedures.</p>
+
+            <h4>Playbook 1: Unauthorized PLC Access</h4>
+            <ul>
+                <li><strong>Detect:</strong> IDS alert on unauthorized PLC connection or credential abuse</li>
+                <li><strong>Isolate:</strong> Network-level containment without disrupting running process</li>
+                <li><strong>Preserve Evidence:</strong> Capture network traffic, PLC logs, and memory dumps</li>
+                <li><strong>Verify Logic Integrity:</strong> Compare running PLC logic against known-good baseline</li>
+                <li><strong>Restore:</strong> Reload verified logic, rotate credentials, update firewall rules</li>
+            </ul>
+
+            <h4>Playbook 2: Process Anomaly</h4>
+            <ul>
+                <li><strong>Alert Triage:</strong> Correlate IDS/SIEM alerts with process historian data</li>
+                <li><strong>Process Verification:</strong> Validate physical process values against expected ranges</li>
+                <li><strong>Root Cause Analysis:</strong> Determine if anomaly is cyber, mechanical, or operator error</li>
+                <li><strong>Containment:</strong> Apply process-safe containment to affected zone</li>
+                <li><strong>Recovery:</strong> Restore normal operations with enhanced monitoring</li>
+            </ul>
+
+            <h4>Playbook 3: Ransomware in OT</h4>
+            <ul>
+                <li><strong>Network Segmentation:</strong> Immediately enforce IT/OT boundary and isolate affected segments</li>
+                <li><strong>OT Impact Assessment:</strong> Determine which PLCs, HMIs, and historians are affected</li>
+                <li><strong>Safe Shutdown:</strong> Execute controlled process shutdown if integrity is compromised</li>
+                <li><strong>Air-Gap Recovery:</strong> Restore from offline backups with verified clean media</li>
+            </ul>
+
+            <h4>Playbook 4: Supply Chain Compromise</h4>
+            <ul>
+                <li><strong>Firmware Verification:</strong> Hash-check all firmware and software against vendor-signed originals</li>
+                <li><strong>Network Isolation:</strong> Quarantine devices with suspected compromised firmware</li>
+                <li><strong>Behavioral Analysis:</strong> Monitor quarantined devices for C2 callbacks or anomalous traffic</li>
+                <li><strong>Vendor Notification:</strong> Coordinate disclosure and remediation with equipment vendor</li>
+            </ul>
+        </div>
+
+        <!-- 5. Threat Intelligence -->
+        <div class="tool-detail defense">
+            <h3>Threat Intelligence</h3>
+            <div class="tool-proto">MITRE ATT&amp;CK for ICS &mdash; STIX/TAXII &bull; IOC Management &bull; Threat Actor Tracking</div>
+            <p>Integrated threat intelligence platform with full MITRE ATT&amp;CK for ICS matrix coverage. Correlate observed activity with known threat actor TTPs, manage indicators of compromise, and consume threat feeds in standard formats.</p>
+
+            <h4>Capabilities</h4>
+            <ul>
+                <li>Full MITRE ATT&amp;CK for ICS matrix coverage with technique-level mapping</li>
+                <li>STIX/TAXII feed integration for automated intelligence consumption</li>
+                <li>IOC management dashboard with lifecycle tracking and expiration</li>
+                <li>Threat actor tracking: XENOTIME, SANDWORM, ELECTRUM, KAMACITE, ERYTHRITE, and more</li>
+                <li>TTP correlation with IDS alerts for attribution confidence scoring</li>
+            </ul>
+
+            <h4>ATT&amp;CK for ICS Tactics Covered</h4>
+            <pre>Initial Access          Execution              Persistence
+Evasion                 Discovery              Lateral Movement
+Collection              Command &amp; Control      Inhibit Response Function
+Impair Process Control  Impact</pre>
+        </div>
+
+        <!-- 6. Network Baseline Monitor -->
+        <div class="tool-detail defense">
+            <h3>Network Baseline Monitor</h3>
+            <div class="tool-proto">PASSIVE MONITORING &mdash; Asset Inventory &bull; Traffic Profiling &bull; Anomaly Detection</div>
+            <p>Passive OT network monitoring tool that builds a comprehensive baseline of normal network behavior. Automatically discovers assets, profiles traffic patterns per protocol, and alerts on any deviation from the established baseline.</p>
+
+            <h4>Capabilities</h4>
+            <ul>
+                <li>Automatic asset inventory with OS fingerprinting and protocol identification</li>
+                <li>Traffic profiling per protocol with time-of-day and day-of-week patterns</li>
+                <li>Anomaly detection against learned baselines using statistical models</li>
+                <li>New device and new connection alerting for unauthorized additions</li>
+                <li>Zero network impact &mdash; fully passive tap or SPAN-based deployment</li>
+            </ul>
+
+            <h4>Baseline Metrics Tracked</h4>
+            <pre>Device Count            47 assets across 9 subnets
+Protocol Distribution   Modbus 34% | DNP3 18% | S7comm 15% | OPC UA 12% | Other 21%
+Traffic Volume          Avg 2.4 Gbps | Peak 3.1 Gbps | Baseline window: 30 days
+Connection Patterns     142 unique src/dst pairs | 8 protocols | 23 active services</pre>
+        </div>
+
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+</body>
+</html>

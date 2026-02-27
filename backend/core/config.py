@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     MODBUS_PORT: int = 502
     
     # Application
-    DEBUG: bool = True
+    DEBUG: bool = False
     
     class Config:
         env_file = ".env"

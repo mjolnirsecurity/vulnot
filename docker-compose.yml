@@ -36,13 +36,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-vulnot-redis-pass}@redis:6379
       - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN:-vulnot-super-secret-token}
       - INFLUXDB_ORG=vulnot
       - INFLUXDB_BUCKET=process_data
       - MODBUS_HOST=modbus-simulator
       - MODBUS_PORT=502
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000,http://localhost:8080}
+      - DEBUG=${DEBUG:-false}
     volumes:
       - ./backend:/app
     depends_on:
@@ -65,7 +67,7 @@ services:
       - "502:502"      # Modbus TCP
       - "5020:5020"    # Secondary Modbus port
     environment:
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-vulnot-redis-pass}@redis:6379
       - MODBUS_PORT=502
       - UNIT_ID=1
     volumes:
@@ -86,9 +88,9 @@ services:
       dockerfile: Dockerfile.process
     container_name: vulnot-process
     environment:
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-vulnot-redis-pass}@redis:6379
       - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN:-vulnot-super-secret-token}
       - INFLUXDB_ORG=vulnot
       - INFLUXDB_BUCKET=process_data
       - SIMULATION_SPEED=1.0
@@ -115,7 +117,7 @@ services:
     networks:
       - vulnot-network
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-vulnot-redis-pass}
 
   # ===========================================
   # InfluxDB - Time-series historian
@@ -128,10 +130,10 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnotpassword
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD:-vulnotpassword}
       - DOCKER_INFLUXDB_INIT_ORG=vulnot
       - DOCKER_INFLUXDB_INIT_BUCKET=process_data
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=vulnot-super-secret-token
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_ADMIN_TOKEN:-vulnot-super-secret-token}
     volumes:
       - influxdb-data:/var/lib/influxdb2
     networks:
@@ -148,7 +150,7 @@ services:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-vulnot}
       - GF_INSTALL_PLUGINS=grafana-clock-panel
     volumes:
       - grafana-data:/var/lib/grafana

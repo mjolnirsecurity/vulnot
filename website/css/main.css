@@ -1,0 +1,338 @@
+/* ================================================================
+   RESET & BASE
+   ================================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+    color: #d0d0d0;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+a { color: #00d4ff; text-decoration: none; transition: color 0.2s; }
+a:hover { color: #00ff88; }
+code { font-family: 'IBM Plex Mono', monospace; background: rgba(0,212,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* ================================================================
+   NAV
+   ================================================================ */
+nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(15, 15, 30, 0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+}
+nav .container {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+}
+nav .logo { display: flex; align-items: center; gap: 12px; }
+nav .logo img { height: 36px; }
+nav .logo span { font-weight: 500; font-size: 18px; color: #00d4ff; letter-spacing: 2px; }
+nav .links { display: flex; gap: 24px; }
+nav .links a { color: #aaa; font-size: 14px; font-weight: 400; transition: color 0.2s; }
+nav .links a:hover, nav .links a.active { color: #00d4ff; }
+.hamburger { display: none; background: none; border: none; color: #00d4ff; font-size: 24px; cursor: pointer; }
+
+/* ================================================================
+   HERO
+   ================================================================ */
+.hero {
+    padding: 160px 0 100px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(0,212,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero h1 {
+    font-size: clamp(48px, 8vw, 96px); font-weight: 200; color: #fff;
+    letter-spacing: 12px; margin-bottom: 16px;
+}
+.hero h1 em { font-style: normal; color: #00d4ff; }
+.hero .tagline { font-size: 20px; color: #888; margin-bottom: 12px; font-weight: 300; }
+.hero .sub { font-size: 15px; color: #666; margin-bottom: 40px; }
+.hero .stats { display: flex; justify-content: center; gap: 48px; margin-bottom: 48px; flex-wrap: wrap; }
+.hero .stat { text-align: center; }
+.hero .stat .num { font-size: 36px; font-weight: 500; color: #00d4ff; }
+.hero .stat .lbl { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+.cta-btn {
+    display: inline-block; padding: 14px 36px;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: #000; font-weight: 500; font-size: 15px;
+    border-radius: 6px; transition: transform 0.2s, box-shadow 0.2s;
+}
+.cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,212,255,0.3); color: #000; }
+.cta-btn-outline {
+    display: inline-block; padding: 14px 36px; margin-left: 16px;
+    border: 1px solid #00d4ff; color: #00d4ff;
+    font-weight: 500; font-size: 15px; border-radius: 6px;
+    transition: background 0.2s;
+}
+.cta-btn-outline:hover { background: rgba(0,212,255,0.1); color: #00d4ff; }
+
+/* ================================================================
+   SECTIONS
+   ================================================================ */
+section { padding: 80px 0; }
+section:nth-child(even) { background: rgba(0,0,0,0.15); }
+.section-header { text-align: center; margin-bottom: 56px; }
+.section-header h2 {
+    font-size: 36px; font-weight: 200; color: #fff; margin-bottom: 12px;
+}
+.section-header p { color: #888; max-width: 640px; margin: 0 auto; }
+.accent-cyan { color: #00d4ff; }
+.accent-green { color: #00ff88; }
+.accent-orange { color: #ff6b35; }
+.accent-red { color: #e74c3c; }
+
+/* ================================================================
+   ABOUT
+   ================================================================ */
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.about-text h3 { font-size: 24px; font-weight: 400; color: #fff; margin-bottom: 16px; }
+.about-text p { margin-bottom: 16px; }
+.about-features { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+.about-feat { padding: 16px; background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.1); border-radius: 8px; }
+.about-feat strong { color: #00d4ff; display: block; margin-bottom: 4px; font-weight: 500; }
+.about-feat span { font-size: 13px; color: #888; }
+
+/* ================================================================
+   PROTOCOL CARDS
+   ================================================================ */
+.protocol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.proto-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 24px; text-align: center;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.proto-card:hover { border-color: #00d4ff; transform: translateY(-4px); }
+.proto-card .icon { font-size: 32px; margin-bottom: 12px; }
+.proto-card h4 { font-size: 16px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.proto-card .port { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #00d4ff; margin-bottom: 8px; }
+.proto-card p { font-size: 13px; color: #888; }
+
+/* ================================================================
+   TRAINING TABS
+   ================================================================ */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 32px; justify-content: center; flex-wrap: wrap; }
+.tab-btn {
+    padding: 10px 24px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+    color: #888; font-size: 14px; cursor: pointer; transition: all 0.2s;
+    font-family: 'IBM Plex Sans', sans-serif;
+}
+.tab-btn.active, .tab-btn:hover { background: rgba(0,212,255,0.1); border-color: #00d4ff; color: #00d4ff; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.lab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.lab-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 20px; transition: border-color 0.3s;
+}
+.lab-card:hover { border-color: #00ff88; }
+.lab-card .lab-num { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #00d4ff; margin-bottom: 4px; }
+.lab-card h4 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 8px; }
+.lab-card p { font-size: 13px; color: #888; }
+.lab-card .tag {
+    display: inline-block; margin-top: 8px; padding: 2px 8px;
+    font-size: 11px; border-radius: 4px;
+    background: rgba(0,255,136,0.1); color: #00ff88; margin-right: 4px;
+}
+.lab-card .tag.red { background: rgba(255,107,53,0.1); color: #ff6b35; }
+.lab-card .tag.blue { background: rgba(0,212,255,0.1); color: #00d4ff; }
+
+/* ================================================================
+   TOOLS
+   ================================================================ */
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.tool-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 24px; transition: border-color 0.3s;
+}
+.tool-card:hover { border-color: #ff6b35; }
+.tool-card.defense:hover { border-color: #00ff88; }
+.tool-card h4 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 8px; }
+.tool-card p { font-size: 13px; color: #888; }
+.tool-card code { font-size: 12px; }
+.tool-card .tag {
+    display: inline-block; margin-top: 8px; padding: 2px 8px;
+    font-size: 11px; border-radius: 4px;
+    background: rgba(255,107,53,0.1); color: #ff6b35; margin-right: 4px;
+}
+
+/* ================================================================
+   TOOL DETAIL (expanded docs on offensive/defensive/forensics pages)
+   ================================================================ */
+.tool-detail {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 28px; margin-bottom: 24px;
+    transition: border-color 0.3s;
+}
+.tool-detail:hover { border-color: #ff6b35; }
+.tool-detail.defense:hover { border-color: #00ff88; }
+.tool-detail h3 { font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.tool-detail .tool-proto { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #00d4ff; margin-bottom: 12px; }
+.tool-detail p { font-size: 14px; color: #888; margin-bottom: 16px; }
+.tool-detail h4 { font-size: 14px; font-weight: 500; color: #ccc; margin-bottom: 8px; margin-top: 16px; }
+.tool-detail pre {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; padding: 14px; margin-bottom: 12px;
+    overflow-x: auto; font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: #ccc; line-height: 1.5;
+}
+.tool-detail ul { list-style: none; padding: 0; }
+.tool-detail ul li {
+    font-size: 13px; color: #888; padding: 4px 0 4px 16px;
+    position: relative;
+}
+.tool-detail ul li::before {
+    content: '\25B8'; position: absolute; left: 0; color: #00d4ff;
+}
+
+/* ================================================================
+   FORENSICS
+   ================================================================ */
+.forensics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+.forensic-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; overflow: hidden; transition: border-color 0.3s, transform 0.2s;
+}
+.forensic-card:hover { border-color: #e74c3c; transform: translateY(-4px); }
+.forensic-card-header {
+    padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(231,76,60,0.04);
+}
+.forensic-card-header h4 { font-size: 15px; font-weight: 500; color: #fff; }
+.forensic-card-header .year { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #e74c3c; }
+.forensic-card-body { padding: 16px 20px; }
+.forensic-card-body p { font-size: 13px; color: #888; margin-bottom: 12px; }
+.forensic-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.forensic-skills .sk {
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    background: rgba(231,76,60,0.08); color: #e74c3c; border: 1px solid rgba(231,76,60,0.15);
+}
+.forensic-tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+.forensic-tool {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 24px; transition: border-color 0.3s;
+}
+.forensic-tool:hover { border-color: #e74c3c; }
+.forensic-tool h4 { font-size: 16px; font-weight: 500; color: #fff; margin-bottom: 8px; }
+.forensic-tool p { font-size: 13px; color: #888; margin-bottom: 12px; }
+.forensic-tool .cmd-list { list-style: none; padding: 0; }
+.forensic-tool .cmd-list li {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    padding: 6px 10px; margin-bottom: 4px;
+    background: rgba(0,0,0,0.2); border-radius: 4px; color: #ccc;
+}
+.forensic-tool .cmd-list li span { color: #e74c3c; }
+
+/* ================================================================
+   HMI DASHBOARD SHOWCASE
+   ================================================================ */
+.hmi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px; }
+.hmi-panel {
+    background: linear-gradient(180deg, #0d1a2a 0%, #162337 100%);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    overflow: hidden; transition: border-color 0.3s, transform 0.2s;
+    text-decoration: none; color: inherit; display: block;
+}
+.hmi-panel:hover { border-color: var(--hmi-accent, #00d4ff); transform: translateY(-4px); color: inherit; }
+.hmi-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; border-bottom: 2px solid var(--hmi-accent, #00d4ff);
+    background: rgba(0,0,0,0.3);
+}
+.hmi-header h4 { font-size: 14px; font-weight: 500; color: #fff; }
+.hmi-badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    padding: 3px 10px; border-radius: 12px;
+    background: rgba(0,0,0,0.4); color: var(--hmi-accent, #00d4ff);
+    border: 1px solid var(--hmi-accent, #00d4ff);
+}
+.hmi-body { padding: 16px; min-height: 220px; position: relative; }
+.hmi-gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hmi-gauge {
+    background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px;
+}
+.hmi-gauge .lbl { font-size: 11px; color: #888; margin-bottom: 4px; }
+.hmi-gauge .val { font-size: 18px; font-weight: 500; color: var(--hmi-accent, #00d4ff); font-family: 'IBM Plex Mono', monospace; }
+.hmi-gauge .bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.hmi-gauge .bar-fill { height: 100%; border-radius: 2px; background: var(--hmi-accent, #00d4ff); transition: width 1s ease; }
+.hmi-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #00ff88; margin-top: 12px; padding: 6px 10px;
+    background: rgba(0,255,136,0.05); border-radius: 6px;
+}
+.hmi-dot { width: 6px; height: 6px; border-radius: 50%; background: #00ff88; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.hmi-net { font-size: 11px; color: #555; margin-top: 8px; font-family: 'IBM Plex Mono', monospace; }
+.hmi-visual {
+    display: flex; align-items: flex-end; gap: 8px;
+    height: 80px; margin-bottom: 12px;
+}
+.hmi-tank {
+    flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--hmi-accent, #00d4ff);
+    border-radius: 4px 4px 6px 6px; position: relative; height: 100%;
+    display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+}
+.hmi-tank-fill { border-radius: 0 0 5px 5px; transition: height 1s ease; }
+.hmi-tank-lbl {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 14px; font-weight: 500; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    z-index: 2; font-family: 'IBM Plex Mono', monospace;
+}
+.hmi-tank-name { text-align: center; font-size: 10px; color: #888; margin-top: 4px; }
+
+/* ================================================================
+   SIEM
+   ================================================================ */
+.siem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.siem-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 20px; text-align: center;
+    transition: border-color 0.3s;
+}
+.siem-card:hover { border-color: #00ff88; }
+.siem-card h4 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.siem-card p { font-size: 13px; color: #888; }
+
+/* ================================================================
+   CONTACT / FOOTER
+   ================================================================ */
+.contact-cta { text-align: center; }
+.contact-cta h2 { font-size: 36px; font-weight: 200; color: #fff; margin-bottom: 16px; }
+.contact-links { display: flex; justify-content: center; gap: 32px; margin-top: 32px; flex-wrap: wrap; }
+.contact-links a { display: flex; align-items: center; gap: 8px; color: #aaa; font-size: 15px; }
+.contact-links a:hover { color: #00d4ff; }
+footer {
+    padding: 32px 0; border-top: 1px solid rgba(255,255,255,0.06);
+    text-align: center; font-size: 13px; color: #555;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 768px) {
+    nav .links { display: none; }
+    .hamburger { display: block; }
+    nav .links.open {
+        display: flex; flex-direction: column;
+        position: absolute; top: 64px; left: 0; right: 0;
+        background: rgba(15,15,30,0.98); padding: 16px 24px; gap: 12px;
+    }
+    .about-grid { grid-template-columns: 1fr; }
+    .about-features { grid-template-columns: 1fr; }
+    .hero .stats { gap: 24px; }
+    .hmi-grid { grid-template-columns: 1fr; }
+    .hero h1 { letter-spacing: 4px; }
+    .forensic-tools-grid { grid-template-columns: 1fr; }
+    .forensics-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>SIEM Integrations - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="Forward OT security logs to your SIEM platform with pre-built collectors for Sumo Logic, Splunk, ELK, Chronicle, and Syslog/CEF.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>SIEM <span class="accent-green">Integrations</span></h1>
+        <p class="tagline">Forward OT security logs to your SIEM platform with pre-built collectors, correlation rules, and dashboards.</p>
+    </div>
+</div>
+
+<!-- ============================================================
+     ARCHITECTURE OVERVIEW
+     ============================================================ -->
+<section>
+    <div class="container">
+        <div class="section-header">
+            <h2>Architecture <span class="accent-cyan">Overview</span></h2>
+            <p>All OT lab events flow through Redis pub/sub channels and are forwarded to your SIEM platform by dedicated collectors.</p>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 32px; overflow-x: auto;">
+            <pre style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #ccc; line-height: 1.8; margin: 0; text-align: center; white-space: pre;">
+  <span style="color:#00d4ff; font-weight:500;">VULNOT OT Labs</span>            <span style="color:#888;">Redis Pub/Sub</span>            <span style="color:#00ff88; font-weight:500;">SIEM Collectors</span>            <span style="color:#ff6b35; font-weight:500;">Destinations</span>
+
+ +-----------------+       +----------------+       +------------------+       +----------------+
+ |  Modbus  :502   |       |                |       |                  | ----> | Sumo Logic     |
+ |  DNP3    :20000 | ----> |    Redis        | ----> |  Collector       | ----> | Splunk         |
+ |  S7comm  :102   |       |    Pub/Sub     |       |  Workers         | ----> | ELK Stack      |
+ |  OPC UA  :4840  |       |                |       |                  | ----> | Chronicle      |
+ |  BACnet  :47808 |       +----------------+       +------------------+       | Syslog / CEF   |
+ |  EIP     :44818 |                                                           +----------------+
+ |  MQTT    :1883  |       Channels:
+ |  PROFINET:34964 |         ot_attacks    ot_network    ot_process
+ |  Historian:8553 |         ot_compliance ot_forensics
+ +-----------------+
+            </pre>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     SIEM INTEGRATION CARDS
+     ============================================================ -->
+<section>
+    <div class="container">
+        <div class="section-header">
+            <h2>Supported <span class="accent-green">Platforms</span></h2>
+            <p>Five production-ready collectors with protocol-aware parsing and MITRE ATT&amp;CK enrichment.</p>
+        </div>
+
+        <!-- 1. Sumo Logic -->
+        <div class="tool-detail defense">
+            <h3>Sumo Logic</h3>
+            <div class="tool-proto">HTTP Source &mdash; JSON Log Forwarding &bull; Pre-built OT Dashboards</div>
+            <p>HTTP Source collector with JSON log forwarding and pre-built OT dashboards. Events are batched and flushed to your Sumo Logic HTTP endpoint with full field extraction and MITRE ATT&amp;CK technique enrichment.</p>
+
+            <h4>Log Format</h4>
+            <p>JSON via HTTP POST</p>
+
+            <h4>Configuration</h4>
+            <pre>SUMO_ENDPOINT=https://endpoint1.collection.us2.sumologic.com/receiver/v1/http/...</pre>
+
+            <h4>Features</h4>
+            <ul>
+                <li>Pre-built OT security dashboards</li>
+                <li>MITRE ATT&amp;CK enrichment</li>
+                <li>Automated parsing</li>
+                <li>Batch flushing (100 events or 10 seconds)</li>
+            </ul>
+        </div>
+
+        <!-- 2. Splunk -->
+        <div class="tool-detail defense">
+            <h3>Splunk</h3>
+            <div class="tool-proto">HEC &mdash; CIM-Compliant Field Mapping &bull; OT Security App</div>
+            <p>HEC collector with CIM-compliant field mapping and OT security app. Events are forwarded via HTTP Event Collector with automatic sourcetype assignment and index-time field extraction for fast search performance.</p>
+
+            <h4>Log Format</h4>
+            <p>JSON via HEC (HTTP Event Collector)</p>
+
+            <h4>Configuration</h4>
+            <pre>SPLUNK_HEC_URL=https://splunk.example.com:8088/services/collector
+SPLUNK_HEC_TOKEN=your-hec-token-here</pre>
+
+            <h4>Features</h4>
+            <ul>
+                <li>CIM field mapping</li>
+                <li>sourcetype=vulnot:ot</li>
+                <li>Pre-built correlation searches</li>
+                <li>Index-time field extraction</li>
+            </ul>
+        </div>
+
+        <!-- 3. ELK Stack -->
+        <div class="tool-detail defense">
+            <h3>ELK Stack</h3>
+            <div class="tool-proto">Elasticsearch &mdash; Kibana Dashboards &bull; Logstash Pipeline Configs</div>
+            <p>Elasticsearch ingest with Kibana dashboards and Logstash pipeline configs. Events are bulk-indexed with OT-specific field mappings, lifecycle policies, and ready-to-import Kibana dashboard exports.</p>
+
+            <h4>Log Format</h4>
+            <p>JSON via Elasticsearch bulk API</p>
+
+            <h4>Configuration</h4>
+            <pre>ELK_URL=https://elasticsearch.example.com:9200</pre>
+
+            <h4>Features</h4>
+            <ul>
+                <li>Index template with OT field mappings</li>
+                <li>Kibana dashboard exports</li>
+                <li>Logstash pipeline configs</li>
+                <li>ILM policy for log retention</li>
+            </ul>
+        </div>
+
+        <!-- 4. Google Chronicle -->
+        <div class="tool-detail defense">
+            <h3>Google Chronicle</h3>
+            <div class="tool-proto">UDM &mdash; Unified Data Model Ingestion &bull; Chronicle Detection Rules</div>
+            <p>UDM-formatted ingestion with Chronicle detection rules. OT events are mapped to the Unified Data Model with entity context, enabling native Chronicle detection rules written in YARA-L for cross-source correlation.</p>
+
+            <h4>Log Format</h4>
+            <p>UDM (Unified Data Model)</p>
+
+            <h4>Configuration</h4>
+            <pre>CHRONICLE_CUSTOMER_ID=your-customer-id
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json</pre>
+
+            <h4>Features</h4>
+            <ul>
+                <li>UDM entity mapping</li>
+                <li>Chronicle detection rules (YARA-L)</li>
+                <li>Entity analytics</li>
+                <li>Threat intelligence integration</li>
+            </ul>
+        </div>
+
+        <!-- 5. Syslog / CEF -->
+        <div class="tool-detail defense">
+            <h3>Syslog / CEF</h3>
+            <div class="tool-proto">RFC 5424 &bull; RFC 3164 &bull; CEF Format &mdash; UDP / TCP / TLS</div>
+            <p>RFC 5424, RFC 3164, and CEF formats over UDP, TCP, or TLS. The universal collector for any syslog-compatible receiver, with OT-specific CEF extensions and configurable facility/severity mapping.</p>
+
+            <h4>Log Format</h4>
+            <p>Syslog (RFC 5424/3164) or CEF</p>
+
+            <h4>Configuration</h4>
+            <pre>SYSLOG_HOST=syslog.example.com
+SYSLOG_PORT=514
+SYSLOG_PROTOCOL=tcp   # udp | tcp | tls</pre>
+
+            <h4>Features</h4>
+            <ul>
+                <li>UDP/TCP/TLS transport</li>
+                <li>CEF format with OT extensions</li>
+                <li>Facility/severity mapping</li>
+                <li>Compatible with any syslog receiver</li>
+            </ul>
+        </div>
+
+    </div>
+</section>
+
+<!-- ============================================================
+     LOG CHANNELS
+     ============================================================ -->
+<section>
+    <div class="container">
+        <div class="section-header">
+            <h2>Log <span class="accent-cyan">Channels</span></h2>
+            <p>Each collector subscribes to one or more Redis pub/sub channels carrying structured OT event data.</p>
+        </div>
+
+        <table style="width: 100%; background: rgba(255,255,255,0.02); border-collapse: collapse; border-radius: 12px; overflow: hidden; font-size: 14px;">
+            <thead>
+                <tr>
+                    <th style="background: rgba(0,255,136,0.08); color: #00ff88; padding: 14px 16px; text-align: left; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Channel</th>
+                    <th style="background: rgba(0,255,136,0.08); color: #00ff88; padding: 14px 16px; text-align: left; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Description</th>
+                    <th style="background: rgba(0,255,136,0.08); color: #00ff88; padding: 14px 16px; text-align: left; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Events/sec</th>
+                    <th style="background: rgba(0,255,136,0.08); color: #00ff88; padding: 14px 16px; text-align: left; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Format</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #00d4ff; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">ot_attacks</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ccc;">Attack detection alerts</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">~10-50</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888;">JSON</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #00d4ff; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">ot_network</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ccc;">Network traffic metadata</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">~100-500</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888;">JSON</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #00d4ff; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">ot_process</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ccc;">Process value changes</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">~50-200</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888;">JSON</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #00d4ff; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">ot_compliance</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ccc;">Compliance check results</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">~1-5</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888;">JSON</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #00d4ff; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">ot_forensics</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #ccc;">Forensic evidence events</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888; font-family: 'IBM Plex Mono', monospace; font-size: 13px;">~5-20</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #888;">JSON</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="margin-top: 32px; padding: 20px 24px; background: rgba(0,255,136,0.04); border: 1px solid rgba(0,255,136,0.12); border-radius: 10px; font-size: 14px; color: #aaa; line-height: 1.7;">
+            All collectors subscribe to Redis pub/sub channels and support batch flushing, MITRE ATT&amp;CK enrichment, and multi-protocol parsing.
+        </p>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+</body>
+</html>

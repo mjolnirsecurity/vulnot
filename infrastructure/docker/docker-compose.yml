@@ -31,10 +31,11 @@ services:
     container_name: vulnot-redis
     ports:
       - "6399:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-vulnot-redis-pass}
     networks:
       - vulnot-backend
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vulnot-redis-pass}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -48,7 +49,7 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=vulnot
-      - DOCKER_INFLUXDB_INIT_PASSWORD=vulnot123
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD:-vulnot123}
       - DOCKER_INFLUXDB_INIT_ORG=mjolnir
       - DOCKER_INFLUXDB_INIT_BUCKET=ot_data
     volumes:
@@ -68,7 +69,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=vulnot-super-secret-token
+      - INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN:-vulnot-super-secret-token}
       - INFLUXDB_ORG=mjolnir
       - INFLUXDB_BUCKET=process_data
       - SIMULATION_RATE=100
@@ -377,7 +378,7 @@ services:
     ports:
       - "8081:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=vulnot
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-vulnot}
       - GF_AUTH_ANONYMOUS_ENABLED=true
     volumes:
       - grafana-data:/var/lib/grafana

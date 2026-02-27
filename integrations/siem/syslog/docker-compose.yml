@@ -1,0 +1,58 @@
+# VULNOT Syslog/CEF Collector - Docker Compose
+# Add this service to your main docker-compose.yml or run standalone
+
+version: '3.8'
+
+services:
+  syslog-collector:
+    build: .
+    container_name: vulnot-syslog-collector
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SYSLOG_HOST=${SYSLOG_HOST:-syslog-server}
+      - SYSLOG_PORT=${SYSLOG_PORT:-514}
+      - SYSLOG_TRANSPORT=${SYSLOG_TRANSPORT:-udp}
+      - SYSLOG_FORMAT=${SYSLOG_FORMAT:-rfc5424}
+      - SYSLOG_FACILITY=${SYSLOG_FACILITY:-16}
+      - SYSLOG_HOSTNAME=${SYSLOG_HOSTNAME:-vulnot-lab}
+      - SYSLOG_APP_NAME=${SYSLOG_APP_NAME:-vulnot}
+      - TLS_CA_CERT=${TLS_CA_CERT:-}
+      - TLS_CLIENT_CERT=${TLS_CLIENT_CERT:-}
+      - TLS_CLIENT_KEY=${TLS_CLIENT_KEY:-}
+      - TLS_VERIFY=${TLS_VERIFY:-true}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - FLUSH_INTERVAL=${FLUSH_INTERVAL:-5}
+      - CEF_VENDOR=${CEF_VENDOR:-MjolnirSecurity}
+      - CEF_PRODUCT=${CEF_PRODUCT:-VULNOT}
+      - CEF_VERSION=${CEF_VERSION:-1.0}
+    depends_on:
+      - redis
+    networks:
+      - vulnot-core
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Include Redis if running standalone
+  redis:
+    image: redis:7-alpine
+    container_name: vulnot-redis-syslog
+    ports:
+      - "6379:6379"
+    networks:
+      - vulnot-core
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+networks:
+  vulnot-core:
+    driver: bridge
+
+volumes:
+  redis-data:

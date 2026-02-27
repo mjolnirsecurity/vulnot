@@ -10,6 +10,7 @@ Forward OT security logs from VULNOT to your SIEM platform of choice.
 | **Splunk** | Supported | [splunk/README.md](splunk/README.md) |
 | **ELK Stack** | Supported | [elk/README.md](elk/README.md) |
 | **Google Chronicle** | Supported | [chronicle/README.md](chronicle/README.md) |
+| **Syslog/CEF** | Supported | [syslog/README.md](syslog/README.md) |
 
 ## Architecture
 

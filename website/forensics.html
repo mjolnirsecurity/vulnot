@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>Digital Forensics - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="OT/ICS digital forensics training: investigate real-world attacks with evidence collection, protocol analysis, timeline reconstruction, and MITRE ATT&CK mapping.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>Digital <span style="color:#e74c3c;">Forensics</span></h1>
+        <p class="tagline">Investigate real-world ICS/OT attacks with evidence collection, protocol analysis, timeline reconstruction, and MITRE ATT&amp;CK mapping.</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+
+        <!-- ============================================================
+             SECTION A: Forensic Case Studies
+             ============================================================ -->
+        <div class="section-header">
+            <h2>Forensic <span class="accent-red">Case Studies</span></h2>
+            <p>Investigate landmark ICS/OT attacks with real forensic artifacts, IOC extraction, and MITRE ATT&amp;CK mapping.</p>
+        </div>
+
+        <div class="forensics-grid">
+
+            <!-- 1. Stuxnet -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Stuxnet-Style PLC Attack</h4>
+                    <span class="year">2010</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Investigate sophisticated S7comm PLC program modification targeting centrifuge VFD control. Analyze injected OB35 cyclic interrupts, unauthorized FC blocks, and setpoint manipulation in DB values.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">S7comm Analysis</span>
+                        <span class="sk">PLC Memory Dumps</span>
+                        <span class="sk">Program Block Diff</span>
+                        <span class="sk">Timeline Reconstruction</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Modified OB35 with unauthorized FC1874 call</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">DB890 setpoint changed from 1064 Hz to variable 807-1210 Hz</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Step 7 project file timestamp anomaly</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Acquire PLC program blocks &rarr; Compare against known-good baseline &rarr; Identify injected function blocks &rarr; Reconstruct attack timeline</p>
+                </div>
+            </div>
+
+            <!-- 2. Industroyer / CrashOverride -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Industroyer / CrashOverride</h4>
+                    <span class="year">2016</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Reconstruct Ukraine power grid attack: DNP3 Direct Operate without Select, circuit breaker toggling sequences, SIPROTEC relay DoS, and wiper deployment.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">DNP3 Traffic</span>
+                        <span class="sk">SCADA Logs</span>
+                        <span class="sk">RTU Diagnostics</span>
+                        <span class="sk">Relay Analysis</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">DNP3 Direct Operate (FC 0x03) without preceding Select</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Rapid breaker open/close cycling</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">SIPROTEC DoS via malformed packets</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Wiper targeting MicroSCADA config</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Capture DNP3 traffic &rarr; Identify unauthorized commands &rarr; Correlate with breaker state changes &rarr; Extract wiper artifacts</p>
+                </div>
+            </div>
+
+            <!-- 3. TRITON / TRISIS -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>TRITON / TRISIS</h4>
+                    <span class="year">2017</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>SIS compromise targeting Triconex controllers. Analyze trilog.exe dropper, library.zip payload, imain.bin backdoor, modified safety logic blocks, and changed trip setpoints.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">SIS Controllers</span>
+                        <span class="sk">TriStation Protocol</span>
+                        <span class="sk">Memory Analysis</span>
+                        <span class="sk">Backdoor Detection</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">trilog.exe communicating on TCP/1502 (TriStation)</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">library.zip containing inject.bin and imain.bin</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Modified safe state logic blocks</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Safety trip setpoints changed from 400&deg;C to 500&deg;C</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Examine TriStation protocol traffic &rarr; Identify unauthorized program transfers &rarr; Analyze memory for backdoor &rarr; Verify safety logic integrity</p>
+                </div>
+            </div>
+
+            <!-- 4. Colonial Pipeline -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Colonial Pipeline</h4>
+                    <span class="year">2021</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Ransomware impact on OT: IT/OT boundary analysis, DarkSide artifact examination, firewall log review, OT system integrity verification.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">IT/OT Boundary</span>
+                        <span class="sk">Ransomware Artifacts</span>
+                        <span class="sk">Firewall Logs</span>
+                        <span class="sk">Restart Assessment</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">DarkSide ransomware artifacts (*.darkside extension)</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Compromised VPN credentials (no MFA)</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Lateral movement via RDP</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">OT shutdown due to billing system uncertainty</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Analyze IT/OT boundary logs &rarr; Identify lateral movement path &rarr; Assess OT system integrity &rarr; Develop safe restart procedure</p>
+                </div>
+            </div>
+
+            <!-- 5. Water Utility Attack -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Water Utility Attack</h4>
+                    <span class="year">2021</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Oldsmar-style remote access compromise: TeamViewer artifact analysis, Modbus write forensics, chemical dosing manipulation.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">HMI Forensics</span>
+                        <span class="sk">Modbus Analysis</span>
+                        <span class="sk">Remote Access</span>
+                        <span class="sk">Historian Verification</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">TeamViewer session from unknown IP</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Modbus FC 0x06 (write single register) to NaOH dosing</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Register 40001 changed from 100 ppm to 11,100 ppm</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Operator HMI mouse movement anomaly</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Review remote access logs &rarr; Capture Modbus traffic &rarr; Verify historian records &rarr; Reconstruct operator session</p>
+                </div>
+            </div>
+
+            <!-- 6. Historian Attacks & Forensics -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Historian Attacks &amp; Forensics</h4>
+                    <span class="year">Lab 08</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Expert historian security: SQL injection, false data injection, evidence backdating/deletion, complete exfiltration.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">SQL Injection</span>
+                        <span class="sk">Data Manipulation</span>
+                        <span class="sk">Exfiltration</span>
+                        <span class="sk">IOC Extraction</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">SQL injection via tag name parameter</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Bulk INSERT with backdated timestamps</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">DELETE operations targeting audit tables</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Full database dump to external IP</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Review web access logs &rarr; Identify injection vectors &rarr; Correlate data gaps with attack timeline &rarr; Extract exfiltration evidence</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================================================
+             SECTION B: Forensic Toolkits
+             ============================================================ -->
+        <div class="section-header" style="margin-top:64px;">
+            <h2>Forensic <span class="accent-red">Toolkits</span></h2>
+            <p>Command-line tools for OT evidence collection, protocol analysis, and incident reporting.</p>
+        </div>
+
+        <div class="forensic-tools-grid">
+
+            <!-- Tool 1: CLI -->
+            <div class="forensic-tool">
+                <h4>vulnot-forensics <span style="font-weight:300;color:#888;font-size:13px;">(CLI)</span></h4>
+                <p>Command-line forensic evidence collection toolkit</p>
+                <div class="cmd-list">
+                    <ul>
+                        <li><span>collect</span> &mdash; Collect forensic evidence from OT systems</li>
+                        <li><span>analyze-pcap</span> &mdash; Protocol-level packet capture analysis</li>
+                        <li><span>analyze-logs</span> &mdash; System and SCADA log examination</li>
+                        <li><span>analyze-memory</span> &mdash; PLC memory dump analysis</li>
+                        <li><span>report</span> &mdash; Generate forensic incident reports</li>
+                        <li><span>iocs</span> &mdash; Display OT attack indicators</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tool 2: Advanced Toolkit -->
+            <div class="forensic-tool">
+                <h4>vulnot-forensics <span style="font-weight:300;color:#888;font-size:13px;">(Advanced Toolkit)</span></h4>
+                <p>Deep investigation toolkit</p>
+                <div class="cmd-list">
+                    <ul>
+                        <li><span>acquire-plc</span> &mdash; PLC memory dumps with SHA-256 hashing</li>
+                        <li><span>analyze-pcap</span> &mdash; OT protocol distribution &amp; anomaly detection</li>
+                        <li><span>analyze-historian</span> &mdash; Value spikes, data gaps, quality codes</li>
+                        <li><span>timeline</span> &mdash; MITRE ATT&amp;CK phase-based reconstruction</li>
+                        <li><span>preserve</span> &mdash; Chain of custody &amp; evidence archival</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+</body>
+</html>

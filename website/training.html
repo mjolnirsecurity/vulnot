@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="0">
+    <title>Training Offerings - VULNOT | Mjolnir Security</title>
+    <meta name="description" content="Structured OT/ICS security training paths for red teams, forensics analysts, and SOC defenders.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard-host.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>Training <span class="accent-green">Offerings</span></h1>
+        <p class="tagline">Structured learning paths for red teams, forensics analysts, and SOC defenders.</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="showTab('redteam')">Red Team Labs</button>
+            <button class="tab-btn" onclick="showTab('forensics')">Forensics Cases</button>
+            <button class="tab-btn" onclick="showTab('soc')">SOC Defender</button>
+        </div>
+
+        <!-- ============================================================
+             RED TEAM LABS
+             ============================================================ -->
+        <div id="tab-redteam" class="tab-panel active">
+            <div class="lab-grid">
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 01</div>
+                    <h4>OT Network Discovery</h4>
+                    <p>Passive and active reconnaissance of industrial networks using Nmap, Shodan queries, and protocol fingerprinting.</p>
+                    <span class="tag red">Recon</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Beginner</span>
+                        <span class="tag">2 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 02</div>
+                    <h4>Protocol Deep Dive</h4>
+                    <p>Decode Modbus, DNP3, and S7comm traffic with Wireshark and custom dissectors.</p>
+                    <span class="tag red">Analysis</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Beginner</span>
+                        <span class="tag">3 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 03</div>
+                    <h4>PLC Exploitation</h4>
+                    <p>Write to holding registers, flip coils, and manipulate process values on live simulators.</p>
+                    <span class="tag red">Exploit</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 04</div>
+                    <h4>Man-in-the-Middle</h4>
+                    <p>ARP poisoning and traffic interception on OT networks with Ettercap and custom scripts.</p>
+                    <span class="tag red">MitM</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">3 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 05</div>
+                    <h4>Denial of Service</h4>
+                    <p>Flood attacks on Modbus, DNP3, and S7comm services to test resilience.</p>
+                    <span class="tag red">DoS</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">2 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 06</div>
+                    <h4>Firmware Extraction</h4>
+                    <p>Extract and analyze PLC firmware for hardcoded credentials and logic manipulation.</p>
+                    <span class="tag red">Reverse</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 07</div>
+                    <h4>HMI Exploitation</h4>
+                    <p>Web HMI vulnerabilities, command injection, and unauthorized control panel access.</p>
+                    <span class="tag red">Web</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">3 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 08</div>
+                    <h4>Lateral Movement</h4>
+                    <p>Pivot from IT to OT networks through jump hosts and misconfigured firewalls.</p>
+                    <span class="tag red">Pivot</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Lab 09</div>
+                    <h4>Capstone: APT Campaign</h4>
+                    <p>Full kill-chain attack from initial access through process manipulation using VULNOT's APT toolkit.</p>
+                    <span class="tag red">APT</span>
+                    <span class="tag red">Capstone</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Expert</span>
+                        <span class="tag">8 hours</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================
+             FORENSICS CASES
+             ============================================================ -->
+        <div id="tab-forensics" class="tab-panel">
+            <div class="lab-grid">
+
+                <div class="lab-card">
+                    <div class="lab-num">Case 01</div>
+                    <h4>Stuxnet Analysis</h4>
+                    <p>Analyze Stuxnet-style PLC logic manipulation, centrifuge speed alteration, and rootkit persistence mechanisms.</p>
+                    <span class="tag blue">ICS Malware</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">6 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Case 02</div>
+                    <h4>Industroyer / CrashOverride</h4>
+                    <p>Reconstruct the Ukraine power grid attack: IEC 101/104 abuse, breaker toggling, and wiper deployment.</p>
+                    <span class="tag blue">Power Grid</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">6 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Case 03</div>
+                    <h4>TRITON / TRISIS</h4>
+                    <p>Safety Instrumented System (SIS) compromise: Triconex controller exploitation and safety logic override.</p>
+                    <span class="tag blue">Safety</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Expert</span>
+                        <span class="tag">8 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Case 04</div>
+                    <h4>Colonial Pipeline</h4>
+                    <p>Ransomware impact on OT: IT/OT convergence failures, pipeline shutdown decision analysis, and recovery.</p>
+                    <span class="tag blue">Ransomware</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Case 05</div>
+                    <h4>Water Utility Attack</h4>
+                    <p>Oldsmar-style water treatment compromise: remote access abuse, chemical dosing manipulation, and detection.</p>
+                    <span class="tag blue">Water</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================
+             SOC DEFENDER
+             ============================================================ -->
+        <div id="tab-soc" class="tab-panel">
+            <div class="lab-grid">
+
+                <div class="lab-card">
+                    <div class="lab-num">Course 01</div>
+                    <h4>OT Baseline &amp; Monitoring</h4>
+                    <p>Establish network baselines, configure OT-specific IDS rules, and deploy passive monitoring sensors.</p>
+                    <span class="tag">Baseline</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Beginner</span>
+                        <span class="tag">4 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Course 02</div>
+                    <h4>Detection Engineering</h4>
+                    <p>Write SIEM correlation rules, Sigma rules, and custom Suricata signatures for OT protocol anomalies.</p>
+                    <span class="tag">Detection</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">6 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Course 03</div>
+                    <h4>Incident Response</h4>
+                    <p>OT-specific IR playbooks: containment without process disruption, evidence collection, and safe recovery.</p>
+                    <span class="tag">IR</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">6 hours</span>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">Course 04</div>
+                    <h4>Threat Hunting</h4>
+                    <p>Proactive hunting in OT environments using MITRE ATT&amp;CK for ICS framework and historical log analysis.</p>
+                    <span class="tag">Hunting</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">8 hours</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="js/components.js"></script>
+<script>
+function showTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
