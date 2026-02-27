@@ -45,7 +45,7 @@
 
 ## About
 
-VULNOT (Vulnerable OT) is a comprehensive OT/ICS security training platform developed by **Milind Bhargava** at **[Mjolnir Security](https://mjolnirsecurity.com)**. It provides realistic, intentionally vulnerable industrial control system simulations for security professionals to learn offensive and defensive OT security techniques in a safe, legal environment.
+VULNOT (Vulnerable OT) is a comprehensive OT/ICS security training platform developed by **Milind Bhargava** at **[Mjolnir Security](https://mjolnirsecurity.com)** — a 100% Canadian-owned, pure-play cybersecurity firm with 580+ DFIR engagements and SOC 2 Type 2 certification. Born from lessons learned across hundreds of real-world engagements, VULNOT provides realistic, intentionally vulnerable industrial control system simulations for security professionals to learn offensive and defensive OT security techniques in a safe, legal environment.
 
 ### Repository
 
@@ -270,9 +270,7 @@ Comprehensive instructor-led training for VULNOT is offered exclusively through 
 
 ### Contact for Training
 
-📧 **training@mjolnirsecurity.com**
-
-For corporate training, custom scenarios, or private sessions, please reach out to our training team at Mjolnir Training.
+For corporate training, custom scenarios, or private sessions, please reach out via our **[contact form](website/contact.html)**.
 
 ### Self-Paced Labs
 
@@ -372,17 +370,28 @@ docker-compose up -d
 
 ### Custom Dashboards
 
-Need custom SIEM dashboards, correlation rules, or integration support?
-
-**Contact Mjolnir Security**: [sales@mjolnirsecurity.com](mailto:sales@mjolnirsecurity.com)
+Need custom SIEM dashboards, correlation rules, or integration support? **[Contact us](website/contact.html)**.
 
 ---
 
-## Sample Dashboards
+## Website
 
-Interactive HTML dashboards demonstrating HMI interfaces for each scenario.
+The VULNOT multi-page website provides interactive documentation, HMI dashboard showcases, and detailed tool references.
 
-See [sample-dashboards/README.md](sample-dashboards/README.md) for all 9 scenario dashboards.
+| Page | Description |
+|------|-------------|
+| [Home](website/index.html) | Landing page with platform overview |
+| [Dashboards](website/dashboards.html) | Gallery of 9 interactive HMI dashboards |
+| [Training](website/training.html) | Red Team labs, Forensics cases, SOC courses |
+| [Offensive](website/offensive.html) | 12 attack tools with full command documentation |
+| [Defensive](website/defensive.html) | 6 defense capabilities with detailed descriptions |
+| [Forensics](website/forensics.html) | 6 case studies + 2 forensics toolkits |
+| [SIEM](website/siem.html) | 5 SIEM integrations with architecture diagrams |
+| [Contact](website/contact.html) | Contact form |
+
+### Sample Dashboards
+
+Interactive HTML dashboards demonstrating HMI interfaces for each scenario are available both as standalone files in [sample-dashboards/](sample-dashboards/) and wrapped with site navigation in [website/dashboards/](website/dashboards/).
 
 ---
 
@@ -436,12 +445,11 @@ MIT License - See [LICENSE](LICENSE) for details.
 |---------|---------|
 | Website | [https://mjolnirsecurity.com](https://mjolnirsecurity.com) |
 | GitHub | [https://github.com/mjolnirsecurity/vulnot](https://github.com/mjolnirsecurity/vulnot) |
-| Training | [training@mjolnirsecurity.com](mailto:training@mjolnirsecurity.com) |
-| Commercial | [sales@mjolnirsecurity.com](mailto:sales@mjolnirsecurity.com) |
+| Inquiries | [Contact Form](website/contact.html) |
 
 ---
 
 <p align="center">
   <strong>Built for OT Security Professionals</strong><br>
-  <em>© 2024 Mjolnir Security. All rights reserved.</em>
+  <em>© 2025 Mjolnir Security. All rights reserved.</em>
 </p>
