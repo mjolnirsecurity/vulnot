@@ -270,7 +270,7 @@ Comprehensive instructor-led training for VULNOT is offered exclusively through 
 
 ### Contact for Training
 
-For corporate training, custom scenarios, or private sessions, please reach out via our **[contact form](website/contact.html)**.
+For corporate training, custom scenarios, or private sessions, please reach out via our **[contact form](https://vulnot.mjolnirlabs.com/contact)**.
 
 ### Self-Paced Labs
 
@@ -370,7 +370,7 @@ docker-compose up -d
 
 ### Custom Dashboards
 
-Need custom SIEM dashboards, correlation rules, or integration support? **[Contact us](website/contact.html)**.
+Need custom SIEM dashboards, correlation rules, or integration support? **[Contact us](https://vulnot.mjolnirlabs.com/contact)**.
 
 ---
 
@@ -387,7 +387,7 @@ The VULNOT multi-page website provides interactive documentation, HMI dashboard 
 | [Defensive](website/defensive.html) | 6 defense capabilities with detailed descriptions |
 | [Forensics](website/forensics.html) | 6 case studies + 2 forensics toolkits |
 | [SIEM](website/siem.html) | 5 SIEM integrations with architecture diagrams |
-| [Contact](website/contact.html) | Contact form |
+| [Contact](https://vulnot.mjolnirlabs.com/contact) | Contact form |
 
 ### Sample Dashboards
 
@@ -445,7 +445,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 |---------|---------|
 | Website | [https://mjolnirsecurity.com](https://mjolnirsecurity.com) |
 | GitHub | [https://github.com/mjolnirsecurity/vulnot](https://github.com/mjolnirsecurity/vulnot) |
-| Inquiries | [Contact Form](website/contact.html) |
+| Inquiries | [Contact Form](https://vulnot.mjolnirlabs.com/contact) |
 
 ---
 
