@@ -7,7 +7,7 @@
     "dev": "docker-compose -f infrastructure/docker/docker-compose.yml up",
     "dev:dashboard": "cd apps/dashboard && npm run dev",
     "dev:api": "cd apps/api && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
-    "build": "cp -r website dist",
+    "build": "rm -rf dist && cp -r website dist",
     "build:dashboard": "cd apps/dashboard && npm run build",
     "start": "docker-compose -f infrastructure/docker/docker-compose.yml up -d",
     "stop": "docker-compose -f infrastructure/docker/docker-compose.yml down",
