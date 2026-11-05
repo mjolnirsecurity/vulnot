@@ -179,6 +179,52 @@
                 </div>
             </div>
 
+            <!-- 7. FrostyGoop District Heating (2024) -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>FrostyGoop District Heating</h4>
+                    <span class="year">2024</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Investigate the 2024 Lviv municipal district heating Modbus TCP attack across 620 apartment buildings: uncover ENCO / Unitronics ultrasonic heat-meter calibration offset spoofing (+65&deg;C in HR10) masking sub-freezing supply water.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">Modbus FC 16</span>
+                        <span class="sk">Calibration Spoof</span>
+                        <span class="sk">Unitronics PCOM</span>
+                        <span class="sk">Thermodynamic Delta-T</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">HR10 calibration offset set to +65.0&deg;C</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">HMI reports 83.0&deg;C while actual supply drops to 18.0&deg;C</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Default Unitronics PCOM Admin PIN (1111)</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Run <code>vulnot-forensics detect-calibration-spoof</code> &rarr; Cross-validate return water delta-T &rarr; Restore Golden Baseline</p>
+                </div>
+            </div>
+
+            <!-- 8. Volt Typhoon Living-off-the-Land (2024-2026) -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>Volt Typhoon OT DMZ LotL</h4>
+                    <span class="year">2024&ndash;2026</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Hunt and eradicate zero-malware Volt Typhoon pre-positioning across IT/OT jump hosts and ruggedized edge gateways using native OS <code>netsh interface portproxy</code> and <code>socat</code> relays.</p>
+                    <div class="forensic-skills">
+                        <span class="sk">LotL Portproxy</span>
+                        <span class="sk">T1090.001</span>
+                        <span class="sk">Conduit Hunting</span>
+                        <span class="sk">PLC Archive Staging</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">netsh v4tov4 relay 0.0.0.0:8502 &rarr; 10.0.1.10:502</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">socat relay 0.0.0.0:28000 &rarr; 10.0.2.10:20000 (DNP3)</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Staged WaterPlant_PLC1_Backup.zap16 &amp; Substation_RTU1.ACD</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Run <code>vulnot-blue hunt --hypothesis lotl-portproxy</code> &rarr; Flush relays &rarr; Isolate conduit safely</p>
+                </div>
+            </div>
+
         </div>
 
         <!-- ============================================================
@@ -214,9 +260,11 @@
                 <div class="cmd-list">
                     <ul>
                         <li><span>acquire-plc</span> &mdash; PLC memory dumps with SHA-256 hashing</li>
+                        <li><span>acquire-ai</span> &mdash; AI Copilot MCP invocation logs &amp; ONNX model SHA-256 verification</li>
+                        <li><span>detect-calibration-spoof</span> &mdash; Thermodynamic delta-T vs HR10 calibration spoof detector</li>
                         <li><span>analyze-pcap</span> &mdash; OT protocol distribution &amp; anomaly detection</li>
                         <li><span>analyze-historian</span> &mdash; Value spikes, data gaps, quality codes</li>
-                        <li><span>timeline</span> &mdash; MITRE ATT&amp;CK phase-based reconstruction</li>
+                        <li><span>timeline</span> &mdash; MITRE ATT&amp;CK &amp; ATLAS phase-based reconstruction</li>
                         <li><span>preserve</span> &mdash; Chain of custody &amp; evidence archival</li>
                     </ul>
                 </div>

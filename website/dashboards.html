@@ -19,7 +19,7 @@
 <div class="page-hero">
     <div class="container">
         <h1>HMI Dashboard <span class="accent-cyan">Showcase</span></h1>
-        <p class="tagline">Interactive sample dashboards for all nine industrial scenarios with live-updating process data.</p>
+        <p class="tagline">Interactive sample dashboards for all 14 industrial &amp; AI-in-OT scenarios with live-updating process data.</p>
     </div>
 </div>
 
@@ -251,6 +251,96 @@
                         <span style="color:#888;">sql&gt;</span> SELECT * FROM ot_data WHERE tag='Water.IntakeLevel' LIMIT 10
                     </div>
                     <div class="hmi-net">10.0.9.0/24 &bull; API: http://10.0.9.10:8553</div>
+                </div>
+            </a>
+
+            <!-- 10. AI SCADA Copilot & MCP Server -->
+            <a href="training.html" class="hmi-panel" style="--hmi-accent: #a855f7;">
+                <div class="hmi-header">
+                    <h4>AI SCADA Copilot &amp; MCP Server</h4>
+                    <span class="hmi-badge">MCP :8090</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">LLM Context</div><div class="val" style="color:#a855f7;">Llama-3-70B</div><div class="bar"><div class="bar-fill" style="width:88%;background:#a855f7;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">MCP Tools</div><div class="val">4 Active</div><div class="bar"><div class="bar-fill" style="width:100%;background:#a855f7;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">HITL Approval</div><div class="val" style="color:#ff6b35;">DISABLED</div><div class="bar"><div class="bar-fill" style="width:15%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Prompt Guard</div><div class="val" style="color:#ff6b35;">BYPASSED</div><div class="bar"><div class="bar-fill" style="width:10%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot" style="background:#a855f7;"></div> AUTONOMOUS MCP AGENT &mdash; Level 1 Write Enabled</div>
+                    <div class="hmi-net">10.0.90.0/24 &bull; MCP: 10.0.90.10:8090</div>
+                </div>
+            </a>
+
+            <!-- 11. AI Predictive Maintenance & Edge Vision QC -->
+            <a href="training.html" class="hmi-panel" style="--hmi-accent: #ec4899;">
+                <div class="hmi-header">
+                    <h4>AI PdM &amp; Edge Vision QC</h4>
+                    <span class="hmi-badge">ONNX :8091</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Autoencoder Err</div><div class="val" style="color:#00ff88;">0.18</div><div class="bar"><div class="bar-fill" style="width:28%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Bearing Temp</div><div class="val" style="color:#ff6b35;">95.0&deg;C</div><div class="bar"><div class="bar-fill" style="width:95%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">AOI Pass Rate</div><div class="val" style="color:#00ff88;">99.9%</div><div class="bar"><div class="bar-fill" style="width:99%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">ONNX Signature</div><div class="val" style="color:#ff6b35;">UNSIGNED</div><div class="bar"><div class="bar-fill" style="width:20%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot" style="background:#ec4899;"></div> COVARIATE DRIFT EVASION &mdash; Bearing Overheat Masked</div>
+                    <div class="hmi-net">10.0.90.0/24 &bull; ONNX: 10.0.90.20:8091</div>
+                </div>
+            </a>
+
+            <!-- 12. Autonomous RL Chiller Optimizer & OT SOAR -->
+            <a href="training.html" class="hmi-panel" style="--hmi-accent: #6366f1;">
+                <div class="hmi-header">
+                    <h4>RL Chiller Optimizer &amp; OT SOAR</h4>
+                    <span class="hmi-badge">RL/SOAR :8092</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Policy Model</div><div class="val">PPO-v1.8</div><div class="bar"><div class="bar-fill" style="width:80%;background:#6366f1;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Energy Weight</div><div class="val" style="color:#f39c12;">0.80</div><div class="bar"><div class="bar-fill" style="width:80%;background:#f39c12;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Server Rm Valve</div><div class="val">85%</div><div class="bar"><div class="bar-fill" style="width:85%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">SOAR Allowlist</div><div class="val" style="color:#ff6b35;">NONE</div><div class="bar"><div class="bar-fill" style="width:10%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> CLOSED-LOOP RL &amp; SOAR ACTIVE</div>
+                    <div class="hmi-net">10.0.90.0/24 &bull; RL/SOAR: 10.0.90.30:8092</div>
+                </div>
+            </a>
+
+            <!-- 13. District Heating (FrostyGoop) -->
+            <a href="training.html" class="hmi-panel" style="--hmi-accent: #38bdf8;">
+                <div class="hmi-header">
+                    <h4>Municipal District Heating</h4>
+                    <span class="hmi-badge">MODBUS :5020</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Buildings</div><div class="val">620</div><div class="bar"><div class="bar-fill" style="width:100%;background:#38bdf8;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Reported Temp</div><div class="val" style="color:#00ff88;">83.0&deg;C</div><div class="bar"><div class="bar-fill" style="width:83%;background:#00ff88;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Actual Supply</div><div class="val" style="color:#ff6b35;">18.0&deg;C</div><div class="bar"><div class="bar-fill" style="width:18%;background:#ff6b35;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">HR10 Offset</div><div class="val" style="color:#ff6b35;">+65.0&deg;C</div><div class="bar"><div class="bar-fill" style="width:95%;background:#ff6b35;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot" style="background:#38bdf8;"></div> FROSTYGOOP CALIBRATION SPOOF &mdash; ENCO / Unitronics</div>
+                    <div class="hmi-net">10.0.10.0/24 &bull; PLC: 10.0.10.10:5020</div>
+                </div>
+            </a>
+
+            <!-- 14. DER Solar, 50 MWh BESS & OCPP EV Depot -->
+            <a href="training.html" class="hmi-panel" style="--hmi-accent: #10b981;">
+                <div class="hmi-header">
+                    <h4>DER Solar, BESS &amp; OCPP EV Depot</h4>
+                    <span class="hmi-badge">IEEE 2030.5 :8093</span>
+                </div>
+                <div class="hmi-body">
+                    <div class="hmi-gauges">
+                        <div class="hmi-gauge"><div class="lbl">Solar Array</div><div class="val">22.5 MW</div><div class="bar"><div class="bar-fill" style="width:90%;background:#10b981;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">50 MWh BESS</div><div class="val">78% SoC</div><div class="bar"><div class="bar-fill" style="width:78%;background:#10b981;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">OCPP EV Depot</div><div class="val">15.0 MW</div><div class="bar"><div class="bar-fill" style="width:100%;background:#f39c12;"></div></div></div>
+                        <div class="hmi-gauge"><div class="lbl">Grid Frequency</div><div class="val" style="color:#00ff88;">60.00 Hz</div><div class="bar"><div class="bar-fill" style="width:100%;background:#00ff88;"></div></div></div>
+                    </div>
+                    <div class="hmi-status"><div class="hmi-dot"></div> MICROGRID SYNCHRONIZED &mdash; BMS Interlock ON</div>
+                    <div class="hmi-net">10.0.11.0/24 &bull; DERMS: 10.0.11.10:8093</div>
                 </div>
             </a>
 

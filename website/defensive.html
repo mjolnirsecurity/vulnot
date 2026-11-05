@@ -28,52 +28,53 @@
 
         <!-- 1. OT Intrusion Detection System -->
         <div class="tool-detail defense">
-            <h3>OT Intrusion Detection System</h3>
-            <div class="tool-proto">ALL PROTOCOLS &mdash; Modbus &bull; DNP3 &bull; S7comm &bull; OPC UA &bull; BACnet &bull; EtherNet/IP &bull; MQTT &bull; PROFINET</div>
-            <p>Protocol-aware deep packet inspection engine covering all 8 industrial protocols. Parses OT-specific payloads at the application layer to detect unauthorized commands, anomalous values, and known attack signatures in real time.</p>
+            <h3>OT Intrusion Detection System (33 Rules)</h3>
+            <div class="tool-proto">ALL PROTOCOLS &amp; AI &mdash; Modbus &bull; DNP3 &bull; S7comm &bull; OPC UA &bull; BACnet &bull; EtherNet/IP &bull; MQTT &bull; PROFINET &bull; MCP &bull; ONNX &bull; IEEE 2030.5</div>
+            <p>Protocol- and AI-aware deep packet inspection engine covering all 14 industrial &amp; agentic OT scenarios. Parses OT payloads and MCP JSON-RPC calls at the application layer to detect unauthorized commands, calibration spoofs, and adversarial ML drift in real time.</p>
 
             <h4>Capabilities</h4>
             <ul>
-                <li>20+ pre-built detection rules across all supported protocols</li>
+                <li>33 pre-built detection rules across industrial protocols, Agentic MCP, ONNX PdM/Vision, FrostyGoop, and DER microgrids</li>
                 <li>Real-time alerting with configurable severity levels</li>
                 <li>Protocol anomaly detection for malformed or unexpected packets</li>
-                <li>Signature-based and behavioral detection modes</li>
-                <li>Integration with SIEM platforms (Splunk, Elastic, QRadar, Sentinel)</li>
+                <li>Signature-based, statistical 3&sigma;, and physics-informed detection modes</li>
+                <li>Integration with SIEM platforms (Sumo Logic, Splunk, Elastic, Chronicle, Sentinel)</li>
             </ul>
 
             <h4>Example Detection Rules</h4>
-            <pre>ALERT  modbus_write_coil       "Modbus function code 0x05 (Force Single Coil) detected"
-ALERT  dnp3_cold_restart       "DNP3 cold restart command issued to outstation"
-ALERT  s7comm_cpu_stop         "S7comm CPU STOP command sent to PLC"
-ALERT  opcua_anon_auth         "OPC UA anonymous authentication attempt on secure endpoint"
-ALERT  bacnet_write_property   "BACnet WriteProperty to critical HVAC setpoint"
-ALERT  enip_unconnected_send   "EtherNet/IP unconnected send to unknown CIP class"
-ALERT  mqtt_topic_wildcard     "MQTT subscription with wildcard '#' on control topic"
-ALERT  profinet_dcp_set        "PROFINET DCP Set request &mdash; device rename attempt"</pre>
+            <pre>ALERT  MODBUS-001    "Unauthorized Modbus Write (FC 05/06/15/16)"
+ALERT  DNP3-002      "DNP3 Cold Restart command (FC 0x0D) issued to outstation"
+ALERT  S7-001        "S7comm CPU STOP command (0x29) sent to PLC"
+ALERT  PROFINET-002  "CNC G-Code sub-millimeter tool offset drift (&gt; 0.05 mm) during machining"
+ALERT  AI-MCP-001    "AI SCADA Copilot Indirect Prompt Injection &amp; unapproved Level 1 PLC write"
+ALERT  AI-PDM-001    "Physics-Informed PdM Evasion: bearing &gt; 85 C while Autoencoder error &lt; 0.65"
+ALERT  FROSTY-001    "FrostyGoop District Heating calibration offset register HR10 spoof (&gt; 2.0 C)"
+ALERT  DER-001       "DER Inverter droop inversion &amp; OCPP load swing dropping grid &lt; 59.5 Hz"
+ALERT  DECEPTION-001 "High-confidence interaction with Decoy PLC, Decoy SIS, or Shadow MCP Honeypot"</pre>
         </div>
 
         <!-- 2. SIEM Correlation Rules -->
         <div class="tool-detail defense">
-            <h3>SIEM Correlation Rules</h3>
-            <div class="tool-proto">CROSS-PROTOCOL &mdash; Sigma Format &bull; Splunk &bull; Elastic &bull; QRadar &bull; Sentinel</div>
-            <p>20 pre-built correlation rules designed for multi-protocol OT attack detection. Rules are written in Sigma format for portability and can be automatically converted for deployment on major SIEM platforms.</p>
+            <h3>SIEM Correlation Engine (26 Rules)</h3>
+            <div class="tool-proto">CROSS-PROTOCOL &amp; AI KILL CHAINS &mdash; Sigma &bull; YARA &bull; Suricata &bull; SIEM-001..SIEM-026</div>
+            <p>26 multi-event correlation rules (Single, Aggregation, Sequence, and Behavioral) detecting multi-stage IT/OT and Agentic AI attack chains across all 14 scenarios.</p>
 
             <h4>Capabilities</h4>
             <ul>
-                <li>Cross-protocol correlation to detect multi-stage attacks</li>
-                <li>Multi-stage attack detection with kill-chain mapping</li>
-                <li>Sigma rule format for SIEM-agnostic deployment</li>
-                <li>Threshold-based alerting with tunable sensitivity</li>
-                <li>Automatic enrichment with asset context and protocol metadata</li>
+                <li>Cross-protocol &amp; AI kill-chain sequence correlation (<code>SIEM-001</code> through <code>SIEM-026</code>)</li>
+                <li>Portable Sigma and YARA rule export via <code>vulnot-blue export-rules</code></li>
+                <li>Threshold-based alerting with suppression windows to prevent alert fatigue</li>
+                <li>Automatic enrichment with MITRE ATT&amp;CK for ICS and MITRE ATLAS metadata</li>
             </ul>
 
             <h4>Example Correlation Rules</h4>
-            <pre>RULE  recon_sweep             "Reconnaissance: 3+ protocol scans within 5 minutes"
-RULE  plc_change_after_read   "PLC value change detected after unauthorized register read"
-RULE  ot_brute_force          "Brute force attempt on OT service credentials (5+ failures)"
-RULE  lateral_it_to_ot        "Lateral movement detected from IT zone to OT network segment"
-RULE  multi_protocol_enum     "Multi-protocol enumeration from single source IP"
-RULE  after_hours_plc_write   "PLC write command issued outside maintenance window"</pre>
+            <pre>RULE  SIEM-005  "PLC Attack Chain: Recon &rarr; Register Read &rarr; Unauthorized Write"
+RULE  SIEM-021  "Indirect Prompt Injection: Historian Shift Note Write &rarr; Copilot Ingest &rarr; MCP PLC Write"
+RULE  SIEM-022  "Stuxnet 2.0 PdM Evasion: Physical Bearing Overheat + Suppressed Autoencoder Alert"
+RULE  SIEM-023  "FrostyGoop Sequence: HR10 Calibration Offset Write &rarr; HR0 Steam Valve Closure"
+RULE  SIEM-024  "Volt Typhoon LotL: Jump Host Portproxy Created &rarr; Conduit Tunnel &rarr; .zap16 Staged"
+RULE  SIEM-025  "Coordinated DER/BESS/OCPP Oscillation Tripping Substation UFLS (&lt; 59.3 Hz)"
+RULE  SIEM-026  "Zero-False-Positive OT / Shadow MCP Deception Honeypot Canary Trigger"</pre>
         </div>
 
         <!-- 3. IEC 62443 Compliance -->
@@ -178,10 +179,40 @@ Impair Process Control  Impact</pre>
             </ul>
 
             <h4>Baseline Metrics Tracked</h4>
-            <pre>Device Count            47 assets across 9 subnets
-Protocol Distribution   Modbus 34% | DNP3 18% | S7comm 15% | OPC UA 12% | Other 21%
+            <pre>Device Count            62 assets across 12 subnets (Purdue Levels 0&ndash;4)
+Protocol Distribution   Modbus 28% | DNP3 15% | S7comm 12% | OPC UA 12% | MCP/ONNX/DER 18% | Other 15%
 Traffic Volume          Avg 2.4 Gbps | Peak 3.1 Gbps | Baseline window: 30 days
-Connection Patterns     142 unique src/dst pairs | 8 protocols | 23 active services</pre>
+Connection Patterns     184 unique src/dst pairs | 12+ protocols | 33 active IDS rules</pre>
+        </div>
+
+        <!-- 7. Active Conduit Firewall, Physics CBF Guard & Golden Baselines (vulnot-defend) -->
+        <div class="tool-detail defense">
+            <h3>Active Conduit Guard, Physics CBF &amp; Deception Honeypots (<code>vulnot-defend</code>)</h3>
+            <div class="tool-proto">ACTIVE DEFENSE &mdash; IEC 62443-3-2 DPI &bull; Control Barrier Functions (CBF) &bull; ICS/MCP Honeypots</div>
+            <p>Active defensive enforcement CLI combining Purdue Zone/Conduit auditing, Suricata IPS + <code>nftables</code> deep packet inspection rule generation, deterministic Physics Control Barrier Functions (<code>CBF-001</code>..<code>CBF-006</code>), SHA-256 Golden PLC Baseline rollback, and a High-Interaction ICS &amp; Shadow MCP Deception Honeypot mesh.</p>
+
+            <h4>CLI Commands</h4>
+            <pre>vulnot-defend conduit-audit
+vulnot-defend dpi-policy --protocol all
+vulnot-defend physics-guard --scenario all
+vulnot-defend plc-baseline --scenario all --action restore
+vulnot-defend honeypot --action status</pre>
+        </div>
+
+        <!-- 8. Unified Blue Team SOC & Threat Hunting CLI (vulnot-blue) -->
+        <div class="tool-detail defense">
+            <h3>Unified Blue Team SOC &amp; Threat Hunter (<code>vulnot-blue</code>)</h3>
+            <div class="tool-proto">SOC &amp; THREAT HUNTING &mdash; MITRE ATT&amp;CK for ICS &bull; MITRE ATLAS &bull; Safe Containment</div>
+            <p>First-class Blue Team CLI providing unified SOC triage, hypothesis-driven threat hunts across IT/OT conduits and AI inference pipelines, deep-packet OT PCAP analysis, OT-safe containment with physical safety pre-flight checks, and Sigma/YARA rule export.</p>
+
+            <h4>CLI Commands</h4>
+            <pre>vulnot-blue soc-triage
+vulnot-blue hunt --hypothesis lotl-portproxy
+vulnot-blue hunt --hypothesis mcp-prompt-injection
+vulnot-blue hunt --hypothesis pdm-manifold-drift
+vulnot-blue pcap-analyze --pcap ot_incident_capture.pcap
+vulnot-blue contain --isolate-ip 10.0.99.5 --conduit CONDUIT-L4-L35
+vulnot-blue export-rules --format all</pre>
         </div>
 
     </div>

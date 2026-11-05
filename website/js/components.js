@@ -41,7 +41,7 @@
         + '</div></nav>';
 
     var footerHTML = '<footer><div class="container">'
-        + '<p>VULNOT v1.0 &mdash; Developed by Milind Bhargava at Mjolnir Security</p>'
+        + '<p>VULNOT v2.0 &mdash; Developed by Milind Bhargava at Mjolnir Security &bull; Moodle LMS: <a href="https://portal.mjolnir.training" target="_blank" rel="noopener" style="color:#00d4ff;text-decoration:none;">portal.mjolnir.training</a></p>'
         + '</div></footer>';
 
     // Inject nav

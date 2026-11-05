@@ -1,8 +1,8 @@
 {
   "name": "vulnot",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "VULNOT - Vulnerable OT Security Training Platform by Mjolnir Security",
+  "description": "VULNOT v2.0 - Vulnerable OT & AI-in-ICS Security Training Platform by Mjolnir Security",
   "scripts": {
     "dev": "docker-compose -f infrastructure/docker/docker-compose.yml up",
     "dev:dashboard": "cd apps/dashboard && npm run dev",
