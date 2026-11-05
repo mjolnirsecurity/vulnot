@@ -6,9 +6,15 @@ Real-time OT process data API with WebSocket support
 import asyncio
 import json
 import os
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import redis.asyncio as redis
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
@@ -122,10 +128,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from apps.api.moodle_training import router as moodle_training_router
+
 # Include routers
 app.include_router(process_router, prefix="/api/process", tags=["Process"])
 app.include_router(alarms_router, prefix="/api/alarms", tags=["Alarms"])
 app.include_router(system_router, prefix="/api/system", tags=["System"])
+app.include_router(moodle_training_router)
 
 
 @app.get("/")

@@ -1,0 +1,340 @@
+#!/usr/bin/env python3
+"""
+vulnot-moodle - CLI Training & LMS Connector for Mjolnir Training Portal
+Connects VULNOT to https://portal.mjolnir.training
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import getpass
+import json
+import os
+import sys
+from pathlib import Path
+
+# Add repository root to sys.path when executed directly
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from training.moodle.client import (  # noqa: E402
+    DEFAULT_MOODLE_URL,
+    TrainingModuleManager,
+)
+
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+    HAS_RICH = True
+    console = Console()
+except ImportError:
+    HAS_RICH = False
+    console = None
+
+
+def _print_banner(portal_url: str) -> None:
+    if HAS_RICH:
+        console.print(
+            Panel.fit(
+                f"[bold cyan]VULNOT Training & Moodle LMS Connector[/bold cyan]\n"
+                f"[slate_blue1]Portal:[/slate_blue1] [underline green]{portal_url}[/underline green]",
+                border_style="cyan",
+            )
+        )
+    else:
+        print("=" * 68)
+        print("VULNOT Training & Moodle LMS Connector")
+        print(f"Portal: {portal_url}")
+        print("=" * 68)
+
+
+async def cmd_status(mgr: TrainingModuleManager) -> int:
+    _print_banner(mgr.client.base_url)
+    status = await mgr.get_portal_status(force_probe=True)
+    portal = status["portal"]
+    listing = mgr.list_labs()
+    summary = listing["summary"]
+
+    if HAS_RICH:
+        reach_str = "[bold green]ONLINE[/bold green]" if portal.get("reachable") else "[bold red]OFFLINE / LAB ISOLATED[/bold red]"
+        ws_str = "[green]READY[/green]" if portal.get("webservices_endpoint_active") else "[yellow]UNAVAILABLE[/yellow]"
+        auth_str = (
+            f"[green]CONNECTED ({status.get('auth_mode')})[/green]"
+            if status.get("authenticated")
+            else "[yellow]NOT AUTHENTICATED[/yellow]"
+        )
+        t = Table(title="Moodle Portal Connection Status", show_header=False, border_style="slate_blue1")
+        t.add_column("Property", style="cyan")
+        t.add_column("Value", style="white")
+        t.add_row("Portal URL", portal.get("portal_url", DEFAULT_MOODLE_URL))
+        t.add_row("Site Title", portal.get("site_title", "N/A"))
+        t.add_row("Portal Reachability", f"{reach_str} (HTTP {portal.get('http_status')}, {portal.get('latency_ms')} ms)")
+        t.add_row("Moodle Web Services", ws_str)
+        t.add_row("Session Status", auth_str)
+        if status.get("user"):
+            u = status["user"]
+            t.add_row("Student Profile", f"{u.get('fullname')} ({u.get('username')})")
+        t.add_row("Labs Completed", f"{summary['completed_labs']} / {summary['total_labs']} ({summary['overall_progress']}%)")
+        t.add_row("Total Score", f"{summary['earned_points']} / {summary['max_points']} pts")
+        t.add_row("Synced to Moodle", f"{summary['synced_to_moodle_count']} synced, {summary['pending_sync_count']} queued")
+        console.print(t)
+    else:
+        print(json.dumps({"status": status, "summary": summary}, indent=2))
+    return 0
+
+
+async def cmd_login(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    _print_banner(mgr.client.base_url)
+    username = args.username or input("Moodle Username / Email: ").strip()
+    password = args.password or getpass.getpass("Moodle Password: ")
+    res = await mgr.login_with_credentials(
+        username=username,
+        password=password,
+        service=args.service,
+        allow_lab_fallback=not args.strict,
+    )
+    if HAS_RICH:
+        if res.get("success"):
+            console.print(f"[bold green]✓ {res.get('message')}[/bold green]")
+        else:
+            console.print(f"[bold red]✗ Authentication failed: {res.get('error')}[/bold red]")
+    else:
+        print(json.dumps(res, indent=2))
+    return 0 if res.get("success") else 1
+
+
+async def cmd_token(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    _print_banner(mgr.client.base_url)
+    res = await mgr.connect_with_token(
+        wstoken=args.set_token,
+        allow_lab_fallback=not args.strict,
+    )
+    if HAS_RICH:
+        if res.get("success"):
+            console.print(f"[bold green]✓ {res.get('message')}[/bold green]")
+        else:
+            console.print(f"[bold red]✗ Token validation failed: {res.get('error')}[/bold red]")
+    else:
+        print(json.dumps(res, indent=2))
+    return 0 if res.get("success") else 1
+
+
+async def cmd_courses(mgr: TrainingModuleManager) -> int:
+    _print_banner(mgr.client.base_url)
+    data = await mgr.get_courses()
+    if HAS_RICH:
+        t = Table(title="Mjolnir Training Courses (portal.mjolnir.training)", border_style="cyan")
+        t.add_column("Code", style="bold cyan")
+        t.add_column("Course Title", style="white")
+        t.add_column("Level", style="yellow")
+        t.add_column("Duration", style="slate_blue1")
+        t.add_column("Progress", style="green")
+        t.add_column("Portal Link", style="blue")
+        for c in data["courses"]:
+            t.add_row(
+                c["shortname"],
+                c["fullname"],
+                c["level"],
+                c["duration"],
+                f"{c['completed_labs']}/{c['total_labs']} labs ({c['progress']}%)",
+                c["portal_url"],
+            )
+        console.print(t)
+    else:
+        print(json.dumps(data, indent=2))
+    return 0
+
+
+def cmd_labs(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    _print_banner(mgr.client.base_url)
+    data = mgr.list_labs(track=args.track, difficulty=args.difficulty, course=args.course)
+    if HAS_RICH:
+        t = Table(title="VULNOT Training Labs & Moodle Sync State", border_style="cyan")
+        t.add_column("ID", style="bold cyan")
+        t.add_column("Track", style="magenta")
+        t.add_column("Course", style="blue")
+        t.add_column("Title", style="white")
+        t.add_column("Difficulty", style="yellow")
+        t.add_column("Status", style="green")
+        t.add_column("Score", style="cyan")
+        t.add_column("Moodle CMID", style="slate_blue1")
+        for lab in data["labs"]:
+            t.add_row(
+                lab["id"],
+                lab["track"].upper(),
+                lab["course_shortname"],
+                lab["title"],
+                lab["difficulty"],
+                f"{lab['status']} ({lab['progress']}%)",
+                f"{lab['earned_points']}/{lab['total_points']}",
+                str(lab["moodle_cmid"]),
+            )
+        console.print(t)
+    else:
+        print(json.dumps(data, indent=2))
+    return 0
+
+
+def cmd_show(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    lab_def = mgr.get_lab_definition(args.lab_id)
+    if not lab_def:
+        print(f"Error: Lab '{args.lab_id}' not found.", file=sys.stderr)
+        return 1
+    lab = mgr.format_lab_with_progress(lab_def)
+    if HAS_RICH:
+        console.print(
+            Panel(
+                f"[bold cyan]{lab['code']} — {lab['title']}[/bold cyan]\n"
+                f"[slate_blue1]Course:[/slate_blue1] {lab['course_shortname']}  |  "
+                f"[slate_blue1]Track:[/slate_blue1] {lab['track'].upper()}  |  "
+                f"[slate_blue1]Difficulty:[/slate_blue1] {lab['difficulty']}  |  "
+                f"[slate_blue1]Target:[/slate_blue1] {lab['target_host']}\n"
+                f"[slate_blue1]Moodle Activity URL:[/slate_blue1] {lab['portal_activity_url']}\n\n"
+                f"{lab['description']}",
+                title="Lab Overview",
+                border_style="cyan",
+            )
+        )
+        t = Table(title="Objectives", border_style="slate_blue1")
+        t.add_column("Objective ID", style="cyan")
+        t.add_column("Description", style="white")
+        t.add_column("Points", style="yellow")
+        t.add_column("Completed", style="green")
+        t.add_column("Hint", style="dim")
+        for obj in lab["objectives"]:
+            t.add_row(
+                obj["id"],
+                obj["title"],
+                str(obj["points"]),
+                "✓ YES" if obj["completed"] else "Pending",
+                obj["hint"],
+            )
+        console.print(t)
+    else:
+        print(json.dumps(lab, indent=2))
+    return 0
+
+
+async def cmd_submit(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    res = await mgr.verify_objective_or_flag(
+        lab_id=args.lab_id,
+        objective_id=args.objective,
+        flag=args.flag,
+        auto_sync=True,
+    )
+    if HAS_RICH:
+        if res.get("success"):
+            obj = res["verified_objective"]
+            console.print(
+                f"[bold green]✓ Objective Verified:[/bold green] {obj['id']} — {obj['title']} (+{obj['points']} pts)"
+            )
+            sync = res.get("moodle_sync") or {}
+            console.print(
+                f"[cyan]↳ Moodle Portal ({mgr.client.base_url}) Sync Status:[/cyan] {sync.get('status')}"
+            )
+        else:
+            console.print(f"[bold red]✗ {res.get('error')}[/bold red]")
+    else:
+        print(json.dumps(res, indent=2))
+    return 0 if res.get("success") else 1
+
+
+async def cmd_sync(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    _print_banner(mgr.client.base_url)
+    if args.lab:
+        res = await mgr.sync_lab_to_moodle(args.lab)
+    else:
+        res = await mgr.sync_all_to_moodle()
+    if HAS_RICH:
+        console.print_json(data=res)
+    else:
+        print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_export(mgr: TrainingModuleManager, args: argparse.Namespace) -> int:
+    manifest = mgr.export_moodle_manifest()
+    payload = json.dumps(manifest, indent=2)
+    if args.output:
+        Path(args.output).write_text(payload, encoding="utf-8")
+        print(f"Exported Moodle LMS manifest ({len(manifest['activities'])} activities) to {args.output}")
+    else:
+        print(payload)
+    return 0
+
+
+async def async_main() -> int:
+    parser = argparse.ArgumentParser(
+        description="VULNOT Training & Moodle LMS CLI (https://portal.mjolnir.training)"
+    )
+    parser.add_argument(
+        "--portal-url",
+        default=DEFAULT_MOODLE_URL,
+        help=f"Moodle Portal URL (default: {DEFAULT_MOODLE_URL})",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("status", help="Check connection status with https://portal.mjolnir.training")
+
+    p_login = sub.add_parser("login", help="Authenticate with Moodle username and password")
+    p_login.add_argument("-u", "--username", help="Moodle username or email")
+    p_login.add_argument("-p", "--password", help="Moodle password")
+    p_login.add_argument("-s", "--service", default="moodle_mobile_app", help="Moodle Web Service shortname")
+    p_login.add_argument("--strict", action="store_true", help="Disable offline/deferred sync fallback")
+
+    p_token = sub.add_parser("token", help="Connect with a Moodle Web Service API token")
+    p_token.add_argument("--set", dest="set_token", required=True, help="Moodle Web Service token")
+    p_token.add_argument("--strict", action="store_true", help="Disable offline/deferred sync fallback")
+
+    sub.add_parser("courses", help="List VULNOT courses on portal.mjolnir.training")
+
+    p_labs = sub.add_parser("labs", help="List all 18 VULNOT training labs")
+    p_labs.add_argument("--track", choices=["redteam", "forensics", "soc", "all"], default="all")
+    p_labs.add_argument("--difficulty", choices=["beginner", "intermediate", "advanced", "expert", "all"], default="all")
+    p_labs.add_argument("--course", help="Filter by course shortname (e.g., VULNOT-101)")
+
+    p_show = sub.add_parser("show", help="Show details and objectives for a lab")
+    p_show.add_argument("lab_id", help="Lab ID (e.g., lab-01, forensics-01, soc-01)")
+
+    p_submit = sub.add_parser("submit", help="Submit a captured flag or verify an objective")
+    p_submit.add_argument("lab_id", help="Lab ID (e.g., lab-01)")
+    p_submit.add_argument("-f", "--flag", required=True, help="Captured flag (e.g., VULNOT{...})")
+    p_submit.add_argument("-o", "--objective", help="Optional objective ID (e.g., obj-01-1)")
+
+    p_sync = sub.add_parser("sync", help="Synchronize lab progress and grades with portal.mjolnir.training")
+    p_sync.add_argument("-l", "--lab", help="Sync a specific lab ID")
+
+    p_export = sub.add_parser("export-manifest", help="Export Moodle LMS course & activity manifest JSON")
+    p_export.add_argument("-o", "--output", help="Output file path")
+
+    args = parser.parse_args()
+    mgr = TrainingModuleManager(portal_url=args.portal_url)
+
+    if args.command in (None, "status"):
+        return await cmd_status(mgr)
+    if args.command == "login":
+        return await cmd_login(mgr, args)
+    if args.command == "token":
+        return await cmd_token(mgr, args)
+    if args.command == "courses":
+        return await cmd_courses(mgr)
+    if args.command == "labs":
+        return cmd_labs(mgr, args)
+    if args.command == "show":
+        return cmd_show(mgr, args)
+    if args.command == "submit":
+        return await cmd_submit(mgr, args)
+    if args.command == "sync":
+        return await cmd_sync(mgr, args)
+    if args.command == "export-manifest":
+        return cmd_export(mgr, args)
+
+    parser.print_help()
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(async_main()))

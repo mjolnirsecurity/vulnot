@@ -17,11 +17,11 @@ Learn to think like an attacker and understand OT vulnerabilities.
 | [Lab 02](labs/lab-02-modbus-exploitation.md) | Modbus TCP | Intermediate | Register manipulation attacks |
 | [Lab 03](labs/lab-03-dnp3-substation.md) | DNP3 | Intermediate | Power grid control attacks |
 | [Lab 04](labs/lab-04-s7-manufacturing.md) | S7comm | Intermediate | Manufacturing PLC exploitation |
-| [Lab 05](labs/lab-05-opcua-industrial.md) | OPC UA | Intermediate | Process control manipulation |
+| [Lab 05](labs/lab-05-opcua-reactor.md) | OPC UA | Intermediate | Process control manipulation |
 | [Lab 06](labs/lab-06-bacnet-building.md) | BACnet | Intermediate | Building automation attacks |
 | [Lab 07](labs/lab-07-mqtt-iiot.md) | MQTT | Intermediate | IIoT infrastructure attacks |
-| [Lab 08](labs/lab-08-historian-attacks.md) | HTTP/SQL | Advanced | Data historian exploitation |
-| [Lab 09](labs/lab-09-multi-vector.md) | Multiple | Advanced | Coordinated multi-protocol attacks |
+| [Lab 08](labs/lab-08-historian-forensics.md) | HTTP/SQL | Advanced | Data historian exploitation |
+| [Lab 09](labs/lab-09-capstone.md) | Multiple | Advanced | Coordinated multi-protocol attacks |
 
 ### 🔵 Blue Team Labs (SOC Defender)
 Learn to detect, respond to, and investigate OT security incidents.
@@ -85,10 +85,39 @@ Learn to investigate real-world OT attacks based on documented incidents.
 | vulnot-enip | EtherNet/IP | `vulnot-enip --help` |
 | vulnot-historian | Historian | `vulnot-historian --help` |
 | vulnot-forensics | Investigation | `vulnot-forensics --help` |
+| vulnot-moodle | Moodle LMS Sync | `vulnot-moodle --help` |
+
+### Mjolnir Training Portal (Moodle LMS Integration)
+
+VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://portal.mjolnir.training** across three official courses:
+- **VULNOT-101** (`Course ID #101`): Offensive OT/ICS Exploitation (`lab-01` – `lab-09`, 2,000 pts)
+- **VULNOT-201** (`Course ID #201`): Industrial Incident Forensics & Case Studies (`forensics-01` – `forensics-05`, 1,450 pts)
+- **VULNOT-301** (`Course ID #301`): OT SOC Defender & Threat Hunting (`soc-01` – `soc-04`, 950 pts)
+
+#### CLI Usage (`attacker/scripts/vulnot-moodle`)
+```bash
+# Check live reachability & authentication status with https://portal.mjolnir.training
+vulnot-moodle status
+
+# Authenticate with your Mjolnir Training Portal credentials or wstoken
+vulnot-moodle login -u student@mjolnir.training -p '<password>'
+vulnot-moodle token -t '<moodle_wstoken>'
+
+# List all 18 labs or inspect a specific lab's objectives & Moodle links
+vulnot-moodle labs
+vulnot-moodle show lab-01
+
+# Verify a flag / objective / live OT telemetry state and sync completion to Moodle
+vulnot-moodle submit lab-01 -f "VULNOT{modbus_scan_complete}"
+
+# Export course/activity manifest for Moodle LMS administrators
+vulnot-moodle export-manifest -o moodle_manifest.json
+```
 
 ### Access Points
 | Service | URL | Credentials |
 |---------|-----|-------------|
+| Mjolnir Training Portal (Moodle) | https://portal.mjolnir.training | Student / Instructor Account |
 | Dashboard | http://localhost:8080 | None |
 | Grafana | http://localhost:8081 | admin/vulnot |
 | API | http://localhost:9000 | None |

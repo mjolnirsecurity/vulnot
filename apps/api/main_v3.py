@@ -79,6 +79,30 @@ SCENARIOS = {
         "port": 44818,
         "redis_channel": "vulnot:packaging:state",
         "redis_key": "vulnot:packaging:current"
+    },
+    "iiot": {
+        "name": "IIoT Smart Factory",
+        "protocol": "MQTT",
+        "network": "10.0.7.0/24",
+        "port": 1883,
+        "redis_channel": "vulnot:iiot:state",
+        "redis_key": "vulnot:iiot:current"
+    },
+    "cnc": {
+        "name": "CNC Motion Control",
+        "protocol": "PROFINET",
+        "network": "10.0.8.0/24",
+        "port": 34964,
+        "redis_channel": "vulnot:cnc:state",
+        "redis_key": "vulnot:cnc:current"
+    },
+    "historian": {
+        "name": "OT Historian",
+        "protocol": "HTTP API",
+        "network": "10.0.9.0/24",
+        "port": 8553,
+        "redis_channel": "vulnot:historian:state",
+        "redis_key": "vulnot:historian:current"
     }
 }
 
@@ -126,7 +150,13 @@ async def startup():
     global redis_client
     redis_host = os.getenv("REDIS_HOST", "localhost")
     redis_port = int(os.getenv("REDIS_PORT", "6379"))
-    redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+    redis_password = os.getenv("REDIS_PASSWORD") or None
+    redis_client = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True,
+    )
     
     # Start Redis subscribers for each scenario
     for scenario, config in SCENARIOS.items():
@@ -220,6 +250,12 @@ async def ws_ids(websocket: WebSocket):
 # =============================================================================
 # REST Endpoints
 # =============================================================================
+
+from moodle_training import router as moodle_training_router, set_redis_getter
+
+set_redis_getter(lambda: redis_client)
+app.include_router(moodle_training_router)
+
 
 @app.get("/api/health")
 async def health():

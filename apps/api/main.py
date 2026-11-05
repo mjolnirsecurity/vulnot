@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
 INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "vulnot-super-secret-token")
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "mjolnir")
@@ -147,7 +148,12 @@ async def lifespan(app: FastAPI):
     
     # Startup
     print("[API] Starting up...")
-    redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    redis_client = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        password=REDIS_PASSWORD,
+        decode_responses=True,
+    )
     influx_client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
     
     # Start Redis subscriber for broadcasting
@@ -477,6 +483,12 @@ async def reset_scenario():
         "message": "Scenario reset to initial state",
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+from moodle_training import router as moodle_training_router, set_redis_getter
+
+set_redis_getter(lambda: redis_client)
+app.include_router(moodle_training_router)
 
 
 if __name__ == "__main__":
