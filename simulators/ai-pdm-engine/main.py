@@ -154,15 +154,55 @@ class AIPdMVisionSimulator:
         await self.redis.set("vulnot:ai_pdm:current", payload)
         await self.redis.publish("vulnot:ai_pdm:state", payload)
 
+    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            raw = await asyncio.wait_for(reader.read(4096), timeout=5.0)
+            req_text = raw.decode("utf-8", errors="ignore")
+            body_out = self.state.to_dict()
+            if "POST" in req_text and "\r\n\r\n" in req_text:
+                _, body = req_text.split("\r\n\r\n", 1)
+                try:
+                    data = json.loads(body)
+                    if "bearing_temp_c" in data:
+                        body_out = self.evaluate_telemetry(
+                            float(data["bearing_temp_c"]),
+                            float(data.get("vibration_mm_s", 2.1)),
+                            float(data.get("acoustic_db", 68.0)),
+                            float(data.get("lube_oil_psi", 42.0)),
+                        )
+                    elif "model_name" in data:
+                        body_out = self.deploy_vision_model(
+                            data["model_name"], bool(data.get("backdoor_trigger", True))
+                        )
+                except Exception:
+                    pass
+            payload = json.dumps(body_out, indent=2).encode("utf-8")
+            header = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                f"Content-Length: {len(payload)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8")
+            writer.write(header + payload)
+            await writer.drain()
+        except Exception:
+            pass
+        finally:
+            writer.close()
+
     async def run(self):
         await self.connect()
+        port = int(os.getenv("PDM_PORT", "8091"))
+        server = await asyncio.start_server(self.handle_client, "0.0.0.0", port)
+        print(f"[AI-PdM-Vision] Listening on 0.0.0.0:{port} (ONNX / PdM API)")
         self.running = True
-        while self.running:
-            try:
-                await self.publish_state()
-            except Exception as exc:
-                print(f"[AI-PdM-Vision] Loop error: {exc}")
-            await asyncio.sleep(1.0)
+        async with server:
+            while self.running:
+                try:
+                    await self.publish_state()
+                except Exception as exc:
+                    print(f"[AI-PdM-Vision] Loop error: {exc}")
+                await asyncio.sleep(1.0)
 
 
 if __name__ == "__main__":

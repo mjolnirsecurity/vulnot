@@ -191,15 +191,80 @@ class CryoColdChainSimulator:
         await self.redis.set("vulnot:cryo_blood:current", payload)
         await self.redis.publish("vulnot:cryo_blood:state", payload)
 
+    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            raw = await asyncio.wait_for(reader.read(4096), timeout=5.0)
+            req_text = raw.decode("utf-8", errors="ignore")
+            if req_text.startswith(("GET ", "POST ")):
+                body_out = self.state.to_dict()
+                if "POST" in req_text and "\r\n\r\n" in req_text:
+                    _, body = req_text.split("\r\n\r\n", 1)
+                    try:
+                        data = json.loads(body)
+                        if data.get("action") == "sabotage":
+                            body_out = self.execute_coldchain_sabotage(
+                                new_setpoint_c=float(data.get("setpoint_c", 110.0)),
+                                force_defrost_heater=bool(data.get("force_defrost", True)),
+                                suppress_alarm=bool(data.get("suppress_alarm", True)),
+                                source_ip=str(data.get("source_ip", "172.16.88.14")),
+                            )
+                        elif data.get("action") == "rescue":
+                            body_out = self.execute_oncall_rescue(
+                                isolate_contractor_vpn=bool(data.get("isolate_contractor_vpn", True)),
+                                enable_cbf_cutout=bool(data.get("enable_cbf_cutout", True)),
+                            )
+                    except Exception:
+                        pass
+                payload = json.dumps(body_out, indent=2).encode("utf-8")
+                header = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json\r\n"
+                    f"Content-Length: {len(payload)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("utf-8")
+                writer.write(header + payload)
+            elif len(raw) >= 8:
+                # Modbus TCP MBAP responder (Danfoss AK-SM800A on :5021)
+                tid = raw[0:2]
+                pid = raw[2:4]
+                uid = raw[6:7]
+                fc = raw[7]
+                if fc in (3, 4):
+                    count = int.from_bytes(raw[10:12], "big") if len(raw) >= 12 else 5
+                    regs = [
+                        int(self.state.target_setpoint_c * 10) & 0xFFFF,
+                        int(self.state.chamber_actual_temp_c * 10) & 0xFFFF,
+                        int(self.state.defrost_cutoff_limit_c * 10) & 0xFFFF,
+                        int(self.state.high_temp_alarm_limit_c * 10) & 0xFFFF,
+                        int(self.state.glycol_loop_pressure_bar * 10) & 0xFFFF,
+                    ]
+                    reg_bytes = b"".join(
+                        int(regs[i % len(regs)]).to_bytes(2, "big") for i in range(count)
+                    )
+                    pdu = bytes([fc, count * 2]) + reg_bytes
+                    length = (len(pdu) + 1).to_bytes(2, "big")
+                    writer.write(tid + pid + length + uid + pdu)
+                else:
+                    writer.write(raw[:12])
+            await writer.drain()
+        except Exception:
+            pass
+        finally:
+            writer.close()
+
     async def run(self):
         await self.connect()
+        port = int(os.getenv("CRYO_PORT", "5021"))
+        server = await asyncio.start_server(self.handle_client, "0.0.0.0", port)
+        print(f"[CRYO-COLDCHAIN] Listening on 0.0.0.0:{port} (Danfoss AK-SM800A Modbus/TeleMon)")
         self.running = True
-        while self.running:
-            try:
-                await self.publish_state()
-            except Exception as exc:
-                print(f"[CRYO-COLDCHAIN] Error: {exc}")
-            await asyncio.sleep(2.0)
+        async with server:
+            while self.running:
+                try:
+                    await self.publish_state()
+                except Exception as exc:
+                    print(f"[CRYO-COLDCHAIN] Error: {exc}")
+                await asyncio.sleep(2.0)
 
 
 if __name__ == "__main__":

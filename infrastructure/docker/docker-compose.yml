@@ -257,6 +257,118 @@ services:
     restart: unless-stopped
 
   # ==========================================================================
+  # SCENARIOS 10-12: AGENTIC AI-IN-OT & ADVERSARIAL ML (10.0.90.0/24)
+  # ==========================================================================
+
+  ai-scada-copilot:
+    build: ../../simulators/ai-scada-copilot
+    container_name: vulnot-ai-copilot
+    environment:
+      - REDIS_HOST=redis
+      - COPILOT_PORT=8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-ai:
+        ipv4_address: 10.0.90.10
+    restart: unless-stopped
+
+  ai-pdm-engine:
+    build: ../../simulators/ai-pdm-engine
+    container_name: vulnot-ai-pdm
+    environment:
+      - REDIS_HOST=redis
+      - PDM_PORT=8091
+    ports:
+      - "8091:8091"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-ai:
+        ipv4_address: 10.0.90.20
+    restart: unless-stopped
+
+  ai-rl-optimizer:
+    build: ../../simulators/ai-rl-optimizer
+    container_name: vulnot-ai-rl-soar
+    environment:
+      - REDIS_HOST=redis
+      - RL_SOAR_PORT=8092
+    ports:
+      - "8092:8092"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-ai:
+        ipv4_address: 10.0.90.30
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 13: MUNICIPAL DISTRICT HEATING - FROSTYGOOP (10.0.10.0/24)
+  # ==========================================================================
+
+  district-heating:
+    build: ../../simulators/district-heating
+    container_name: vulnot-district-heating
+    environment:
+      - REDIS_HOST=redis
+      - HEATING_PORT=5020
+    ports:
+      - "5020:5020"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-heating:
+        ipv4_address: 10.0.10.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 14: DER SOLAR, 50 MWh BESS & OCPP EV DEPOT (10.0.11.0/24)
+  # ==========================================================================
+
+  der-microgrid:
+    build: ../../simulators/der-microgrid
+    container_name: vulnot-der-microgrid
+    environment:
+      - REDIS_HOST=redis
+      - DER_PORT=8093
+    ports:
+      - "8093:8093"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-der:
+        ipv4_address: 10.0.11.10
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SCENARIO 15: EFS BLOOD PLASMA CRYO-STORAGE - COOLWORLD (10.0.12.0/24)
+  # ==========================================================================
+
+  cryo-coldchain:
+    build: ../../simulators/cryo-coldchain
+    container_name: vulnot-cryo-coldchain
+    environment:
+      - REDIS_HOST=redis
+      - CRYO_PORT=5021
+    ports:
+      - "5021:5021"
+    depends_on:
+      - redis
+    networks:
+      vulnot-backend:
+      vulnot-ot-cryo:
+        ipv4_address: 10.0.12.10
+    restart: unless-stopped
+
+  # ==========================================================================
   # DEFENSE SERVICES
   # ==========================================================================
   
@@ -280,6 +392,10 @@ services:
       - vulnot-ot-iiot
       - vulnot-ot-motion
       - vulnot-ot-historian
+      - vulnot-ot-heating
+      - vulnot-ot-der
+      - vulnot-ot-cryo
+      - vulnot-ot-ai
     restart: unless-stopped
 
   # ==========================================================================
@@ -308,6 +424,10 @@ services:
       - vulnot-ot-iiot
       - vulnot-ot-motion
       - vulnot-ot-historian
+      - vulnot-ot-heating
+      - vulnot-ot-der
+      - vulnot-ot-cryo
+      - vulnot-ot-ai
 
   attacker-water:
     build: ../../attacker
@@ -447,6 +567,30 @@ networks:
     ipam:
       config:
         - subnet: 10.0.9.0/24
+
+  vulnot-ot-heating:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.10.0/24
+
+  vulnot-ot-der:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.11.0/24
+
+  vulnot-ot-cryo:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.12.0/24
+
+  vulnot-ot-ai:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.90.0/24
 
 # ============================================================================
 # VOLUMES

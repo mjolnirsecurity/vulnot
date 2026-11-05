@@ -121,15 +121,73 @@ class DistrictHeatingSimulator:
         await self.redis.set("vulnot:frostygoop:current", payload)
         await self.redis.publish("vulnot:frostygoop:state", payload)
 
+    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            raw = await asyncio.wait_for(reader.read(4096), timeout=5.0)
+            req_text = raw.decode("utf-8", errors="ignore")
+            if req_text.startswith(("GET ", "POST ")):
+                body_out = self.state.to_dict()
+                if "POST" in req_text and "\r\n\r\n" in req_text:
+                    _, body = req_text.split("\r\n\r\n", 1)
+                    try:
+                        data = json.loads(body)
+                        if "offset_c" in data:
+                            body_out = self.execute_frostygoop_calibration_attack(
+                                float(data["offset_c"]), str(data.get("pcom_pin", "1111"))
+                            )
+                    except Exception:
+                        pass
+                payload = json.dumps(body_out, indent=2).encode("utf-8")
+                header = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json\r\n"
+                    f"Content-Length: {len(payload)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("utf-8")
+                writer.write(header + payload)
+            elif len(raw) >= 8:
+                # Minimal Modbus TCP MBAP responder (FC 03 / FC 06 / FC 16)
+                tid = raw[0:2]
+                pid = raw[2:4]
+                uid = raw[6:7]
+                fc = raw[7]
+                if fc in (3, 4):
+                    count = int.from_bytes(raw[10:12], "big") if len(raw) >= 12 else 4
+                    byte_count = count * 2
+                    regs = [
+                        int(self.state.reported_supply_temp_c * 10),
+                        int(self.state.actual_supply_temp_c * 10),
+                        int(self.state.return_water_temp_c * 10),
+                        int(self.state.calibration_offset_c * 10),
+                    ]
+                    reg_bytes = b"".join(
+                        int(regs[i % len(regs)] & 0xFFFF).to_bytes(2, "big") for i in range(count)
+                    )
+                    pdu = bytes([fc, byte_count]) + reg_bytes
+                    length = (len(pdu) + 1).to_bytes(2, "big")
+                    writer.write(tid + pid + length + uid + pdu)
+                else:
+                    # Echo write confirmation
+                    writer.write(raw[:12])
+            await writer.drain()
+        except Exception:
+            pass
+        finally:
+            writer.close()
+
     async def run(self):
         await self.connect()
+        port = int(os.getenv("HEATING_PORT", "5020"))
+        server = await asyncio.start_server(self.handle_client, "0.0.0.0", port)
+        print(f"[District-Heating] Listening on 0.0.0.0:{port} (Modbus TCP / PCOM / HTTP)")
         self.running = True
-        while self.running:
-            try:
-                await self.publish_state()
-            except Exception as exc:
-                print(f"[District-Heating] Loop error: {exc}")
-            await asyncio.sleep(1.0)
+        async with server:
+            while self.running:
+                try:
+                    await self.publish_state()
+                except Exception as exc:
+                    print(f"[District-Heating] Loop error: {exc}")
+                await asyncio.sleep(1.0)
 
 
 if __name__ == "__main__":

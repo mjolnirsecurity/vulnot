@@ -117,15 +117,50 @@ class DERMicrogridSimulator:
         await self.redis.set("vulnot:der_microgrid:current", payload)
         await self.redis.publish("vulnot:der_microgrid:state", payload)
 
+    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            raw = await asyncio.wait_for(reader.read(4096), timeout=5.0)
+            req_text = raw.decode("utf-8", errors="ignore")
+            body_out = self.state.to_dict()
+            if "POST" in req_text and "\r\n\r\n" in req_text:
+                _, body = req_text.split("\r\n\r\n", 1)
+                try:
+                    data = json.loads(body)
+                    if data.get("action") == "oscillate":
+                        body_out = self.execute_oscillation_attack(
+                            invert_droop=bool(data.get("invert_droop", True)),
+                            disable_bms=bool(data.get("disable_bms", True)),
+                            ev_pulse_mw=float(data.get("ev_pulse_mw", 15.0)),
+                        )
+                except Exception:
+                    pass
+            payload = json.dumps(body_out, indent=2).encode("utf-8")
+            header = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                f"Content-Length: {len(payload)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8")
+            writer.write(header + payload)
+            await writer.drain()
+        except Exception:
+            pass
+        finally:
+            writer.close()
+
     async def run(self):
         await self.connect()
+        port = int(os.getenv("DER_PORT", "8093"))
+        server = await asyncio.start_server(self.handle_client, "0.0.0.0", port)
+        print(f"[DER-Microgrid] Listening on 0.0.0.0:{port} (IEEE 2030.5 / OCPP 2.0.1)")
         self.running = True
-        while self.running:
-            try:
-                await self.publish_state()
-            except Exception as exc:
-                print(f"[DER-Microgrid] Loop error: {exc}")
-            await asyncio.sleep(1.0)
+        async with server:
+            while self.running:
+                try:
+                    await self.publish_state()
+                except Exception as exc:
+                    print(f"[DER-Microgrid] Loop error: {exc}")
+                await asyncio.sleep(1.0)
 
 
 if __name__ == "__main__":
