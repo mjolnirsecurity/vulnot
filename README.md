@@ -315,12 +315,13 @@ Simulates a renewable microgrid coupled to the DNP3 Substation with a 25 MW IEEE
 
 VULNOT includes a built-in bidirectional Moodle LMS connector (`training/moodle/client.py`, `/api/training/moodle/*`, and the `vulnot-moodle` CLI) linked to **[https://portal.mjolnir.training](https://portal.mjolnir.training)**:
 
-| Course Code | Course Title | Duration | Labs Covered |
-|-------------|--------------|----------|--------------|
-| **VULNOT-101** | OT/ICS Security Fundamentals | 2 days | Labs 01–04, SOC-01 |
-| **VULNOT-201** | Advanced ICS Protocol Exploitation & Defense | 3 days | Labs 05–08, SOC-02, SOC-03 |
-| **VULNOT-301** | OT Incident Response, Forensics & Red Team Capstone | 5 days | Lab 09, Forensics 01–05, SOC-04 |
-| **VULNOT-401** | AI-in-OT, Agentic ICS Exploitation & Emerging Threats | 4 days | Labs 10–15, Forensics 06–07, SOC-05 |
+| Course Code | Course Title | Duration | Labs Covered | Portal URL |
+|-------------|--------------|----------|--------------|------------|
+| **VULNOT-101** | OT/ICS Security Core & Legacy Fieldbus Exploitation | 2 days | `soc-01`, `lab-01` – `lab-04` | [Course #56](https://portal.mjolnir.training/course/view.php?id=56) |
+| **VULNOT-201** | Advanced Industrial Protocols, Kinetic Manufacturing & Historian Operations | 3 days | `lab-05` – `lab-08`, `lab-10`, `lab-11` | [Course #57](https://portal.mjolnir.training/course/view.php?id=57) |
+| **VULNOT-301** | OT SOC Detection Engineering, Active Conduit Defense & Safe Incident Response | 3 days | `soc-02`, `soc-03`, `soc-04`, `lab-09` | [Course #58](https://portal.mjolnir.training/course/view.php?id=58) |
+| **VULNOT-401** | Landmark ICS Digital Forensics, Supply-Chain Cold-Chain & LotL Investigations | 4 days | `forensics-01` – `forensics-08` | [Course #59](https://portal.mjolnir.training/course/view.php?id=59) |
+| **VULNOT-501** | Agentic AI-in-OT, Adversarial ML, Modern DER Microgrids & Healthcare Cold-Chain Exploitation | 3 days | `lab-12` – `lab-16`, `soc-05` | [Course #60](https://portal.mjolnir.training/course/view.php?id=60) |
 
 **Certification:** Successful completion of the Master Class includes the **VULNOT OT Security Practitioner** certification.
 

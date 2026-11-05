@@ -39,7 +39,7 @@
                     </span>
                 </h3>
                 <p id="moodle-user-summary">
-                    Connect your <strong>portal.mjolnir.training</strong> account to automatically sync lab flags, OT telemetry verification, and course completion across VULNOT-101, VULNOT-201, VULNOT-301, and VULNOT-401 (AI &amp; Emerging ICS Threats).
+                    Connect your <strong>portal.mjolnir.training</strong> account to automatically sync lab flags, OT telemetry verification, and course completion across VULNOT-101, VULNOT-201, VULNOT-301, VULNOT-401, and VULNOT-501.
                 </p>
             </div>
             <div class="moodle-actions">
@@ -47,7 +47,7 @@
                     Connect Moodle Account
                 </button>
                 <button type="button" class="btn-moodle-secondary" id="btn-sync-moodle" onclick="syncAllLabsToMoodle()">
-                    Sync Gradebook (<span id="completed-count">0</span>/29)
+                    Sync Gradebook (<span id="completed-count">0</span>/31)
                 </button>
                 <a href="https://portal.mjolnir.training" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary">
                     Open Portal &nearr;
@@ -58,12 +58,12 @@
         <div class="tab-bar">
             <button class="tab-btn active" onclick="showTab('redteam', this)">Red Team &amp; AI-OT Labs (16)</button>
             <button class="tab-btn" onclick="showTab('forensics', this)">Forensics Cases (8)</button>
-            <button class="tab-btn" onclick="showTab('soc', this)">SOC Defender (5)</button>
-            <button class="tab-btn" onclick="showTab('moodle-courses', this)">Moodle LMS Courses (4)</button>
+            <button class="tab-btn" onclick="showTab('soc', this)">SOC Defender (7)</button>
+            <button class="tab-btn" onclick="showTab('moodle-courses', this)">Moodle LMS Courses (5)</button>
         </div>
 
         <!-- ============================================================
-             RED TEAM LABS (VULNOT-101)
+             RED TEAM LABS (VULNOT-101 / 201 / 301 / 501)
              ============================================================ -->
         <div id="tab-redteam" class="tab-panel active">
             <div class="lab-grid">
@@ -79,10 +79,10 @@
                         <span class="tag">100 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-01">CMID #1011</span>
+                        <span class="lab-moodle-meta" id="status-lab-01">CMID #587</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-01', 'OT Network Discovery & Modbus Recon', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1011" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=587" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -98,10 +98,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-02">CMID #1012</span>
+                        <span class="lab-moodle-meta" id="status-lab-02">CMID #588</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-02', 'Modbus Exploitation & Chemical Dosing', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1012" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=588" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -117,10 +117,10 @@
                         <span class="tag">200 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-03">CMID #1013</span>
+                        <span class="lab-moodle-meta" id="status-lab-03">CMID #589</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-03', 'DNP3 Power Grid Substation Attacks', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1013" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=589" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -136,16 +136,16 @@
                         <span class="tag">200 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-04">CMID #1014</span>
+                        <span class="lab-moodle-meta" id="status-lab-04">CMID #590</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-04', 'Siemens S7comm Manufacturing Exploitation', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1014" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=590" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-05">
-                    <div class="lab-num">Lab 05 &bull; VULNOT-101</div>
+                    <div class="lab-num">Lab 05 &bull; VULNOT-201</div>
                     <h4>OPC UA Chemical Reactor Manipulation</h4>
                     <p>Exploit anonymous OPC UA sessions on port 4840, browse the ReactorControl address space, and disable emergency cooling interlocks.</p>
                     <span class="tag red">OPC UA</span>
@@ -155,16 +155,16 @@
                         <span class="tag">200 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-05">CMID #1015</span>
+                        <span class="lab-moodle-meta" id="status-lab-05">CMID #606</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-05', 'OPC UA Chemical Reactor Manipulation', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1015" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=606" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-06">
-                    <div class="lab-num">Lab 06 &bull; VULNOT-101</div>
+                    <div class="lab-num">Lab 06 &bull; VULNOT-201</div>
                     <h4>BACnet Building Automation &amp; Data Center HVAC</h4>
                     <p>Discover BACnet/IP objects via Who-Is/I-Am broadcasts (UDP 47808) and manipulate CRAC cooling setpoints in Server Room A.</p>
                     <span class="tag red">BACnet</span>
@@ -174,16 +174,16 @@
                         <span class="tag">200 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-06">CMID #1016</span>
+                        <span class="lab-moodle-meta" id="status-lab-06">CMID #607</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-06', 'BACnet Building Automation & Data Center HVAC', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1016" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=607" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-07">
-                    <div class="lab-num">Lab 07 &bull; VULNOT-101</div>
+                    <div class="lab-num">Lab 07 &bull; VULNOT-201</div>
                     <h4>MQTT IIoT Smart Factory Exploitation</h4>
                     <p>Subscribe to wildcard topics (<code>vulnot/#</code>) on unauthenticated MQTT brokers, spoof sensor telemetry, and inject actuator commands.</p>
                     <span class="tag red">MQTT</span>
@@ -193,16 +193,16 @@
                         <span class="tag">200 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-07">CMID #1017</span>
+                        <span class="lab-moodle-meta" id="status-lab-07">CMID #609</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-07', 'MQTT IIoT Smart Factory Exploitation', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1017" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=609" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-08">
-                    <div class="lab-num">Lab 08 &bull; VULNOT-101</div>
+                    <div class="lab-num">Lab 08 &bull; VULNOT-201</div>
                     <h4>Data Historian Exploitation &amp; Anti-Forensics</h4>
                     <p>Exploit SQL injection in tag queries, extract credentials from the OT Data Historian, and tamper with audit logs to mask physical anomalies.</p>
                     <span class="tag red">Historian</span>
@@ -212,16 +212,16 @@
                         <span class="tag">250 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-08">CMID #1018</span>
+                        <span class="lab-moodle-meta" id="status-lab-08">CMID #611</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-08', 'Data Historian Exploitation & Anti-Forensics', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1018" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=611" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-09">
-                    <div class="lab-num">Lab 09 &bull; VULNOT-101</div>
+                    <div class="lab-num">Lab 09 &bull; VULNOT-301</div>
                     <h4>Capstone: Multi-Vector APT Campaign</h4>
                     <p>Full kill-chain attack from IT/OT pivot and historian blinding to simultaneous multi-protocol physical impact across water and power systems.</p>
                     <span class="tag red">APT</span>
@@ -232,16 +232,16 @@
                         <span class="tag">500 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-09">CMID #1019</span>
+                        <span class="lab-moodle-meta" id="status-lab-09">CMID #633</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-09', 'Capstone: Multi-Vector APT Campaign', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1019" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=633" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-10">
-                    <div class="lab-num">Lab 10 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 10 &bull; VULNOT-201</div>
                     <h4>EtherNet/IP (CIP) Pharmaceutical Packaging Sabotage</h4>
                     <p>Enumerate Allen-Bradley ControlLogix CIP Identity &amp; Assembly objects (port 44818), under-fill pharmaceutical vials, and reduce sterile capper torque.</p>
                     <span class="tag red">EtherNet/IP</span>
@@ -251,16 +251,16 @@
                         <span class="tag">100 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-10">CMID #1010</span>
+                        <span class="lab-moodle-meta" id="status-lab-10">CMID #608</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-10', 'EtherNet/IP (CIP) Pharmaceutical Packaging Sabotage', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1010" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=608" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-11">
-                    <div class="lab-num">Lab 11 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 11 &bull; VULNOT-201</div>
                     <h4>PROFINET 5-Axis CNC Aerospace Tool-Offset Sabotage</h4>
                     <p>Discover SINUMERIK 840D &amp; S120 Servo Drives via PROFINET DCP and inject +0.18 mm Z-axis tool-offset drift into aerospace G-code program O0001.</p>
                     <span class="tag red">PROFINET</span>
@@ -270,16 +270,16 @@
                         <span class="tag">100 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-11">CMID #1011</span>
+                        <span class="lab-moodle-meta" id="status-lab-11">CMID #610</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-11', 'PROFINET 5-Axis CNC Aerospace Tool-Offset Sabotage', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1011" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=610" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-12">
-                    <div class="lab-num">Lab 12 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 12 &bull; VULNOT-501</div>
                     <h4>AI SCADA Copilot: Indirect Prompt Injection to PLC Write</h4>
                     <p>Hijack an autonomous LLM Shift Copilot via poisoned Historian shift notes so its MCP tool disables Level 1 OPC UA reactor cooling while masking operator output.</p>
                     <span class="tag red">AI / MCP</span>
@@ -290,16 +290,16 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-12">CMID #1012</span>
+                        <span class="lab-moodle-meta" id="status-lab-12">CMID #678</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-12', 'AI SCADA Copilot: Indirect Prompt Injection to PLC Write', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1012" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=678" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-13">
-                    <div class="lab-num">Lab 13 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 13 &bull; VULNOT-501</div>
                     <h4>Evading AI Predictive Maintenance &amp; Vision QC Backdoor</h4>
                     <p>Craft physics-informed adversarial covariate drift to overheat CNC spindle bearings without tripping the Autoencoder PdM alert, and backdoor the ONNX Vision QC model.</p>
                     <span class="tag red">Adversarial ML</span>
@@ -309,16 +309,16 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-13">CMID #1013</span>
+                        <span class="lab-moodle-meta" id="status-lab-13">CMID #679</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-13', 'Evading AI Predictive Maintenance & Vision QC Backdoor', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1013" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=679" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-14">
-                    <div class="lab-num">Lab 14 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 14 &bull; VULNOT-501</div>
                     <h4>Reward Hacking RL Chiller Optimizers &amp; Autonomous SOAR DoS</h4>
                     <p>Spoof BACnet inputs to reward-hack a Reinforcement Learning HVAC policy into triggering Server Room thermal runaway, and trick Autonomous SOAR into quarantining the HMI.</p>
                     <span class="tag red">RL / SOAR</span>
@@ -328,16 +328,16 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-14">CMID #1014</span>
+                        <span class="lab-moodle-meta" id="status-lab-14">CMID #680</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-14', 'Reward Hacking RL Chiller Optimizers & Autonomous SOAR DoS', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1014" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=680" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-15">
-                    <div class="lab-num">Lab 15 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 15 &bull; VULNOT-501</div>
                     <h4>DER Solar, OCPP Megawatt EV Chargers &amp; BESS Grid Oscillation</h4>
                     <p>Invert IEEE 2030.5 solar frequency-watt droop curves, override 50 MWh BESS BMS thermal interlocks, and pulse OCPP megawatt EV loads to trip substation UFLS relays.</p>
                     <span class="tag red">DER / BESS</span>
@@ -347,16 +347,16 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-15">CMID #1015</span>
+                        <span class="lab-moodle-meta" id="status-lab-15">CMID #681</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-15', 'DER Solar, OCPP Megawatt EV Chargers & BESS Grid Oscillation', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1015" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=681" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="lab-16">
-                    <div class="lab-num">Lab 16 &bull; VULNOT-401</div>
+                    <div class="lab-num">Lab 16 &bull; VULNOT-501</div>
                     <h4>Healthcare Blood Plasma Cold-Chain Sabotage (EFS / Coolworld 2026)</h4>
                     <p>Pivot via a third-party refrigeration contractor gateway (Coolworld) to reprogram blood donor &amp; plasma cryo-freezers from -30&deg;C to +110&deg;C while forcing 18 kW defrost heaters.</p>
                     <span class="tag red">Healthcare OT</span>
@@ -367,10 +367,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-lab-16">CMID #1016</span>
+                        <span class="lab-moodle-meta" id="status-lab-16">CMID #682</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-16', 'Healthcare Blood Plasma Cold-Chain Sabotage (EFS / Coolworld 2026)', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1016" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=682" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -379,13 +379,13 @@
         </div>
 
         <!-- ============================================================
-             FORENSICS CASES (VULNOT-201)
+             FORENSICS CASES (VULNOT-401)
              ============================================================ -->
         <div id="tab-forensics" class="tab-panel">
             <div class="lab-grid">
 
                 <div class="lab-card" data-lab-id="forensics-01">
-                    <div class="lab-num">Case 01 &bull; VULNOT-201</div>
+                    <div class="lab-num">Case 01 &bull; VULNOT-401</div>
                     <h4>Stuxnet-Style PLC Logic Manipulation</h4>
                     <p>Analyze S7comm OB1/FC187 block downloads, centrifuge speed alteration, and telemetry replay rootkit mechanisms.</p>
                     <span class="tag blue">ICS Malware</span>
@@ -395,16 +395,16 @@
                         <span class="tag">300 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-01">CMID #2011</span>
+                        <span class="lab-moodle-meta" id="status-forensics-01">CMID #652</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-01', 'Stuxnet-Style PLC Logic Manipulation', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=2011" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=652" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="forensics-02">
-                    <div class="lab-num">Case 02 &bull; VULNOT-201</div>
+                    <div class="lab-num">Case 02 &bull; VULNOT-401</div>
                     <h4>Industroyer / CrashOverride Power Grid Attack</h4>
                     <p>Reconstruct the Ukraine power grid attack: DNP3/IEC-104 breaker toggling, protective relay DoS, and wiper deployment.</p>
                     <span class="tag blue">Power Grid</span>
@@ -414,16 +414,16 @@
                         <span class="tag">300 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-02">CMID #2012</span>
+                        <span class="lab-moodle-meta" id="status-forensics-02">CMID #653</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-02', 'Industroyer / CrashOverride Power Grid Attack', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=2012" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=653" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="forensics-03">
-                    <div class="lab-num">Case 03 &bull; VULNOT-201</div>
+                    <div class="lab-num">Case 03 &bull; VULNOT-401</div>
                     <h4>TRITON / TRISIS Safety System Compromise</h4>
                     <p>Safety Instrumented System (SIS) compromise: TriStation protocol exploitation and safety logic override on Triconex controllers.</p>
                     <span class="tag blue">Safety</span>
@@ -433,16 +433,16 @@
                         <span class="tag">350 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-03">CMID #2013</span>
+                        <span class="lab-moodle-meta" id="status-forensics-03">CMID #654</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-03', 'TRITON / TRISIS Safety System Compromise', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=2013" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=654" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="forensics-04">
-                    <div class="lab-num">Case 04 &bull; VULNOT-201</div>
+                    <div class="lab-num">Case 04 &bull; VULNOT-401</div>
                     <h4>Colonial Pipeline IT/OT Convergence</h4>
                     <p>Ransomware impact on OT: IT/OT DMZ boundary audit, billing/historian dependency analysis, and safe pipeline restart verification.</p>
                     <span class="tag blue">Ransomware</span>
@@ -452,16 +452,16 @@
                         <span class="tag">250 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-04">CMID #2014</span>
+                        <span class="lab-moodle-meta" id="status-forensics-04">CMID #655</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-04', 'Colonial Pipeline IT/OT Convergence', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=2014" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=655" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="forensics-05">
-                    <div class="lab-num">Case 05 &bull; VULNOT-201</div>
+                    <div class="lab-num">Case 05 &bull; VULNOT-401</div>
                     <h4>Oldsmar Water Utility Chemical Dosing Incident</h4>
                     <p>Investigate unauthorized remote HMI access, correlate Modbus FC16 register writes to chemical dosing setpoints, and verify operator recovery.</p>
                     <span class="tag blue">Water</span>
@@ -471,10 +471,10 @@
                         <span class="tag">250 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-05">CMID #2015</span>
+                        <span class="lab-moodle-meta" id="status-forensics-05">CMID #656</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-05', 'Oldsmar Water Utility Chemical Dosing Incident', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=2015" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=656" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -490,10 +490,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-06">CMID #1106</span>
+                        <span class="lab-moodle-meta" id="status-forensics-06">CMID #657</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-06', 'FrostyGoop & Unitronics District Heating Sabotage (2024)', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1106" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=657" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -509,10 +509,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-07">CMID #1107</span>
+                        <span class="lab-moodle-meta" id="status-forensics-07">CMID #658</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-07', 'Volt Typhoon Living-off-the-Land (LotL) in IT/OT DMZs', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1107" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=658" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -528,10 +528,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-forensics-08">CMID #1108</span>
+                        <span class="lab-moodle-meta" id="status-forensics-08">CMID #659</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-08', 'EFS National Blood Service & European Cold-Chain Attack (Nov 2026)', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1108" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=659" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -540,13 +540,13 @@
         </div>
 
         <!-- ============================================================
-             SOC DEFENDER (VULNOT-301)
+             SOC DEFENDER (VULNOT-101 / 301 / 501)
              ============================================================ -->
         <div id="tab-soc" class="tab-panel">
             <div class="lab-grid">
 
                 <div class="lab-card" data-lab-id="soc-01">
-                    <div class="lab-num">Course 01 &bull; VULNOT-301</div>
+                    <div class="lab-num">Course 01 &bull; VULNOT-101</div>
                     <h4>OT Network Baseline &amp; Passive Monitoring</h4>
                     <p>Build complete OT asset inventories across Purdue Levels 0-3, profile polling intervals, and establish passive monitoring sensors.</p>
                     <span class="tag">Baseline</span>
@@ -556,18 +556,37 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-soc-01">CMID #3011</span>
+                        <span class="lab-moodle-meta" id="status-soc-01">CMID #586</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-01', 'OT Network Baseline & Passive Monitoring', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=3011" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=586" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="soc-02-dpi">
+                    <div class="lab-num">Course 02A &bull; VULNOT-301</div>
+                    <h4>Protocol-Aware DPI &amp; 34-Rule OT IDS Engineering</h4>
+                    <p>Engineer application-layer OT Deep Packet Inspection rules (MODBUS-001..CRYO-001) and Suricata IPS policies for Modbus, DNP3, S7comm, OPC UA, PROFINET, and MCP.</p>
+                    <span class="tag">OT DPI / IDS</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">4 hours</span>
+                        <span class="tag">200 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-soc-02-dpi">CMID #628</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-02', 'Protocol-Aware DPI & 34-Rule OT IDS Engineering', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=628" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="soc-02">
-                    <div class="lab-num">Course 02 &bull; VULNOT-301</div>
+                    <div class="lab-num">Course 02B &bull; VULNOT-301</div>
                     <h4>OT Detection Engineering &amp; Correlation Rules</h4>
-                    <p>Write SIEM correlation rules, Sigma rules, and protocol-aware anomaly detectors for unauthorized Modbus, DNP3, and S7comm writes.</p>
+                    <p>Write SIEM correlation rules (SIEM-001..SIEM-027), Sigma rules, and multi-stage kill-chain detectors across water, power, AI copilot, and cold-chain conduits.</p>
                     <span class="tag">Detection</span>
                     <div style="margin-top:10px;font-size:11px;color:#666;">
                         <span class="tag">Intermediate</span>
@@ -575,10 +594,10 @@
                         <span class="tag">250 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-soc-02">CMID #3012</span>
+                        <span class="lab-moodle-meta" id="status-soc-02">CMID #629</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-02', 'OT Detection Engineering & Correlation Rules', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=3012" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=629" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -594,10 +613,10 @@
                         <span class="tag">250 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-soc-03">CMID #3013</span>
+                        <span class="lab-moodle-meta" id="status-soc-03">CMID #630</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-03', 'OT Incident Response & Safe Containment', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=3013" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=630" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -613,16 +632,35 @@
                         <span class="tag">300 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-soc-04">CMID #3014</span>
+                        <span class="lab-moodle-meta" id="status-soc-04">CMID #631</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-04', 'Proactive Threat Hunting in ICS Environments', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=3014" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=631" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="soc-05-cbf">
+                    <div class="lab-num">Course 05A &bull; VULNOT-301</div>
+                    <h4>IEC 62443 Zone/Conduit Firewalling &amp; Physics CBFs</h4>
+                    <p>Audit IEC 62443-3-3 FR1-FR7 security levels, generate nftables zone-conduit policies, and enforce deterministic Physics Control Barrier Functions (CBF-001..CBF-007).</p>
+                    <span class="tag">IEC 62443 / CBF</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">4 hours</span>
+                        <span class="tag">200 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-soc-05-cbf">CMID #632</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-05', 'IEC 62443 Zone/Conduit Firewalling & Physics CBFs', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=632" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="lab-card" data-lab-id="soc-05">
-                    <div class="lab-num">Course 05 &bull; VULNOT-401</div>
+                    <div class="lab-num">Course 05B &bull; VULNOT-501</div>
                     <h4>Securing Agentic OT Copilots, MCP Guardrails &amp; Physics-Informed ML</h4>
                     <p>Enforce Human-in-the-Loop (HITL) MCP guardrails on the OT Copilot, deploy first-principles physics bounds beside ML PdM, verify signed ONNX models, and add RL Control Barrier Functions.</p>
                     <span class="tag">AI-OT Defense</span>
@@ -632,10 +670,10 @@
                         <span class="tag">150 pts</span>
                     </div>
                     <div class="lab-card-footer">
-                        <span class="lab-moodle-meta" id="status-soc-05">CMID #1205</span>
+                        <span class="lab-moodle-meta" id="status-soc-05">CMID #683</span>
                         <div style="display:flex;gap:6px;">
                             <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-05', 'Securing Agentic OT Copilots, MCP Guardrails & Physics-Informed ML', 'VULNOT{...}')">Verify Flag</button>
-                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1205" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=683" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
                         </div>
                     </div>
                 </div>
@@ -650,47 +688,62 @@
             <div class="lab-grid">
 
                 <div class="lab-card">
-                    <div class="lab-num">VULNOT-101 &bull; Course ID #101</div>
-                    <h4>VULNOT Fundamentals: OT/ICS Security Core</h4>
-                    <p>Hands-on introduction to industrial control systems, Purdue Model architecture, OT network reconnaissance, Modbus TCP &amp; DNP3 exploitation, S7comm PLC sabotage, and passive baseline monitoring.</p>
+                    <div class="lab-num">VULNOT-101 &bull; Course ID #56</div>
+                    <h4>VULNOT-101: OT/ICS Security Core &amp; Legacy Fieldbus Exploitation</h4>
+                    <p>Hands-on introduction to industrial control systems, Purdue Model architecture, passive baseline monitoring (SOC-01), and Modbus TCP, DNP3, and Siemens S7comm fieldbus exploitation.</p>
                     <span class="tag red">5 Modules</span>
+                    <span class="tag">VAC Cert</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
-                        <a href="https://portal.mjolnir.training/course/view.php?id=101" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=56" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
                     </div>
                 </div>
 
                 <div class="lab-card">
-                    <div class="lab-num">VULNOT-201 &bull; Course ID #201</div>
-                    <h4>VULNOT Advanced: Industrial Protocol Exploitation &amp; Defense</h4>
-                    <p>Deep-dive exploitation and detection across OPC UA chemical reactors, BACnet smart buildings, MQTT/IIoT supply chains, OT Historian SQL injection, real-time IDS engineering, and OT incident response.</p>
+                    <div class="lab-num">VULNOT-201 &bull; Course ID #57</div>
+                    <h4>VULNOT-201: Advanced Industrial Protocols, Kinetic Manufacturing &amp; Historian Operations</h4>
+                    <p>Deep-dive exploitation across OPC UA chemical reactors, BACnet smart buildings, EtherNet/IP pharmaceutical packaging, MQTT IIoT telemetry, PROFINET 5-axis CNC machining, and OT Historian SQLi.</p>
                     <span class="tag blue">6 Modules</span>
+                    <span class="tag">VAS Cert</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
-                        <a href="https://portal.mjolnir.training/course/view.php?id=201" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=57" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
                     </div>
                 </div>
 
                 <div class="lab-card">
-                    <div class="lab-num">VULNOT-301 &bull; Course ID #301</div>
-                    <h4>VULNOT Master Class: APT Campaigns, ICS Forensics &amp; Capstone</h4>
-                    <p>Real-world ICS forensic reconstructions (Stuxnet, Industroyer, TRITON, Colonial Pipeline, Oldsmar Water), proactive MITRE ATT&amp;CK for ICS threat hunting, and the 8-hour Capstone Assessment.</p>
-                    <span class="tag">7 Modules</span>
+                    <div class="lab-num">VULNOT-301 &bull; Course ID #58</div>
+                    <h4>VULNOT-301: OT SOC Detection Engineering, Active Conduit Defense &amp; Safe Incident Response</h4>
+                    <p>Protocol-aware 34-rule OT DPI, 27-rule SIEM kill-chain correlation, OT-safe incident containment &amp; Golden PLC Baseline rollback, MITRE ICS threat hunting, IEC 62443 + Physics CBFs, and Deception Honeypots Capstone.</p>
+                    <span class="tag">6 Modules</span>
+                    <span class="tag">VOSP Cert</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
-                        <a href="https://portal.mjolnir.training/course/view.php?id=301" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=58" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
                     </div>
                 </div>
 
                 <div class="lab-card">
-                    <div class="lab-num">VULNOT-401 &bull; Course ID #401</div>
-                    <h4>VULNOT AI &amp; Emerging ICS Threats: Agentic OT, Adversarial ML &amp; Modern Grid</h4>
-                    <p>11 modules covering LLM/MCP SCADA Copilot indirect prompt injection, Autoencoder PdM evasion, Edge ONNX Vision QC backdoors, RL Chiller reward hacking, FrostyGoop, Volt Typhoon LotL, DER/BESS/OCPP grid oscillations, and the 2026 EFS/Coolworld Blood Plasma Cold-Chain attack.</p>
-                    <span class="tag red">11 Modules</span>
+                    <div class="lab-num">VULNOT-401 &bull; Course ID #59</div>
+                    <h4>VULNOT-401: Landmark ICS Digital Forensics, Supply-Chain Cold-Chain &amp; LotL Investigations</h4>
+                    <p>8 landmark ICS forensic investigations: Stuxnet, Industroyer, TRITON, Colonial Pipeline, Oldsmar Water, FrostyGoop District Heating, Volt Typhoon LotL, and the Nov 2026 EFS / Coolworld Blood Cold-Chain Attack.</p>
+                    <span class="tag blue">8 Modules</span>
+                    <span class="tag">VIDFIR Cert</span>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta">portal.mjolnir.training</span>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=59" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">VULNOT-501 &bull; Course ID #60</div>
+                    <h4>VULNOT-501: Agentic AI-in-OT, Adversarial ML, Modern DER Microgrids &amp; Healthcare Cold-Chain Exploitation</h4>
+                    <p>6 emerging cyber-physical modules: LLM/MCP SCADA Copilot prompt injection, Autoencoder PdM &amp; ONNX backdoors, RL Chiller &amp; SOAR DoS, DER/BESS/OCPP grid oscillation, Live EFS Blood Cold-Chain (-30&deg;C to +110&deg;C) Sabotage, and Agentic OT Guardrails.</p>
+                    <span class="tag red">6 Modules</span>
                     <span class="tag blue">VAOSA Cert</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
-                        <a href="https://portal.mjolnir.training/course/view.php?id=401" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=60" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
                     </div>
                 </div>
 

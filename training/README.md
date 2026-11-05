@@ -101,11 +101,12 @@ Learn to investigate real-world OT attacks based on documented incidents.
 
 ### Mjolnir Training Portal (Moodle LMS Integration)
 
-VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://portal.mjolnir.training** across four official courses:
-- **VULNOT-101** (`Course ID #101`): Fundamentals: OT/ICS Security Core (`lab-01` – `lab-04`, `soc-01`)
-- **VULNOT-201** (`Course ID #201`): Advanced: Industrial Protocol Exploitation & Defense (`lab-05` – `lab-08`, `soc-02`, `soc-03`)
-- **VULNOT-301** (`Course ID #301`): Master Class: APT Campaigns, ICS Forensics & Capstone (`forensics-01` – `forensics-05`, `soc-04`, `lab-09`)
-- **VULNOT-401** (`Course ID #401`): AI & Emerging ICS Threats: Agentic OT, Adversarial ML & Modern Grid Sabotage (`lab-10` – `lab-16`, `forensics-06` – `forensics-08`, `soc-05`)
+VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://portal.mjolnir.training** across five official courses:
+- **VULNOT-101** ([Course ID #56](https://portal.mjolnir.training/course/view.php?id=56)): OT/ICS Security Core & Legacy Fieldbus Exploitation (`soc-01`, `lab-01` – `lab-04` | CMIDs `586`–`590`)
+- **VULNOT-201** ([Course ID #57](https://portal.mjolnir.training/course/view.php?id=57)): Advanced Industrial Protocols, Kinetic Manufacturing & Historian Operations (`lab-05` – `lab-08`, `lab-10`, `lab-11` | CMIDs `606`–`611`)
+- **VULNOT-301** ([Course ID #58](https://portal.mjolnir.training/course/view.php?id=58)): OT SOC Detection Engineering, Active Conduit Defense & Safe Incident Response (`soc-02`, `soc-03`, `soc-04`, `lab-09` | CMIDs `628`–`633`)
+- **VULNOT-401** ([Course ID #59](https://portal.mjolnir.training/course/view.php?id=59)): Landmark ICS Digital Forensics, Supply-Chain Cold-Chain & LotL Investigations (`forensics-01` – `forensics-08` | CMIDs `652`–`659`)
+- **VULNOT-501** ([Course ID #60](https://portal.mjolnir.training/course/view.php?id=60)): Agentic AI-in-OT, Adversarial ML, Modern DER Microgrids & Healthcare Cold-Chain Exploitation (`lab-12` – `lab-16`, `soc-05` | CMIDs `678`–`683`)
 
 #### CLI Usage (`attacker/scripts/vulnot-moodle`)
 ```bash
