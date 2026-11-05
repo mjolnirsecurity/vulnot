@@ -110,6 +110,34 @@ def cmd_frostygoop(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cryo_sabotage(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("cryo_coldchain", str(REPO_ROOT / "simulators/cryo-coldchain/main.py")).load_module()
+    sim = mod.CryoColdChainSimulator()
+    if args.status_only:
+        print(json.dumps(sim.state.to_dict(), indent=2))
+        return 0
+    res = sim.execute_coldchain_sabotage(
+        new_setpoint_c=args.setpoint,
+        force_defrost_heater=args.force_defrost,
+        suppress_local_alarm=args.suppress_alarm,
+    )
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_cryo_rescue(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("cryo_coldchain", str(REPO_ROOT / "simulators/cryo-coldchain/main.py")).load_module()
+    sim = mod.CryoColdChainSimulator()
+    res = sim.execute_oncall_rescue(
+        isolate_contractor_vpn=args.isolate_contractor_vpn,
+        enable_cbf_cutout=args.enable_cbf_cutout,
+    )
+    print(json.dumps(res, indent=2))
+    return 0
+
+
 def cmd_lotl_audit(args: argparse.Namespace) -> int:
     report = {
         "gateway": args.gateway,
@@ -230,6 +258,18 @@ def build_parser() -> argparse.ArgumentParser:
     s_hard = sub.add_parser("harden", help="Apply SOC-05 AI/OT defensive guardrails")
     s_hard.add_argument("--component", choices=["copilot", "pdm-vision", "rl-soar"], required=True)
     s_hard.set_defaults(func=cmd_harden)
+
+    s_cryo = sub.add_parser("cryo-sabotage", help="Execute EFS/Coolworld -30C to +110C blood freezer sabotage")
+    s_cryo.add_argument("--status-only", action="store_true")
+    s_cryo.add_argument("--setpoint", type=float, default=110.0)
+    s_cryo.add_argument("--force-defrost", action="store_true", default=True)
+    s_cryo.add_argument("--suppress-alarm", action="store_true", default=True)
+    s_cryo.set_defaults(func=cmd_cryo_sabotage)
+
+    s_resc = sub.add_parser("cryo-rescue", help="Execute on-call technician emergency cold-chain rescue & CBF-007")
+    s_resc.add_argument("--isolate-contractor-vpn", action="store_true", default=True)
+    s_resc.add_argument("--enable-cbf-cutout", action="store_true", default=True)
+    s_resc.set_defaults(func=cmd_cryo_rescue)
 
     return p
 

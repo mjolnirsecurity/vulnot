@@ -498,6 +498,22 @@ CORRELATION_RULES = [
         },
         actions=["alert", "block_source", "capture_forensic_pcap", "incident_create"],
     ),
+
+    CorrelationRule(
+        id="SIEM-027",
+        name="EFS / Coolworld Healthcare Cold-Chain Contractor Sabotage (-30C to +110C)",
+        description="Correlates third-party refrigeration contractor VPN login with extreme positive setpoint write (+110 C), defrost heater activation, and alarm threshold suppression",
+        rule_type=RuleType.SEQUENCE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="T0886 / T0836 / T0838",
+        sequence=[
+            {"event": "contractor_vpn_login_coolworld"},
+            {"event": "modbus_write_hr0_setpoint_110c"},
+            {"event": "modbus_coil1_defrost_heater_forced_on"},
+        ],
+        time_window_seconds=180,
+        actions=["alert", "page_oncall_technician", "isolate_contractor_vpn", "engage_cbf007_bimetallic_cutout"],
+    ),
 ]
 
 

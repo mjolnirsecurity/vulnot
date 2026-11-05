@@ -369,6 +369,14 @@ class OTIDSEngine:
                 protocol="deception",
                 condition="dest_ip in ['10.0.1.99', '10.0.3.99', '10.0.4.99', '10.0.90.99']"
             ),
+            DetectionRule(
+                id="CRYO-001",
+                name="Healthcare Cryo-Freezer Extreme Setpoint Shift (-30C to +110C)",
+                description="Medical cold-chain freezer setpoint raised above -20 C or electric defrost heater forced ON via contractor VPN",
+                severity=AlertSeverity.CRITICAL,
+                protocol="modbus",
+                condition="dest_port == 5021 and (target_setpoint_c > -20.0 or electric_defrost_heater_on)"
+            ),
         ]
         
     async def connect(self):

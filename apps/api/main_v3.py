@@ -143,6 +143,14 @@ SCENARIOS = {
         "port": 8093,
         "redis_channel": "vulnot:der_microgrid:state",
         "redis_key": "vulnot:der_microgrid:current"
+    },
+    "cryo-blood": {
+        "name": "EFS Blood Plasma Cryo-Storage (Coolworld)",
+        "protocol": "Modbus TCP / TeleMon",
+        "network": "10.0.12.0/24",
+        "port": 5021,
+        "redis_channel": "vulnot:cryo_blood:state",
+        "redis_key": "vulnot:cryo_blood:current"
     }
 }
 

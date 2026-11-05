@@ -100,6 +100,13 @@ const scenarios = [
     description: '25 MW solar array, 50 MWh utility BESS, and 15 MW OCPP 2.0.1 fleet charging depot',
     devices: 8, vulnerabilities: 4, alerts: 1,
     metrics: { bessMWh: 50, solarMW: 22.5, gridHz: 60.0 }, path: '/training'
+  },
+  {
+    id: 15, name: 'EFS Blood Plasma Cryo-Storage', protocol: 'Modbus / TeleMon', port: 5021,
+    network: '10.0.12.0/24', status: 'critical', icon: '🩸',
+    description: 'Healthcare cold-chain vaults (-30°C to +110°C Coolworld contractor attack on 4,800 plasma units)',
+    devices: 4, vulnerabilities: 4, alerts: 3,
+    metrics: { setpointC: -30.0, plasmaUnits: 4800, defrostOn: 'OFF' }, path: '/training'
   }
 ];
 

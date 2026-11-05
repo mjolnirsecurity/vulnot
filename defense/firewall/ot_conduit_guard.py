@@ -172,6 +172,15 @@ PHYSICS_INVARIANTS: List[PhysicsInvariant] = [
         safe_fallback_action="OPEN BESS DC contactor on thermal violation and RATE-LIMIT OCPP EV depot load steps",
         mitre_mitigation="M0801 - Access Management / IEEE 1547 Ride-Through Protection",
     ),
+    PhysicsInvariant(
+        invariant_id="CBF-007",
+        scenario="cryo-blood",
+        asset="EFS Blood Plasma Cryo-Freezer Vaults A/B/C (10.0.12.10:5021)",
+        description="Firmware setpoint clamped to [-40.0 C, -25.0 C]; hardware bimetallic thermal cutout opens electric defrost heater circuit above -15.0 C",
+        condition_expression="-40.0 <= target_setpoint_c <= -25.0 and not (chamber_actual_temp_c > -15.0 and electric_defrost_heater_on)",
+        safe_fallback_action="OPEN defrost heater contactor, FORCE cascade_compressor_on=True, CLAMP HR0=-30.0 C, PAGE on-call technician",
+        mitre_mitigation="M0807 - Third-Party Conduit Isolation / Hardware Bimetallic Thermal Cutout",
+    ),
 ]
 
 
@@ -246,6 +255,20 @@ GOLDEN_BASELINES: Dict[str, GoldenBaseline] = {
         protocol="IEEE 2030.5 / OCPP 2.0.1",
         config_sha256=hashlib.sha256(b"vulnot-der-golden-v1").hexdigest(),
         critical_registers={"freq_watt_droop_inverted": False, "bms_thermal_interlock_enabled": True, "coupled_grid_frequency_hz": 60.0},
+        safety_interlocks_enabled=True,
+    ),
+    "cryo-blood": GoldenBaseline(
+        scenario="cryo-blood",
+        target_host="10.0.12.10:5021",
+        protocol="Modbus TCP / Coolworld-TeleMon",
+        config_sha256=hashlib.sha256(b"vulnot-efs-cryo-golden-v1").hexdigest(),
+        critical_registers={
+            "HR0_target_setpoint_c": -30.0,
+            "HR2_defrost_cutoff_limit_c": 8.0,
+            "HR3_high_temp_alarm_limit_c": -25.0,
+            "COIL0_cascade_compressor_on": True,
+            "COIL1_electric_defrost_heater_on": False,
+        },
         safety_interlocks_enabled=True,
     ),
 }

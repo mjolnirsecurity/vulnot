@@ -225,6 +225,29 @@
                 </div>
             </div>
 
+            <!-- 9. EFS Blood Service & Coolworld Cold-Chain (Nov 2026) -->
+            <div class="forensic-card">
+                <div class="forensic-card-header">
+                    <h4>EFS Blood Service &amp; Coolworld Cold-Chain</h4>
+                    <span class="year">Nov 2026</span>
+                </div>
+                <div class="forensic-card-body">
+                    <p>Investigate the European cold-chain attack on France's National Blood Service (EFS) via refrigeration contractor Coolworld, where hackers reset -30&deg;C blood plasma &amp; donor sample freezers to +110&deg;C (230&deg;F).</p>
+                    <div class="forensic-skills">
+                        <span class="sk">Supply Chain</span>
+                        <span class="sk">Danfoss AK-SM800A</span>
+                        <span class="sk">-30&deg;C &rarr; +110&deg;C</span>
+                        <span class="sk">On-Call Rescue</span>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">Contractor VPN 172.16.88.42 &rarr; Danfoss AK-SM800A (:5021)</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">HR0 target reset from -30.0&deg;C to +110.0&deg;C + 18 kW defrost ON</li>
+                        <li style="font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(231,76,60,0.05);color:#c0392b;border:1px solid rgba(231,76,60,0.12);">4,800 plasma &amp; donor units saved at -23.4&deg;C by on-call tech</li>
+                    </ul>
+                    <p style="font-size:13px;color:#666;margin-top:12px;"><strong style="color:#888;">Investigation:</strong> Run <code>vulnot-blue hunt --hypothesis efs-coldchain-sabotage</code> &rarr; Execute <code>vulnot-ai cryo-rescue</code> &rarr; Enforce CBF-007 thermal cutout</p>
+                </div>
+            </div>
+
         </div>
 
         <!-- ============================================================

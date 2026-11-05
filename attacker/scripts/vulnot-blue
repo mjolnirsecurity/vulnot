@@ -117,6 +117,22 @@ def cmd_hunt(args: argparse.Namespace) -> int:
             ],
             "flag": "VULNOT{hunt_der_ocpp_subsynchronous_oscillation_traced}",
         },
+        "efs-coldchain-sabotage": {
+            "hypothesis": "Compromised third-party contractor VPN (Coolworld) reprogrammed EFS blood plasma freezers from -30 C to +110 C",
+            "mitre_techniques": ["T0886", "T0836", "T0838"],
+            "telemetry_queried": [
+                "Contractor VPN gateway 172.16.88.14 session logs",
+                "Danfoss AK-SM800A Modbus audit log on 10.0.12.10:5021",
+                "Out-of-band PT100 watchdog on Vault-A (2,400 FFP units)",
+            ],
+            "findings": [
+                "Unauthorized contractor VPN login (`coolworld_maint`) from 172.16.88.14 at 02:11 CET",
+                "Modbus FC16 write to 10.0.12.10:5021: HR0=-30.0 C -> +110.0 C, HR2=+110.0 C, HR3=+120.0 C",
+                "COIL0 cascade compressor forced OFF; COIL1 18 kW electric defrost heater forced ON",
+                "On-call technician watchdog paged at -23.4 C prior to -20.0 C plasma denaturation limit",
+            ],
+            "flag": "VULNOT{efs_coolworld_contractor_pivot_traced}",
+        },
     }
     res = hunts[args.hypothesis]
     res["hypothesis_id"] = args.hypothesis
@@ -234,6 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
             "pdm-manifold-drift",
             "frostygoop-calibration",
             "der-oscillation",
+            "efs-coldchain-sabotage",
         ],
         default="lotl-portproxy",
     )

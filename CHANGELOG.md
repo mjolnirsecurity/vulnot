@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2.1.0] - 2026-11-05
+
+### Added
+- **Scenario 15 — EFS Blood Plasma Cryo-Storage & Coolworld Cold-Chain (`simulators/cryo-coldchain/main.py`, `10.0.12.10:5021`)**:
+  - Models the November 2026 cyberattack on France's National Blood Service (**Établissement Français du Sang — EFS**) via its third-party refrigeration contractor **Coolworld** (part of the European industrial cold-chain attack wave — *"From frozen peas to frozen plasma in three weeks"*).
+  - Emulates a Danfoss AK-SM800A / `Coolworld-TeleMon-v3.2` cellular refrigeration controller protecting `4,800` transfusion plasma and blood donor sample units at `-30.0°C`, where attackers reprogram `HR0` to `+110.0°C` (`230°F`), force 18 kW electric defrost heaters (`COIL1=True`), and suppress high-temp alarms (`HR3=+120.0°C`), while an out-of-band on-call technician watchdog detects rising temperatures at `-23.4°C` and rescues the inventory.
+- **2 New Hands-On Labs (`VULNOT-401`, Expanding Curriculum to 29 Labs / 4,000 Points)**:
+  - `training/labs/lab-16-cryo-blood-coldchain.md` — *Lab 16: Healthcare Blood Plasma Cold-Chain Sabotage (EFS / Coolworld 2026)*
+  - `training/forensics/forensics-08-efs-blood-coldchain.md` — *Forensic Case 08: EFS National Blood Service & European Cold-Chain Attack (Nov 2026)*
+- **Cold-Chain Offensive, Defensive & Threat-Hunting Capabilities**:
+  - `attacker/scripts/vulnot-ai`: Added `cryo-sabotage` and `cryo-rescue` subcommands.
+  - `attacker/scripts/vulnot-blue`: Added `--hypothesis efs-coldchain-sabotage` to `vulnot-blue hunt`.
+  - `attacker/scripts/vulnot-apt`: Added `efs_coolworld_2026` multi-stage campaign (`10` APT campaigns total).
+  - `defense/ids/ot_ids.py`: Added `CRYO-001` detection rule (`34` OT IDS rules total).
+  - `defense/siem/rules/correlation_rules.py`: Added `SIEM-027` sequence correlation rule (`27` SIEM rules total).
+  - `defense/firewall/ot_conduit_guard.py`: Added `CBF-007` hardware bimetallic thermal cutout invariant and `"cryo-blood"` Golden Baseline.
+
+---
+
 ## [2.0.0] - 2026-11-04
 
 ### Added

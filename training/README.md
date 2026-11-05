@@ -28,6 +28,7 @@ Learn to think like an attacker and understand OT vulnerabilities.
 | [Lab 13](labs/lab-13-ai-pdm-vision.md) | ONNX / MQTT | Expert | Evading AI Predictive Maintenance & backdooring Edge Vision QC |
 | [Lab 14](labs/lab-14-ai-rl-soar-hijack.md) | PPO RL / BACnet | Advanced | Reward hacking RL chiller optimizers & autonomous OT SOAR DoS |
 | [Lab 15](labs/lab-15-der-bess-microgrid.md) | IEEE 2030.5 / OCPP | Expert | DER solar inverter, 50 MWh BESS & megawatt EV grid oscillation |
+| [Lab 16](labs/lab-16-cryo-blood-coldchain.md) | Modbus TCP / Danfoss | Expert | Healthcare Blood Plasma Cold-Chain Sabotage (EFS / Coolworld 2026) |
 
 ### 🔵 Blue Team Labs (SOC Defender)
 Learn to detect, respond to, and investigate OT security incidents.
@@ -52,6 +53,7 @@ Learn to investigate real-world OT attacks based on documented incidents.
 | [Forensics 05](forensics/forensics-05-water-utility.md) | Water Attacks | 2021-24 | Water treatment attacks |
 | [Forensics 06](forensics/forensics-06-frostygoop-heating.md) | FrostyGoop / Unitronics | 2024 | District heating Modbus calibration spoofing across 620 buildings |
 | [Forensics 07](forensics/forensics-07-volt-typhoon-lotl.md) | Volt Typhoon LotL | 2024-26 | Living-off-the-Land (`netsh portproxy` / `socat`) in IT/OT DMZs |
+| [Forensics 08](forensics/forensics-08-efs-blood-coldchain.md) | EFS / Coolworld Cold-Chain | Nov 2026 | Blood plasma & donor sample freezers reset from -30°C to +110°C |
 
 ---
 
@@ -103,7 +105,7 @@ VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://por
 - **VULNOT-101** (`Course ID #101`): Fundamentals: OT/ICS Security Core (`lab-01` – `lab-04`, `soc-01`)
 - **VULNOT-201** (`Course ID #201`): Advanced: Industrial Protocol Exploitation & Defense (`lab-05` – `lab-08`, `soc-02`, `soc-03`)
 - **VULNOT-301** (`Course ID #301`): Master Class: APT Campaigns, ICS Forensics & Capstone (`forensics-01` – `forensics-05`, `soc-04`, `lab-09`)
-- **VULNOT-401** (`Course ID #401`): AI & Emerging ICS Threats: Agentic OT, Adversarial ML & Modern Grid Sabotage (`lab-10` – `lab-15`, `forensics-06`, `forensics-07`, `soc-05`)
+- **VULNOT-401** (`Course ID #401`): AI & Emerging ICS Threats: Agentic OT, Adversarial ML & Modern Grid Sabotage (`lab-10` – `lab-16`, `forensics-06` – `forensics-08`, `soc-05`)
 
 #### CLI Usage (`attacker/scripts/vulnot-moodle`)
 ```bash

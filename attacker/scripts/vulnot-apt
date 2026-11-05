@@ -525,6 +525,34 @@ CAMPAIGNS = {
             ),
         ]
     ),
+
+    "efs_coolworld_2026": APTCampaign(
+        name="EFS Blood Service & Coolworld Cold-Chain Sabotage (Nov 2026)",
+        description="Emulates the Nov 2026 European cold-chain cyberattack resetting EFS blood plasma freezers from -30 C to +110 C via contractor Coolworld",
+        objective="Pivot via third-party refrigeration contractor VPN to reprogram medical plasma freezers from -30 C to +110 C and force electric defrost heaters ON",
+        steps=[
+            AttackStep(
+                id="EFS26-01",
+                name="Contractor Telemonitoring Gateway Discovery",
+                phase=AttackPhase.INITIAL_ACCESS,
+                technique_id="T0886",
+                description="Enumerate Coolworld-TeleMon v3.2 gateway and Danfoss AK-SM800A Modbus registers on 10.0.12.10:5021",
+                target="10.0.12.10:5021",
+                command="vulnot-ai cryo-sabotage --status-only",
+                success_indicator="4,800 blood/plasma units and HR0..HR4 register map enumerated"
+            ),
+            AttackStep(
+                id="EFS26-02",
+                name="Setpoint Reprogramming (-30 C to +110 C) & Defrost Heater Activation",
+                phase=AttackPhase.IMPACT,
+                technique_id="T0836",
+                description="Write +110.0 C to HR0/HR2, disable cascade compressor COIL0, force 18 kW defrost heaters COIL1 ON, and shift alarm limit HR3 to +120 C",
+                target="10.0.12.10:5021",
+                command="vulnot-ai cryo-sabotage --setpoint 110.0 --force-defrost --suppress-alarm",
+                success_indicator="Freezer setpoint changed to +110.0 C; on-call technician watchdog triggered at -23.4 C"
+            ),
+        ]
+    ),
 }
 
 

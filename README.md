@@ -55,10 +55,10 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 
 ### Why VULNOT?
 
-- **Realistic Scenarios**: 14 industrial & AI-in-OT scenarios simulating real-world critical infrastructure and agentic OT environments
-- **Multi-Protocol + AI/MCP**: 12+ industrial & modern OT protocols (Modbus TCP, DNP3, S7comm, OPC UA, BACnet/IP, EtherNet/IP CIP, MQTT, PROFINET, Unitronics PCOM, IEEE 2030.5, OCPP 2.0.1, Model Context Protocol MCP, ONNX Runtime)
+- **Realistic Scenarios**: 15 industrial, healthcare cold-chain & AI-in-OT scenarios simulating real-world critical infrastructure and agentic OT environments
+- **Multi-Protocol + AI/MCP**: 13+ industrial & modern OT protocols (Modbus TCP, DNP3, S7comm, OPC UA, BACnet/IP, EtherNet/IP CIP, MQTT, PROFINET, Unitronics PCOM, Danfoss AK-SM800A Telemonitoring, IEEE 2030.5, OCPP 2.0.1, Model Context Protocol MCP, ONNX Runtime)
 - **Complete Red/Blue/Defense Toolkit**: 23+ offensive, defensive, threat-hunting, and DFIR CLI tools (`vulnot-ai`, `vulnot-fuzz`, `vulnot-pivot`, `vulnot-defend`, `vulnot-blue`, `vulnot-moodle`, etc.)
-- **Active Defense & Guardrails**: 33 OT IDS rules, 26 SIEM correlation rules, 7 incident response playbooks, IEC 62443 Zone/Conduit DPI firewall, Physics Control Barrier Functions (CBF), and ICS/MCP Deception Honeypots
+- **Active Defense & Guardrails**: 34 OT IDS rules, 27 SIEM correlation rules, 7 incident response playbooks, IEC 62443 Zone/Conduit DPI firewall, Physics Control Barrier Functions (CBF), and ICS/MCP Deception Honeypots
 - **Moodle LMS Integration**: Bidirectional gradebook, course enrollment, and CTF flag verification with **[https://portal.mjolnir.training](https://portal.mjolnir.training)** (`VULNOT-101` through `VULNOT-401`)
 - **Compliance Mapping**: IEC 62443, NIST SP 800-82, NERC CIP, MITRE ATT&CK for ICS, MITRE ATLAS, and OWASP LLM Top 10
 
@@ -66,7 +66,7 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 
 ## Features
 
-### 🏭 14 Industrial & AI-in-OT Scenarios
+### 🏭 15 Industrial, Healthcare & AI-in-OT Scenarios
 
 | # | Scenario | Protocol / Stack | Port | Network |
 |---|----------|------------------|------|---------|
@@ -84,6 +84,7 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 | 12 | Autonomous RL Chiller Optimizer & OT SOAR | RL / BACnet / SOAR | 8092 | 10.0.90.0/24 |
 | 13 | Municipal District Heating (FrostyGoop) | Modbus TCP / PCOM | 5020 | 10.0.10.0/24 |
 | 14 | DER Solar, 50 MWh BESS & OCPP EV Depot | IEEE 2030.5 / OCPP 2.0.1 | 8093 | 10.0.11.0/24 |
+| 15 | EFS Blood Plasma Cryo-Storage (Coolworld) | Modbus TCP / Danfoss AK-SM800A | 5021 | 10.0.12.0/24 |
 
 ### 🔧 23+ Offensive, Defensive & Blue Team CLI Tools
 
@@ -91,15 +92,15 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 |----------|-------|
 | **Reconnaissance & Pivoting** | `vulnot-scan`, `vulnot-pivot` (`discover-conduits`, `lotl-relay`, `harvest-ot-creds`, `poison-firmware`), protocol scanners |
 | **Protocol & AI Exploitation** | `vulnot-read`, `vulnot-write`, `vulnot-dnp3`, `vulnot-s7`, `vulnot-opcua`, `vulnot-bacnet`, `vulnot-enip`, `vulnot-profinet`, `vulnot-mqtt`, `vulnot-historian`, `vulnot-ai` |
-| **Fuzzing & APT Emulation** | `vulnot-fuzz` (`fuzz-modbus`, `fuzz-dnp3`, `fuzz-s7`, `fuzz-mcp`, `replay-mitm`), `vulnot-apt` (9 multi-stage ICS & AI campaigns) |
+| **Fuzzing & APT Emulation** | `vulnot-fuzz` (`fuzz-modbus`, `fuzz-dnp3`, `fuzz-s7`, `fuzz-mcp`, `replay-mitm`), `vulnot-apt` (10 multi-stage ICS & AI campaigns) |
 | **Active OT Defense** | `vulnot-defend` (`conduit-audit`, `dpi-policy`, `physics-guard`, `plc-baseline`, `honeypot`) |
 | **Blue Team, DFIR & LMS** | `vulnot-blue` (`soc-triage`, `hunt`, `pcap-analyze`, `contain`, `export-rules`), `vulnot-forensics`, `vulnot-report`, `vulnot-moodle` |
 
 ### 🛡️ Defense Capabilities
 
-- **OT IDS**: 33 protocol- and AI-specific detection rules (`MODBUS-001`..`DECEPTION-001`)
-- **SIEM Correlation**: 26 correlation rules (`SIEM-001`..`SIEM-026`, including multi-stage AI/MCP, FrostyGoop, Volt Typhoon LotL, and DER oscillation kill chains)
-- **Active Conduit & Physics Guard**: IEC 62443-3-2 conduit auditor, Suricata IPS + `nftables` DPI generator, deterministic Control Barrier Functions (`CBF-001`..`CBF-006`), and Golden PLC Baseline rollback
+- **OT IDS**: 34 protocol- and AI-specific detection rules (`MODBUS-001`..`CRYO-001`)
+- **SIEM Correlation**: 27 correlation rules (`SIEM-001`..`SIEM-027`, including multi-stage AI/MCP, FrostyGoop, Volt Typhoon LotL, DER oscillation, and EFS/Coolworld cold-chain sabotage kill chains)
+- **Active Conduit & Physics Guard**: IEC 62443-3-2 conduit auditor, Suricata IPS + `nftables` DPI generator, deterministic Control Barrier Functions (`CBF-001`..`CBF-007`), and Golden PLC Baseline rollback
 - **ICS & Shadow MCP Deception Honeypots**: High-interaction decoy Modbus, S7-1500, Triconex SIS, and MCP Copilot assets with zero-false-positive canary tripwires
 - **Playbooks**: 7 incident response playbooks
 - **Threat Hunting & DFIR**: Hypothesis-driven MITRE ATT&CK for ICS & MITRE ATLAS hunts, PLC/AI memory acquisition, calibration spoof detection, and Sigma/YARA rule export
@@ -109,9 +110,9 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 | Dashboard | Path | Description |
 |-----------|------|-------------|
 | Main Dashboard | / | Landing page and navigation |
-| Scenarios | /scenarios | All 14 industrial & AI-in-OT scenarios |
+| Scenarios | /scenarios | All 15 industrial & AI-in-OT scenarios |
 | Process HMIs | /water, /power-grid, /factory | Real-time process displays |
-| Training & Moodle LMS | /training | 27 labs + live sync with `https://portal.mjolnir.training` |
+| Training & Moodle LMS | /training | 29 labs + live sync with `https://portal.mjolnir.training` |
 | Defense | /defense | SOC monitoring dashboard |
 | Hunting | /hunting | Threat hunting queries |
 | Forensics | /forensics | Incident investigation |
@@ -121,7 +122,7 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 | Vulnerabilities | /vulnerabilities | Vulnerability management |
 | Enterprise | /enterprise | Multi-site overview |
 
-### 📚 27 Training Labs (Red Team, Forensics & SOC Defender)
+### 📚 29 Training Labs (Red Team, Forensics & SOC Defender)
 
 | Lab / Case | Topic | Track | Course | Difficulty |
 |------------|-------|-------|--------|------------|
@@ -139,9 +140,11 @@ git clone https://github.com/mjolnirsecurity/vulnot.git
 | Lab 13 | Evading AI Predictive Maintenance & Backdooring Edge Vision QC | Red Team | VULNOT-401 | ⭐⭐⭐⭐ Expert |
 | Lab 14 | Reward Hacking RL Chiller Optimizers & Autonomous OT SOAR DoS | Red Team | VULNOT-401 | ⭐⭐⭐ Advanced |
 | Lab 15 | DER Solar, OCPP Megawatt EV Chargers & BESS Grid Oscillation | Red Team | VULNOT-401 | ⭐⭐⭐⭐ Expert |
+| Lab 16 | Healthcare Blood Plasma Cold-Chain Sabotage (EFS / Coolworld 2026) | Red Team | VULNOT-401 | ⭐⭐⭐⭐ Expert |
 | Forensics 01–05 | Stuxnet, Industroyer, TRITON, Colonial Pipeline, Oldsmar Water | Forensics | VULNOT-301 | ⭐⭐–⭐⭐⭐⭐ |
 | Forensics 06 | FrostyGoop & Unitronics District Heating Sabotage (2024) | Forensics | VULNOT-401 | ⭐⭐⭐ Advanced |
 | Forensics 07 | Volt Typhoon Living-off-the-Land (LotL) in OT DMZs | Forensics | VULNOT-401 | ⭐⭐⭐⭐ Expert |
+| Forensics 08 | EFS National Blood Service & European Cold-Chain Attack (Nov 2026) | Forensics | VULNOT-401 | ⭐⭐⭐⭐ Expert |
 | SOC 01–04 | OT Baselines, Real-Time Attack Detection, Safe IR & Threat Hunting | SOC Defender | VULNOT-101..301 | ⭐–⭐⭐⭐ |
 | SOC 05 | Securing Agentic OT AI, MCP Guardrails & Physics-Informed Detection | SOC Defender | VULNOT-401 | ⭐⭐⭐⭐ Expert |
 
