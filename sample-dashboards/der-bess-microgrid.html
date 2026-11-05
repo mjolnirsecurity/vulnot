@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="1">
+    <title>DER Solar, BESS & OCPP EV Depot HMI - VULNOT | Mjolnir Security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard-host.css">
+    <style>
+        .dashboard-frame {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+        }
+        .dashboard-frame .header {
+            background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #10b981;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.25);
+        }
+        .dashboard-frame .logo { display: flex; align-items: center; gap: 15px; }
+        .dashboard-frame .logo h1 { font-size: 24px; color: #10b981; }
+        .dashboard-frame .status-bar { display: flex; gap: 20px; align-items: center; }
+        .dashboard-frame .status-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 15px; border-radius: 20px;
+            background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88;
+        }
+        .dashboard-frame .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; animation: db-pulse 2s infinite; }
+        @keyframes db-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .dashboard-frame .time { font-family: 'Courier New', monospace; font-size: 18px; color: #00d4ff; }
+        .dashboard-frame .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .dashboard-frame .process-view { background: #1e2a3a; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .section-title { font-size: 18px; color: #00d4ff; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a3f5f; }
+        .dashboard-frame .process-diagram { position: relative; min-height: 460px; background: linear-gradient(180deg, #0a1628 0%, #162337 100%); border-radius: 10px; padding: 20px; overflow: hidden; }
+        .dashboard-frame .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .dashboard-frame .panel { background: #1e2a3a; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .gauge-container { display: flex; flex-direction: column; gap: 15px; }
+        .dashboard-frame .gauge { background: #0d1a2a; border-radius: 10px; padding: 15px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .gauge-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .dashboard-frame .gauge-label { font-size: 12px; color: #8ab4f8; }
+        .dashboard-frame .gauge-value { font-size: 18px; font-weight: bold; }
+        .dashboard-frame .gauge-bar { height: 8px; background: #1a2a3a; border-radius: 4px; overflow: hidden; }
+        .dashboard-frame .gauge-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .dashboard-frame .gauge-fill.normal { background: linear-gradient(90deg, #00ff88, #00cc6a); }
+        .dashboard-frame .gauge-fill.warning { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .dashboard-frame .gauge-fill.danger { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .dashboard-frame .alarm-panel { max-height: 200px; overflow-y: auto; }
+        .dashboard-frame .alarm-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px; margin-bottom: 8px;
+            background: rgba(231, 76, 60, 0.1); border-left: 3px solid #e74c3c;
+            border-radius: 5px; font-size: 12px;
+        }
+        .dashboard-frame .alarm-item.warning { background: rgba(243, 156, 18, 0.1); border-left-color: #f39c12; }
+        .dashboard-frame .alarm-time { color: #888; font-family: monospace; }
+        .dashboard-frame .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .dashboard-frame .control-btn {
+            padding: 12px; border: none; border-radius: 8px;
+            font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.25s;
+        }
+        .dashboard-frame .control-btn.primary { background: #00d4ff; color: #000; }
+        .dashboard-frame .control-btn.danger { background: #e74c3c; color: #fff; }
+        .dashboard-frame .control-btn:hover { transform: scale(1.03); }
+        .dashboard-frame .footer {
+            position: relative; background: #0f1a2a; padding: 10px 30px;
+            display: flex; justify-content: space-between;
+            border-top: 1px solid #2a3f5f; font-size: 12px;
+        }
+        .dashboard-frame .protocol-badge {
+            background: rgba(0,0,0,0.4); border: 1px solid #10b981; padding: 5px 15px; border-radius: 15px;
+            color: #10b981; font-weight: bold; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+        }
+        @media (max-width: 768px) {
+            .dashboard-frame .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="breadcrumb">
+    <div class="container">
+        <a href="../index.html">Home</a><span>/</span>
+        <a href="../dashboards.html">Dashboards</a><span>/</span>
+        DER Solar, BESS & OCPP EV Depot
+    </div>
+</div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>DER Solar, BESS & OCPP EV Depot <span class="accent-cyan">HMI</span></h1>
+        <p class="tagline">IEEE 2030.5 :8093 &mdash; Interactive Cyber-Physical HMI Dashboard</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+        <div class="dashboard-frame">
+            <header class="header">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="#10b981" stroke-width="2"/>
+                        <path d="M12 20 L28 20 M20 12 L20 28" fill="none" stroke="#10b981" stroke-width="2"/>
+                    </svg>
+                    <div>
+                        <h1>VULNOT</h1>
+                        <small style="color: #888;">25 MW Solar Array, 50 MWh BESS & 15 MW OCPP 2.0.1 EV Depot - Scenario 14</small>
+                    </div>
+                </div>
+                <div class="status-bar">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span id="sim-sys-status">TELEMETRY ACTIVE</span>
+                    </div>
+                    <div class="protocol-badge">IEEE 2030.5 :8093</div>
+                    <div class="time" id="clock">--:--:--</div>
+                </div>
+            </header>
+
+            <main class="main-container">
+                <section class="process-view">
+                    <h2 class="section-title">Renewable DER Microgrid — Solar Inverters, 50 MWh BESS & Megawatt EV Fleet</h2>
+                    <div class="process-diagram">
+                        
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;height:100%;">
+                <div style="background:#0d1526;border:1px solid #10b981;border-radius:10px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <span style="color:#10b981;font-weight:bold;font-size:14px;">GRID FREQUENCY &amp; BESS DROOP SYNCHRONIZATION</span>
+                            <span id="sim-guard-badge" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid #10b981;padding:2px 8px;border-radius:10px;font-size:11px;">SYNCHRONIZED: 60.00 Hz</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">25 MW Solar PV</div>
+                                <div style="font-size:20px;font-weight:bold;color:#10b981;font-family:monospace;">22.5 MW</div>
+                                <div style="font-size:10px;color:#94a3b8;">SunSpec Inverters</div>
+                            </div>
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">50 MWh BESS</div>
+                                <div id="sim-val-1" style="font-size:20px;font-weight:bold;color:#38bdf8;font-family:monospace;">78% SoC</div>
+                                <div style="font-size:10px;color:#00ff88;">Droop Slope: +1.0</div>
+                            </div>
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">OCPP EV Depot</div>
+                                <div id="sim-val-2" style="font-size:20px;font-weight:bold;color:#f59e0b;font-family:monospace;">15.0 MW</div>
+                                <div style="font-size:10px;color:#f59e0b;">30x 500kW Chargers</div>
+                            </div>
+                        </div>
+                        <div style="background:#070b14;padding:12px;border-radius:8px;border:1px solid #1e293b;font-family:monospace;font-size:12px;color:#cbd5e1;">
+                            <div>Substation Tie-Line Frequency: <span style="color:#00ff88;">60.00 Hz</span> (81U Trip &lt; 59.30 Hz)</div>
+                            <div style="color:#94a3b8;margin-top:4px;">&rarr; Inverting BESS droop slope (-1.0) + 15 MW OCPP EV pulse induces sub-synchronous oscillation!</div>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;">RoCoF (df/dt): <strong>0.02 Hz/s</strong> &bull; BMS Thermal Interlock: <strong>ENABLED</strong></div>
+                </div>
+                <div style="background:#0d1526;border:1px solid #2a3f5f;border-radius:10px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="color:#00d4ff;font-weight:bold;font-size:14px;margin-bottom:12px;">DERMS &amp; OCPP 2.0.1 TELEMETRY (10.0.11.10:8093)</div>
+                        <div style="display:flex;flex-direction:column;gap:8px;font-family:monospace;font-size:12px;">
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #10b981;border-radius:4px;">IEEE 2030.5 DERControl: FreqWatt_Droop = <span id="sim-mcp-write" style="color:#00ff88;">NORMAL (+1.0)</span></div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #38bdf8;border-radius:4px;">BESS Cell Temp: 28.4 &deg;C (Thermal Runaway Limit: 65.0 &deg;C)</div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #f59e0b;border-radius:4px;">OCPP SetChargingProfile: 15.0 MW Coherent Load Step Ready</div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #00ff88;border-radius:4px;">Substation Relay 81U/81O: CLOSED (Grid Connected)</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.45);padding:12px;border-radius:8px;font-size:12px;color:#94a3b8;">
+                        <strong style="color:#00d4ff;">Network:</strong> 10.0.11.0/24 &bull; DERMS: 10.0.11.10:8093 &bull; Coupled to DNP3 Substation 10.0.2.10
+                    </div>
+                </div>
+            </div>
+        
+                    </div>
+                </section>
+
+                <aside class="side-panel">
+                    <div class="panel">
+                        <h3 class="section-title">Process Parameters</h3>
+                        <div class="gauge-container">
+                            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Solar PV Output</span>
+                    <span class="gauge-value" style="color: #10b981;">22.5 MW</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill normal" style="width: 90%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">50 MWh BESS SoC</span>
+                    <span class="gauge-value" style="color: #38bdf8;">78 %</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill normal" style="width: 78%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">OCPP EV Fleet Load</span>
+                    <span class="gauge-value" style="color: #f39c12;">15.0 MW</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill warning" style="width: 100%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Grid Frequency</span>
+                    <span class="gauge-value" style="color: #00ff88;">60.00 Hz</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill normal" style="width: 98%;"></div></div>
+            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="section-title">Active Alarms</h3>
+                        <div class="alarm-panel" id="sim-alarms">
+                            <div class="alarm-item warning">
+                <span class="alarm-time">14:33:12</span>
+                <span>WARNING: Unauthenticated IEEE 2030.5 DERControl XML write attempt on :8093</span>
+            </div>
+<div class="alarm-item warning">
+                <span class="alarm-time">14:30:40</span>
+                <span>WARNING: OCPP 2.0.1 CSMS SetChargingProfile 15 MW step-load ramp detected</span>
+            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="section-title">Operator &amp; Defense Controls</h3>
+                        <div class="controls-grid">
+                            <button type="button" class="control-btn primary" onclick="simAction('hitl')">LOCK DROOP CURVE</button>
+<button type="button" class="control-btn primary" onclick="simAction('guard')">ENABLE BMS INTERLOCK</button>
+<button type="button" class="control-btn danger" onclick="simAction('inject')">INVERT BESS DROOP</button>
+<button type="button" class="control-btn danger" onclick="simAction('revoke')">PULSE 15MW EV LOAD</button>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+            <div class="footer">
+                <span>VULNOT v2.0 - Mjolnir Security Training Platform (10.0.11.0/24)</span>
+                <span>IEEE 2030.5 / SunSpec Modbus | Grid Tie: 60.00 Hz | BESS Capacity: 50 MWh</span>
+                <span>Last Update: <span id="last-update">--:--:--</span></span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="../js/components.js"></script>
+<script>
+    function updateClock() {
+        var now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString();
+        document.getElementById('last-update').textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function simAction(action) {
+        var badge = document.getElementById('sim-guard-badge');
+        var writeEl = document.getElementById('sim-mcp-write');
+        var statusEl = document.getElementById('sim-sys-status');
+        if (action === 'hitl' || action === 'guard') {
+            if (badge) {
+                badge.textContent = 'GUARDRAILS: ENFORCED';
+                badge.style.background = 'rgba(0,255,136,0.18)';
+                badge.style.color = '#00ff88';
+                badge.style.borderColor = '#00ff88';
+            }
+            if (writeEl) {
+                writeEl.textContent = 'PROTECTED / SAFE';
+                writeEl.style.color = '#00ff88';
+            }
+            if (statusEl) statusEl.textContent = 'HARDENED & SAFE';
+        } else {
+            if (badge) {
+                badge.textContent = 'ALERT: OVERRIDE ACTIVE';
+                badge.style.background = 'rgba(231,76,60,0.25)';
+                badge.style.color = '#ff6b6b';
+                badge.style.borderColor = '#e74c3c';
+            }
+            if (writeEl) {
+                writeEl.textContent = 'COMPROMISED / OVERRIDE';
+                writeEl.style.color = '#ff6b6b';
+            }
+            if (statusEl) statusEl.textContent = 'ATTACK IN PROGRESS';
+        }
+    }
+</script>
+</body>
+</html>

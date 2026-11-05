@@ -66,99 +66,114 @@
     <div class="container">
         <div class="section-header">
             <h2>Platform <span class="accent-cyan">Overview</span></h2>
-            <p>Fifteen simulated industrial &amp; AI-in-OT scenarios spanning legacy ICS protocols, Agentic MCP Copilots, ONNX Edge Vision, FrostyGoop District Heating, Renewable DER Microgrids, and Healthcare Blood Cryo-Storage.</p>
+            <p>Fifteen simulated industrial &amp; AI-in-OT scenarios. Click any scenario card below to launch its interactive HMI dashboard in fullscreen.</p>
         </div>
         <div class="protocol-grid">
-            <div class="proto-card">
+            <a href="dashboards/water-treatment.html" class="proto-card" data-fullscreen-hmi="dashboards/water-treatment.html" data-hmi-title="Water Treatment Plant (Modbus :502)">
                 <div class="icon">&#9881;</div>
                 <h4>Modbus TCP</h4>
                 <div class="port">:502</div>
                 <p>Water treatment plant with PLC register manipulation and SCADA control</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/power-grid.html" class="proto-card" data-fullscreen-hmi="dashboards/power-grid.html" data-hmi-title="Power Grid Substation (DNP3 :20000)">
                 <div class="icon">&#9889;</div>
                 <h4>DNP3</h4>
                 <div class="port">:20000</div>
                 <p>Power grid substation with RTU commands, breaker control, and load management</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/manufacturing.html" class="proto-card" data-fullscreen-hmi="dashboards/manufacturing.html" data-hmi-title="Manufacturing Line (S7comm :102)">
                 <div class="icon">&#9874;</div>
                 <h4>S7comm</h4>
                 <div class="port">:102</div>
                 <p>Manufacturing line with Siemens PLC data blocks and CPU control</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/chemical-reactor.html" class="proto-card" data-fullscreen-hmi="dashboards/chemical-reactor.html" data-hmi-title="Chemical Reactor R-101 (OPC UA :4840)">
                 <div class="icon">&#9879;</div>
                 <h4>OPC UA</h4>
                 <div class="port">:4840</div>
                 <p>Chemical reactor with real-time node browsing and method calls</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/building-automation.html" class="proto-card" data-fullscreen-hmi="dashboards/building-automation.html" data-hmi-title="Building Automation (BACnet :47808)">
                 <div class="icon">&#127970;</div>
                 <h4>BACnet</h4>
                 <div class="port">:47808</div>
                 <p>Building automation with HVAC zones, AHU control, and energy monitoring</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/packaging-line.html" class="proto-card" data-fullscreen-hmi="dashboards/packaging-line.html" data-hmi-title="Packaging Line PL-01 (EtherNet/IP :44818)">
                 <div class="icon">&#128230;</div>
                 <h4>EtherNet/IP</h4>
                 <div class="port">:44818</div>
                 <p>Packaging line with CIP connections and high-speed conveyor control</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/iiot-factory.html" class="proto-card" data-fullscreen-hmi="dashboards/iiot-factory.html" data-hmi-title="IIoT Smart Factory (MQTT :1883)">
                 <div class="icon">&#128225;</div>
                 <h4>MQTT</h4>
                 <div class="port">:1883</div>
                 <p>IIoT smart factory with sensor telemetry, gateways, and topic hijacking</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/cnc-motion.html" class="proto-card" data-fullscreen-hmi="dashboards/cnc-motion.html" data-hmi-title="CNC Motion Control (PROFINET :34964)">
                 <div class="icon">&#128736;</div>
                 <h4>PROFINET</h4>
                 <div class="port">:34964</div>
                 <p>CNC motion control with 5-axis positioning, spindle RPM, and tool magazine</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/historian.html" class="proto-card" data-fullscreen-hmi="dashboards/historian.html" data-hmi-title="OT Data Historian (HTTP :8553)">
                 <div class="icon">&#128202;</div>
                 <h4>Historian</h4>
                 <div class="port">:8553</div>
                 <p>OT data historian with time-series analytics, tag browsing, and SQL queries</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/ai-scada-copilot.html" class="proto-card" data-fullscreen-hmi="dashboards/ai-scada-copilot.html" data-hmi-title="AI SCADA Copilot & MCP Server (MCP :8090)">
                 <div class="icon">&#129302;</div>
                 <h4>AI SCADA Copilot</h4>
                 <div class="port">MCP :8090</div>
                 <p>Autonomous LLM Shift Copilot with MCP PLC write tools vulnerable to Indirect Prompt Injection (AML.T0051)</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/ai-pdm-vision.html" class="proto-card" data-fullscreen-hmi="dashboards/ai-pdm-vision.html" data-hmi-title="AI PdM & Edge Vision QC (ONNX :8091)">
                 <div class="icon">&#129504;</div>
                 <h4>AI PdM &amp; Vision QC</h4>
                 <div class="port">ONNX :8091</div>
                 <p>Autoencoder Predictive Maintenance &amp; Edge Vision AOI vulnerable to physics-informed drift &amp; weight backdoors</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/rl-chiller-soar.html" class="proto-card" data-fullscreen-hmi="dashboards/rl-chiller-soar.html" data-hmi-title="RL Chiller Optimizer & OT SOAR (RL/SOAR :8092)">
                 <div class="icon">&#127777;</div>
                 <h4>RL Chiller &amp; SOAR</h4>
                 <div class="port">RL/SOAR :8092</div>
                 <p>PPO Reinforcement Learning HVAC optimizer &amp; Autonomous OT SOAR vulnerable to reward hacking &amp; self-DoS</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/district-heating.html" class="proto-card" data-fullscreen-hmi="dashboards/district-heating.html" data-hmi-title="Municipal District Heating (Modbus :5020)">
                 <div class="icon">&#10052;</div>
                 <h4>District Heating</h4>
                 <div class="port">Modbus :5020</div>
                 <p>Municipal thermal grid modeling the 2024 FrostyGoop &amp; Unitronics calibration offset spoofing attack</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/der-bess-microgrid.html" class="proto-card" data-fullscreen-hmi="dashboards/der-bess-microgrid.html" data-hmi-title="DER Solar, BESS & OCPP EV Depot (IEEE 2030.5 :8093)">
                 <div class="icon">&#128267;</div>
                 <h4>DER &amp; BESS Microgrid</h4>
                 <div class="port">IEEE 2030.5 :8093</div>
                 <p>25 MW Solar Array, 50 MWh BESS &amp; 15 MW OCPP 2.0.1 EV depot coupled to substation frequency stability</p>
-            </div>
-            <div class="proto-card">
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
+            <a href="dashboards/efs-blood-cryo.html" class="proto-card" data-fullscreen-hmi="dashboards/efs-blood-cryo.html" data-hmi-title="EFS Blood Plasma Cryo-Storage (Modbus :5021)">
                 <div class="icon">&#129656;</div>
                 <h4>EFS Blood Cryo-Storage</h4>
                 <div class="port">Modbus :5021</div>
                 <p>Healthcare blood plasma cold-chain (-30&deg;C to +110&deg;C sabotage via third-party Coolworld refrigeration gateway)</p>
-            </div>
+                <div class="fs-launch-hint">&#x26F6; Launch Fullscreen HMI</div>
+            </a>
         </div>
     </div>
 </section>

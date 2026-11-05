@@ -517,3 +517,103 @@ dialog::backdrop {
     border-color: transparent;
 }
 
+/* ================================================================
+   FULLSCREEN HMI DASHBOARD VIEWER (DIALOG + NATIVE FULLSCREEN API)
+   ================================================================ */
+a.proto-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    position: relative;
+}
+
+.proto-card .fs-launch-hint {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #00d4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    opacity: 0.8;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.proto-card:hover .fs-launch-hint {
+    opacity: 1;
+    color: #00ff88;
+}
+
+dialog#hmi-fullscreen-dialog:modal {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: #0a0f1d;
+    overscroll-behavior: contain;
+}
+
+dialog#hmi-fullscreen-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.hmi-fs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 20px;
+    background: #070b14;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.25);
+    flex-shrink: 0;
+}
+
+.hmi-fs-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hmi-fs-toolbar-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    margin: 0;
+}
+
+.hmi-fs-select {
+    background: #111827;
+    color: #00d4ff;
+    border: 1px solid rgba(0, 212, 255, 0.35);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.hmi-fs-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hmi-fs-iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #0f172a;
+}
+
+

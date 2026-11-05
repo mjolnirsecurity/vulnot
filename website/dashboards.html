@@ -19,7 +19,7 @@
 <div class="page-hero">
     <div class="container">
         <h1>HMI Dashboard <span class="accent-cyan">Showcase</span></h1>
-        <p class="tagline">Interactive sample dashboards for all 15 industrial &amp; AI-in-OT scenarios with live-updating process data.</p>
+        <p class="tagline">Click any of the 15 industrial &amp; AI-in-OT dashboards below to launch its live HMI in fullscreen.</p>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <div class="hmi-grid">
 
             <!-- 1. Water Treatment -->
-            <a href="dashboards/water-treatment.html" class="hmi-panel" style="--hmi-accent: #00bfff;">
+            <a href="dashboards/water-treatment.html" class="hmi-panel" data-fullscreen-hmi="dashboards/water-treatment.html" data-hmi-title="Water Treatment Plant (Modbus :502)" style="--hmi-accent: #00bfff;">
                 <div class="hmi-header">
                     <h4>Water Treatment Plant</h4>
                     <span class="hmi-badge">MODBUS :502</span>
@@ -60,7 +60,7 @@
             </a>
 
             <!-- 2. Power Grid -->
-            <a href="dashboards/power-grid.html" class="hmi-panel" style="--hmi-accent: #ffd700;">
+            <a href="dashboards/power-grid.html" class="hmi-panel" data-fullscreen-hmi="dashboards/power-grid.html" data-hmi-title="Power Grid Substation (DNP3 :20000)" style="--hmi-accent: #ffd700;">
                 <div class="hmi-header">
                     <h4>Power Grid Substation</h4>
                     <span class="hmi-badge">DNP3 :20000</span>
@@ -80,7 +80,7 @@
             </a>
 
             <!-- 3. Manufacturing -->
-            <a href="dashboards/manufacturing.html" class="hmi-panel" style="--hmi-accent: #00a8ff;">
+            <a href="dashboards/manufacturing.html" class="hmi-panel" data-fullscreen-hmi="dashboards/manufacturing.html" data-hmi-title="Manufacturing Line (S7comm :102)" style="--hmi-accent: #00a8ff;">
                 <div class="hmi-header">
                     <h4>Manufacturing Line</h4>
                     <span class="hmi-badge">S7COMM :102</span>
@@ -105,7 +105,7 @@
             </a>
 
             <!-- 4. Chemical Reactor -->
-            <a href="dashboards/chemical-reactor.html" class="hmi-panel" style="--hmi-accent: #9b59b6;">
+            <a href="dashboards/chemical-reactor.html" class="hmi-panel" data-fullscreen-hmi="dashboards/chemical-reactor.html" data-hmi-title="Chemical Reactor R-101 (OPC UA :4840)" style="--hmi-accent: #9b59b6;">
                 <div class="hmi-header">
                     <h4>Chemical Reactor R-101</h4>
                     <span class="hmi-badge">OPC UA :4840</span>
@@ -135,7 +135,7 @@
             </a>
 
             <!-- 5. Building Automation -->
-            <a href="dashboards/building-automation.html" class="hmi-panel" style="--hmi-accent: #27ae60;">
+            <a href="dashboards/building-automation.html" class="hmi-panel" data-fullscreen-hmi="dashboards/building-automation.html" data-hmi-title="Building Automation (BACnet :47808)" style="--hmi-accent: #27ae60;">
                 <div class="hmi-header">
                     <h4>Building Automation</h4>
                     <span class="hmi-badge">BACnet :47808</span>
@@ -158,7 +158,7 @@
             </a>
 
             <!-- 6. Packaging Line -->
-            <a href="dashboards/packaging-line.html" class="hmi-panel" style="--hmi-accent: #e67e22;">
+            <a href="dashboards/packaging-line.html" class="hmi-panel" data-fullscreen-hmi="dashboards/packaging-line.html" data-hmi-title="Packaging Line PL-01 (EtherNet/IP :44818)" style="--hmi-accent: #e67e22;">
                 <div class="hmi-header">
                     <h4>Packaging Line PL-01</h4>
                     <span class="hmi-badge">EtherNet/IP :44818</span>
@@ -184,7 +184,7 @@
             </a>
 
             <!-- 7. IIoT Factory -->
-            <a href="dashboards/iiot-factory.html" class="hmi-panel" style="--hmi-accent: #00bcd4;">
+            <a href="dashboards/iiot-factory.html" class="hmi-panel" data-fullscreen-hmi="dashboards/iiot-factory.html" data-hmi-title="IIoT Smart Factory (MQTT :1883)" style="--hmi-accent: #00bcd4;">
                 <div class="hmi-header">
                     <h4>IIoT Smart Factory</h4>
                     <span class="hmi-badge">MQTT :1883</span>
@@ -208,7 +208,7 @@
             </a>
 
             <!-- 8. CNC Motion -->
-            <a href="dashboards/cnc-motion.html" class="hmi-panel" style="--hmi-accent: #ff6b35;">
+            <a href="dashboards/cnc-motion.html" class="hmi-panel" data-fullscreen-hmi="dashboards/cnc-motion.html" data-hmi-title="CNC Motion Control (PROFINET :34964)" style="--hmi-accent: #ff6b35;">
                 <div class="hmi-header">
                     <h4>CNC Motion Control</h4>
                     <span class="hmi-badge">PROFINET :34964</span>
@@ -231,7 +231,7 @@
             </a>
 
             <!-- 9. Historian -->
-            <a href="dashboards/historian.html" class="hmi-panel" style="--hmi-accent: #4ecdc4;">
+            <a href="dashboards/historian.html" class="hmi-panel" data-fullscreen-hmi="dashboards/historian.html" data-hmi-title="OT Data Historian (HTTP :8553)" style="--hmi-accent: #4ecdc4;">
                 <div class="hmi-header">
                     <h4>OT Historian</h4>
                     <span class="hmi-badge">HTTP :8553</span>
@@ -255,7 +255,7 @@
             </a>
 
             <!-- 10. AI SCADA Copilot & MCP Server -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #a855f7;">
+            <a href="dashboards/ai-scada-copilot.html" class="hmi-panel" data-fullscreen-hmi="dashboards/ai-scada-copilot.html" data-hmi-title="AI SCADA Copilot & MCP Server (MCP :8090)" style="--hmi-accent: #a855f7;">
                 <div class="hmi-header">
                     <h4>AI SCADA Copilot &amp; MCP Server</h4>
                     <span class="hmi-badge">MCP :8090</span>
@@ -273,7 +273,7 @@
             </a>
 
             <!-- 11. AI Predictive Maintenance & Edge Vision QC -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #ec4899;">
+            <a href="dashboards/ai-pdm-vision.html" class="hmi-panel" data-fullscreen-hmi="dashboards/ai-pdm-vision.html" data-hmi-title="AI PdM & Edge Vision QC (ONNX :8091)" style="--hmi-accent: #ec4899;">
                 <div class="hmi-header">
                     <h4>AI PdM &amp; Edge Vision QC</h4>
                     <span class="hmi-badge">ONNX :8091</span>
@@ -291,7 +291,7 @@
             </a>
 
             <!-- 12. Autonomous RL Chiller Optimizer & OT SOAR -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #6366f1;">
+            <a href="dashboards/rl-chiller-soar.html" class="hmi-panel" data-fullscreen-hmi="dashboards/rl-chiller-soar.html" data-hmi-title="RL Chiller Optimizer & OT SOAR (RL/SOAR :8092)" style="--hmi-accent: #6366f1;">
                 <div class="hmi-header">
                     <h4>RL Chiller Optimizer &amp; OT SOAR</h4>
                     <span class="hmi-badge">RL/SOAR :8092</span>
@@ -309,7 +309,7 @@
             </a>
 
             <!-- 13. District Heating (FrostyGoop) -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #38bdf8;">
+            <a href="dashboards/district-heating.html" class="hmi-panel" data-fullscreen-hmi="dashboards/district-heating.html" data-hmi-title="Municipal District Heating (Modbus :5020)" style="--hmi-accent: #38bdf8;">
                 <div class="hmi-header">
                     <h4>Municipal District Heating</h4>
                     <span class="hmi-badge">MODBUS :5020</span>
@@ -327,7 +327,7 @@
             </a>
 
             <!-- 14. DER Solar, 50 MWh BESS & OCPP EV Depot -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #10b981;">
+            <a href="dashboards/der-bess-microgrid.html" class="hmi-panel" data-fullscreen-hmi="dashboards/der-bess-microgrid.html" data-hmi-title="DER Solar, BESS & OCPP EV Depot (IEEE 2030.5 :8093)" style="--hmi-accent: #10b981;">
                 <div class="hmi-header">
                     <h4>DER Solar, BESS &amp; OCPP EV Depot</h4>
                     <span class="hmi-badge">IEEE 2030.5 :8093</span>
@@ -345,7 +345,7 @@
             </a>
 
             <!-- 15. EFS Blood Plasma Cryo-Storage (Coolworld 2026) -->
-            <a href="training.html" class="hmi-panel" style="--hmi-accent: #e11d48;">
+            <a href="dashboards/efs-blood-cryo.html" class="hmi-panel" data-fullscreen-hmi="dashboards/efs-blood-cryo.html" data-hmi-title="EFS Blood Plasma Cryo-Storage (Modbus :5021)" style="--hmi-accent: #e11d48;">
                 <div class="hmi-header">
                     <h4>EFS Blood Plasma Cryo-Storage</h4>
                     <span class="hmi-badge">MODBUS :5021</span>

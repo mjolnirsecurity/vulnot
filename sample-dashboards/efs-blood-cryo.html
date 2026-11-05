@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="path-depth" content="1">
+    <title>EFS Blood Plasma Cryo-Storage HMI - VULNOT | Mjolnir Security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard-host.css">
+    <style>
+        .dashboard-frame {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+        }
+        .dashboard-frame .header {
+            background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e11d48;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.25);
+        }
+        .dashboard-frame .logo { display: flex; align-items: center; gap: 15px; }
+        .dashboard-frame .logo h1 { font-size: 24px; color: #e11d48; }
+        .dashboard-frame .status-bar { display: flex; gap: 20px; align-items: center; }
+        .dashboard-frame .status-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 15px; border-radius: 20px;
+            background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88;
+        }
+        .dashboard-frame .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; animation: db-pulse 2s infinite; }
+        @keyframes db-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .dashboard-frame .time { font-family: 'Courier New', monospace; font-size: 18px; color: #00d4ff; }
+        .dashboard-frame .main-container { padding: 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .dashboard-frame .process-view { background: #1e2a3a; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .section-title { font-size: 18px; color: #00d4ff; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a3f5f; }
+        .dashboard-frame .process-diagram { position: relative; min-height: 460px; background: linear-gradient(180deg, #0a1628 0%, #162337 100%); border-radius: 10px; padding: 20px; overflow: hidden; }
+        .dashboard-frame .side-panel { display: flex; flex-direction: column; gap: 20px; }
+        .dashboard-frame .panel { background: #1e2a3a; border-radius: 15px; padding: 20px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .gauge-container { display: flex; flex-direction: column; gap: 15px; }
+        .dashboard-frame .gauge { background: #0d1a2a; border-radius: 10px; padding: 15px; border: 1px solid #2a3f5f; }
+        .dashboard-frame .gauge-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .dashboard-frame .gauge-label { font-size: 12px; color: #8ab4f8; }
+        .dashboard-frame .gauge-value { font-size: 18px; font-weight: bold; }
+        .dashboard-frame .gauge-bar { height: 8px; background: #1a2a3a; border-radius: 4px; overflow: hidden; }
+        .dashboard-frame .gauge-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .dashboard-frame .gauge-fill.normal { background: linear-gradient(90deg, #00ff88, #00cc6a); }
+        .dashboard-frame .gauge-fill.warning { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .dashboard-frame .gauge-fill.danger { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .dashboard-frame .alarm-panel { max-height: 200px; overflow-y: auto; }
+        .dashboard-frame .alarm-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px; margin-bottom: 8px;
+            background: rgba(231, 76, 60, 0.1); border-left: 3px solid #e74c3c;
+            border-radius: 5px; font-size: 12px;
+        }
+        .dashboard-frame .alarm-item.warning { background: rgba(243, 156, 18, 0.1); border-left-color: #f39c12; }
+        .dashboard-frame .alarm-time { color: #888; font-family: monospace; }
+        .dashboard-frame .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .dashboard-frame .control-btn {
+            padding: 12px; border: none; border-radius: 8px;
+            font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.25s;
+        }
+        .dashboard-frame .control-btn.primary { background: #00d4ff; color: #000; }
+        .dashboard-frame .control-btn.danger { background: #e74c3c; color: #fff; }
+        .dashboard-frame .control-btn:hover { transform: scale(1.03); }
+        .dashboard-frame .footer {
+            position: relative; background: #0f1a2a; padding: 10px 30px;
+            display: flex; justify-content: space-between;
+            border-top: 1px solid #2a3f5f; font-size: 12px;
+        }
+        .dashboard-frame .protocol-badge {
+            background: rgba(0,0,0,0.4); border: 1px solid #e11d48; padding: 5px 15px; border-radius: 15px;
+            color: #e11d48; font-weight: bold; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+        }
+        @media (max-width: 768px) {
+            .dashboard-frame .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<div class="breadcrumb">
+    <div class="container">
+        <a href="../index.html">Home</a><span>/</span>
+        <a href="../dashboards.html">Dashboards</a><span>/</span>
+        EFS Blood Plasma Cryo-Storage
+    </div>
+</div>
+
+<div class="page-hero">
+    <div class="container">
+        <h1>EFS Blood Plasma Cryo-Storage <span class="accent-cyan">HMI</span></h1>
+        <p class="tagline">MODBUS :5021 &mdash; Interactive Cyber-Physical HMI Dashboard</p>
+    </div>
+</div>
+
+<section>
+    <div class="container">
+        <div class="dashboard-frame">
+            <header class="header">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="#e11d48" stroke-width="2"/>
+                        <path d="M12 20 L28 20 M20 12 L20 28" fill="none" stroke="#e11d48" stroke-width="2"/>
+                    </svg>
+                    <div>
+                        <h1>VULNOT</h1>
+                        <small style="color: #888;">Healthcare Blood Plasma Cold-Chain & Coolworld Contractor Pivot - Scenario 15</small>
+                    </div>
+                </div>
+                <div class="status-bar">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span id="sim-sys-status">TELEMETRY ACTIVE</span>
+                    </div>
+                    <div class="protocol-badge">MODBUS :5021</div>
+                    <div class="time" id="clock">--:--:--</div>
+                </div>
+            </header>
+
+            <main class="main-container">
+                <section class="process-view">
+                    <h2 class="section-title">National Blood Service Cryo-Freezer Vaults A/B/C (EFS / Coolworld Nov 2026)</h2>
+                    <div class="process-diagram">
+                        
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;height:100%;">
+                <div style="background:#0d1526;border:1px solid #e11d48;border-radius:10px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <span style="color:#fb7185;font-weight:bold;font-size:14px;">CRYO-VAULT THERMAL TELEMETRY (4,800 PLASMA UNITS)</span>
+                            <span id="sim-guard-badge" style="background:rgba(225,29,72,0.25);color:#fda4af;border:1px solid #e11d48;padding:2px 8px;border-radius:10px;font-size:11px;">SABOTAGE: -30&deg;C &rarr; +110&deg;C</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">Vault Core Temp</div>
+                                <div id="sim-val-1" style="font-size:20px;font-weight:bold;color:#38bdf8;font-family:monospace;">-23.4 &deg;C</div>
+                                <div style="font-size:10px;color:#f59e0b;">Rising (+0.8&deg;C/min)</div>
+                            </div>
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">HR0 Target Setpoint</div>
+                                <div id="sim-val-2" style="font-size:20px;font-weight:bold;color:#ef4444;font-family:monospace;">+110.0 &deg;C</div>
+                                <div style="font-size:10px;color:#ef4444;">Normal: -30.0&deg;C</div>
+                            </div>
+                            <div style="background:#161f33;padding:12px;border-radius:8px;text-align:center;">
+                                <div style="font-size:11px;color:#94a3b8;">Defrost Heater</div>
+                                <div style="font-size:20px;font-weight:bold;color:#ef4444;font-family:monospace;">18 kW ON</div>
+                                <div style="font-size:10px;color:#ef4444;">Compressor: OFF</div>
+                            </div>
+                        </div>
+                        <div style="background:#070b14;padding:12px;border-radius:8px;border:1px solid #1e293b;font-family:monospace;font-size:12px;color:#cbd5e1;">
+                            <div>Contractor Conduit: Coolworld-TeleMon VPN (172.16.88.14 &rarr; 10.0.12.10:5021)</div>
+                            <div style="color:#fb7185;margin-top:4px;">&rarr; On-call technician physical sightglass check required before -20.0&deg;C irreversible plasma denaturation!</div>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;">CBF-007 Bimetallic Hardware Cutout (&gt; -25&deg;C): <strong style="color:#00ff88;">READY</strong></div>
+                </div>
+                <div style="background:#0d1526;border:1px solid #2a3f5f;border-radius:10px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="color:#00d4ff;font-weight:bold;font-size:14px;margin-bottom:12px;">DANFOSS AK-SM800A REGISTER MAP (:5021)</div>
+                        <div style="display:flex;flex-direction:column;gap:8px;font-family:monospace;font-size:12px;">
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #e11d48;border-radius:4px;">HR0: Freezer_Setpoint_C = <span id="sim-mcp-write" style="color:#ff6b6b;">+110.0 &deg;C (SABOTAGED)</span></div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #e11d48;border-radius:4px;">HR1: Defrost_Heater_State = 1 (FORCED ON - 18 kW)</div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #f59e0b;border-radius:4px;">HR2: High_Temp_Alarm_Delay = 720 min (SUPPRESSED)</div>
+                            <div style="padding:10px;background:#111c30;border-left:3px solid #38bdf8;border-radius:4px;">HR4: Plasma_Units_At_Risk = 4,800 Donor Bags</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.45);padding:12px;border-radius:8px;font-size:12px;color:#94a3b8;">
+                        <strong style="color:#00d4ff;">Incident Reference:</strong> French National Blood Service (EFS) / Coolworld Cold-Chain Attack
+                    </div>
+                </div>
+            </div>
+        
+                    </div>
+                </section>
+
+                <aside class="side-panel">
+                    <div class="panel">
+                        <h3 class="section-title">Process Parameters</h3>
+                        <div class="gauge-container">
+                            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Vault Core Temp</span>
+                    <span class="gauge-value" style="color: #38bdf8;">-23.4 °C</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill warning" style="width: 76%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">HR0 Target Setpoint</span>
+                    <span class="gauge-value" style="color: #e74c3c;">+110.0 °C</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill danger" style="width: 100%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">18 kW Defrost Strip</span>
+                    <span class="gauge-value" style="color: #e74c3c;">ACTIVE</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill danger" style="width: 95%;"></div></div>
+            </div>
+<div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Plasma Integrity</span>
+                    <span class="gauge-value" style="color: #00ff88;">100% SAFE</span>
+                </div>
+                <div class="gauge-bar"><div class="gauge-fill normal" style="width: 100%;"></div></div>
+            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="section-title">Active Alarms</h3>
+                        <div class="alarm-panel" id="sim-alarms">
+                            <div class="alarm-item ">
+                <span class="alarm-time">03:14:09</span>
+                <span>CRITICAL: Contractor VPN 172.16.88.14 rewrote HR0 setpoint from -30.0°C to +110.0°C</span>
+            </div>
+<div class="alarm-item ">
+                <span class="alarm-time">03:14:10</span>
+                <span>CRITICAL: 18 kW electric defrost heaters forced ON while compressors locked out</span>
+            </div>
+<div class="alarm-item warning">
+                <span class="alarm-time">03:14:12</span>
+                <span>WARNING: High-temperature alarm delay extended to 720 minutes (HR2)</span>
+            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="section-title">Operator &amp; Defense Controls</h3>
+                        <div class="controls-grid">
+                            <button type="button" class="control-btn primary" onclick="simAction('hitl')">RESCUE -30°C & CBF-007</button>
+<button type="button" class="control-btn primary" onclick="simAction('guard')">ISOLATE COOLWORLD VPN</button>
+<button type="button" class="control-btn danger" onclick="simAction('inject')">SIMULATE +110°C ATTACK</button>
+<button type="button" class="control-btn danger" onclick="simAction('revoke')">CUT DEFROST HEATERS</button>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+            <div class="footer">
+                <span>VULNOT v2.0 - Mjolnir Security Training Platform (10.0.12.0/24)</span>
+                <span>Inventory: 4,800 Blood Plasma Units | Target: -30.0°C | Denaturation Limit: -20.0°C</span>
+                <span>Last Update: <span id="last-update">--:--:--</span></span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script src="../js/components.js"></script>
+<script>
+    function updateClock() {
+        var now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString();
+        document.getElementById('last-update').textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function simAction(action) {
+        var badge = document.getElementById('sim-guard-badge');
+        var writeEl = document.getElementById('sim-mcp-write');
+        var statusEl = document.getElementById('sim-sys-status');
+        if (action === 'hitl' || action === 'guard') {
+            if (badge) {
+                badge.textContent = 'GUARDRAILS: ENFORCED';
+                badge.style.background = 'rgba(0,255,136,0.18)';
+                badge.style.color = '#00ff88';
+                badge.style.borderColor = '#00ff88';
+            }
+            if (writeEl) {
+                writeEl.textContent = 'PROTECTED / SAFE';
+                writeEl.style.color = '#00ff88';
+            }
+            if (statusEl) statusEl.textContent = 'HARDENED & SAFE';
+        } else {
+            if (badge) {
+                badge.textContent = 'ALERT: OVERRIDE ACTIVE';
+                badge.style.background = 'rgba(231,76,60,0.25)';
+                badge.style.color = '#ff6b6b';
+                badge.style.borderColor = '#e74c3c';
+            }
+            if (writeEl) {
+                writeEl.textContent = 'COMPROMISED / OVERRIDE';
+                writeEl.style.color = '#ff6b6b';
+            }
+            if (statusEl) statusEl.textContent = 'ATTACK IN PROGRESS';
+        }
+    }
+</script>
+</body>
+</html>

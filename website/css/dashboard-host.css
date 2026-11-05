@@ -1,8 +1,8 @@
 /* ================================================================
-   DASHBOARD HOST - Wrapper styles for embedded dashboards
+   DASHBOARD HOST - Fullscreen & Wrapper styles for HMI dashboards
    ================================================================ */
 
-/* Smaller hero for sub-pages */
+/* Smaller hero for sub-pages (non-dashboard pages) */
 .page-hero {
     padding: 100px 0 40px;
     text-align: center;
@@ -31,13 +31,61 @@
 .breadcrumb a:hover { color: #00ff88; }
 .breadcrumb span { margin: 0 8px; color: #444; }
 
+/* Fullscreen HMI Dashboard Layout (for all pages containing .dashboard-frame) */
+body.hmi-fullscreen-page .breadcrumb,
+body.hmi-fullscreen-page .page-hero {
+    display: none;
+}
+
+body.hmi-fullscreen-page section {
+    padding: 58px 0 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body.hmi-fullscreen-page section > .container {
+    max-width: 100%;
+    width: 100%;
+    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Embedded inside the fullscreen modal dialog (?embed=1) */
+body.hmi-embed-mode #site-nav,
+body.hmi-embed-mode #site-footer,
+body.hmi-embed-mode .breadcrumb,
+body.hmi-embed-mode .page-hero {
+    display: none !important;
+}
+
+body.hmi-embed-mode section {
+    padding: 0 !important;
+    min-height: 100vh;
+}
+
 /* Dashboard frame container */
 .dashboard-frame {
     border: 1px solid rgba(0,212,255,0.15);
-    border-radius: 12px;
+    border-radius: 0;
     overflow: hidden;
     box-shadow: 0 4px 30px rgba(0,0,0,0.3);
-    margin-bottom: 40px;
+    margin-bottom: 0;
+    min-height: calc(100vh - 58px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+body.hmi-embed-mode .dashboard-frame {
+    min-height: 100vh;
+    border: none;
+}
+
+.dashboard-frame .main-container {
+    flex: 1;
 }
 
 /* Override any fixed positioning inside the dashboard */
@@ -46,4 +94,28 @@
 /* Ensure dashboard footer doesn't collide with site footer */
 .dashboard-frame .header {
     position: relative;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.hmi-inline-fs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: rgba(0, 212, 255, 0.14);
+    color: #00d4ff;
+    border: 1px solid rgba(0, 212, 255, 0.45);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.hmi-inline-fs-btn:hover {
+    background: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+    border-color: #00ff88;
 }
