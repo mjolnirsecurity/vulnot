@@ -18,12 +18,17 @@
 ║    • PLC-DISTRIBUTION 10.0.1.12:502 (Clearwell & Dist)      ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  TOOLS AVAILABLE:                                            ║
-║    vulnot-scan   - Discover Modbus devices on network        ║
-║    vulnot-read   - Read registers from PLCs                  ║
-║    vulnot-write  - Write values to PLC registers             ║
-║    vulnot-monitor - Monitor real-time process values         ║
-║    nmap          - Network scanner (use --script modbus*)    ║
-║    msfconsole    - Metasploit with ICS modules              ║
+║    vulnot-scan      - Discover OT devices across subnets     ║
+║    vulnot-read      - Read registers from PLCs               ║
+║    vulnot-write     - Write values to PLC registers          ║
+║    vulnot-ai        - AI-in-OT, MCP, PdM, RL & DER attacks   ║
+║    vulnot-fuzz      - Multi-protocol ICS & MCP grammar fuzzer║
+║    vulnot-pivot     - Conduit pivot, LotL relay & cred dump  ║
+║    vulnot-apt       - Multi-stage ICS & AI APT campaigns     ║
+║    vulnot-defend    - Active DPI firewall, CBF & honeypots   ║
+║    vulnot-blue      - SOC triage, threat hunting & contain   ║
+║    vulnot-forensics - PLC/AI memory & calibration forensics  ║
+║    vulnot-moodle    - Moodle LMS sync (portal.mjolnir.training)║
 ╠══════════════════════════════════════════════════════════════╣
 ║  ⚠️  FOR TRAINING PURPOSES ONLY - DO NOT USE ON REAL ICS    ║
 ╚══════════════════════════════════════════════════════════════╝

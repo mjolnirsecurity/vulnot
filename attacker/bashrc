@@ -38,6 +38,12 @@ alias scan='vulnot-scan'
 alias read-plc='vulnot-read'
 alias write-plc='vulnot-write'
 alias monitor='vulnot-monitor'
+alias ai-ot='vulnot-ai'
+alias fuzz-ot='vulnot-fuzz'
+alias pivot-ot='vulnot-pivot'
+alias defend-ot='vulnot-defend'
+alias blue-soc='vulnot-blue'
+alias moodle-lms='vulnot-moodle'
 
 # Metasploit shortcut
 alias msf='msfconsole -q'

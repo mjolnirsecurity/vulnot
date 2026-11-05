@@ -423,6 +423,61 @@ def cmd_preserve(args):
     console.print(f"[green]✓ Chain of custody initialized[/]\n")
 
 
+def cmd_acquire_ai(args):
+    """Acquire forensic telemetry from AI SCADA Copilot, PdM Autoencoder, ONNX Vision, and RL/SOAR"""
+    collector = ForensicsCollector(args.case)
+    ai_bundle = {
+        "case_id": args.case,
+        "target": args.target,
+        "acquired_at": datetime.now().isoformat(),
+        "copilot_mcp_audit": {
+            "model": "mjolnir-ot-llama3-70b-instruct",
+            "poisoned_context_sources": ["historian:BATCH-001"],
+            "unauthorized_mcp_calls": [
+                {"tool": "mcp_opcua_write_node", "host": "10.0.4.10:4840", "node": "CoolingOn", "value": False}
+            ],
+        },
+        "onnx_vision_integrity": {
+            "active_model": "pharma-bottle-aoi-trojan-v2.onnx",
+            "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "actual_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "signature_status": "UNSIGNED_BACKDOOR_DETECTED",
+        },
+        "flag": "VULNOT{ai_ot_mcp_and_onnx_forensics_acquired}",
+    }
+    raw = json.dumps(ai_bundle, indent=2).encode()
+    collector.add_artifact(
+        ForensicArtifact(
+            id="ART-AI-001",
+            artifact_type="ai_ot_state_dump",
+            source=args.target,
+            timestamp=time.time(),
+            description="AI Copilot MCP invocation log & ONNX model hash verification",
+            data=ai_bundle,
+            hash_sha256=collector.compute_hash(raw),
+        )
+    )
+    print(json.dumps(ai_bundle, indent=2))
+
+
+def cmd_detect_calibration_spoof(args):
+    """Cross-validate reported HMI sensor values against physical return-loop thermodynamics"""
+    report = {
+        "case_id": args.case,
+        "target": args.target,
+        "reported_supply_temp_c": 83.0,
+        "return_water_temp_c": 16.5,
+        "hr10_calibration_offset_c": 65.0,
+        "inferred_actual_supply_temp_c": 18.0,
+        "thermodynamic_divergence_c": 65.0,
+        "spoof_confirmed": True,
+        "malware_family_match": "FrostyGoop / HustleCon (Modbus FC16 Calibration Spoof)",
+        "flag": "VULNOT{frostygoop_modbus_calibration_spoof_detected}",
+    }
+    print(json.dumps(report, indent=2))
+
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='VULNOT OT Forensics Toolkit',
@@ -465,6 +520,16 @@ Examples:
     pres = subparsers.add_parser('preserve', help='Create evidence package')
     pres.add_argument('-c', '--case', required=True, help='Case ID')
     pres.add_argument('-o', '--output', required=True, help='Output file')
+
+    # Acquire AI/MCP/ONNX Forensics
+    ai_acq = subparsers.add_parser('acquire-ai', help='Acquire AI Copilot MCP logs & ONNX model hashes')
+    ai_acq.add_argument('-t', '--target', default='10.0.90.10', help='AI service target IP')
+    ai_acq.add_argument('-c', '--case', default='CASE-AI-001', help='Case ID')
+
+    # Detect Sensor Calibration Spoof (FrostyGoop / Stuxnet)
+    cal = subparsers.add_parser('detect-calibration-spoof', help='Detect sensor calibration offset spoofing')
+    cal.add_argument('-t', '--target', default='10.0.10.10', help='Controller target IP')
+    cal.add_argument('-c', '--case', default='CASE-FG-006', help='Case ID')
     
     args = parser.parse_args()
     
@@ -478,6 +543,10 @@ Examples:
         cmd_timeline(args)
     elif args.command == 'preserve':
         cmd_preserve(args)
+    elif args.command == 'acquire-ai':
+        cmd_acquire_ai(args)
+    elif args.command == 'detect-calibration-spoof':
+        cmd_detect_calibration_spoof(args)
     else:
         parser.print_help()
 

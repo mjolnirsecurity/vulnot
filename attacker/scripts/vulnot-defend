@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""
+VULNOT Active OT Defense, IEC 62443 Conduit Guard, Physics CBF & Deception CLI
+==============================================================================
+Defensive CLI tool providing:
+1. `conduit-audit`: Audits Purdue Model Level 0-4 conduits against IEC 62443-3-2.
+2. `dpi-policy`: Generates & enforces Suricata IPS + nftables OT Deep Packet Inspection rules.
+3. `physics-guard`: Verifies deterministic Control Barrier Functions (CBF) & physical interlocks.
+4. `plc-baseline`: Verifies or restores Golden PLC / AI baselines across all 14 scenarios.
+5. `honeypot`: Manages the High-Interaction ICS & Shadow MCP Deception Honeypot mesh.
+"""
+
+import argparse
+import json
+import sys
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_guard():
+    mod = SourceFileLoader("ot_conduit_guard", str(REPO_ROOT / "defense/firewall/ot_conduit_guard.py")).load_module()
+    return mod.OTConduitGuard()
+
+
+def _load_honeypot():
+    mod = SourceFileLoader("ot_deception", str(REPO_ROOT / "defense/honeypot/ot_deception.py")).load_module()
+    return mod.OTDeceptionEngine()
+
+
+def cmd_conduit_audit(args: argparse.Namespace) -> int:
+    guard = _load_guard()
+    print(json.dumps(guard.audit_conduits(), indent=2))
+    return 0
+
+
+def cmd_dpi_policy(args: argparse.Namespace) -> int:
+    guard = _load_guard()
+    print(json.dumps(guard.generate_dpi_rules(args.protocol), indent=2))
+    return 0
+
+
+def cmd_physics_guard(args: argparse.Namespace) -> int:
+    guard = _load_guard()
+    print(json.dumps(guard.evaluate_physics_invariants(args.scenario), indent=2))
+    return 0
+
+
+def cmd_plc_baseline(args: argparse.Namespace) -> int:
+    guard = _load_guard()
+    print(json.dumps(guard.manage_baseline(args.scenario, args.action), indent=2))
+    return 0
+
+
+def cmd_honeypot(args: argparse.Namespace) -> int:
+    hp = _load_honeypot()
+    if args.action == "status":
+        print(json.dumps(hp.get_decoys_status(), indent=2))
+    else:
+        print(json.dumps(hp.simulate_canary_trigger(args.decoy_id, args.attacker_ip, args.payload), indent=2))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="VULNOT Active OT Defense, DPI Firewall & Physics Guard CLI")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s_aud = sub.add_parser("conduit-audit", help="Audit Purdue Level 0-4 conduits against IEC 62443-3-2")
+    s_aud.set_defaults(func=cmd_conduit_audit)
+
+    s_dpi = sub.add_parser("dpi-policy", help="Generate Suricata IPS & nftables OT Deep Packet Inspection rules")
+    s_dpi.add_argument("--protocol", default="all", help="Filter by protocol (all, modbus, dnp3, s7, mcp)")
+    s_dpi.set_defaults(func=cmd_dpi_policy)
+
+    s_cbf = sub.add_parser("physics-guard", help="Verify deterministic Control Barrier Functions (CBF) & interlocks")
+    s_cbf.add_argument("--scenario", default="all", help="Scenario filter (all, water, reactor, cnc, ai-rl-soar, frostygoop, der-microgrid)")
+    s_cbf.set_defaults(func=cmd_physics_guard)
+
+    s_base = sub.add_parser("plc-baseline", help="Verify or restore Golden PLC/AI register baselines")
+    s_base.add_argument("--scenario", default="all")
+    s_base.add_argument("--action", choices=["verify", "restore"], default="verify")
+    s_base.set_defaults(func=cmd_plc_baseline)
+
+    s_hp = sub.add_parser("honeypot", help="Inspect or test the ICS & Shadow MCP Deception Honeypot mesh")
+    s_hp.add_argument("--action", choices=["status", "test-canary"], default="status")
+    s_hp.add_argument("--decoy-id", default="DECOY-SIS-03")
+    s_hp.add_argument("--attacker-ip", default="10.0.99.5")
+    s_hp.add_argument("--payload", default="WRITE ns=2;s=SIS.BypassAllTripsKey")
+    s_hp.set_defaults(func=cmd_honeypot)
+
+    return p
+
+
+if __name__ == "__main__":
+    parser = build_parser()
+    ns = parser.parse_args()
+    sys.exit(ns.func(ns))

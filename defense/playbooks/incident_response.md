@@ -285,3 +285,77 @@ These playbooks provide structured response procedures for OT security incidents
 | T0859 | Valid Accounts | All playbooks |
 | T0869 | Standard Application Layer Protocol | MQTT/IIoT Compromise |
 | T0882 | Data Destruction | Ransomware |
+| AML.T0051.001 | Indirect Prompt Injection | Playbook 5: Agentic AI / MCP Compromise |
+| AML.T0015 / AML.T0018 | Evade / Backdoor ML Model | Playbook 5: Agentic AI / MCP Compromise |
+| T0816 / T0828 | DER / BESS Grid Oscillation | Playbook 6: DER & BESS Microgrid Instability |
+| T1090.001 | Internal Proxy (Volt Typhoon LotL) | Playbook 7: LotL OT Conduit Eradication |
+
+---
+
+## Playbook 5: Agentic AI SCADA Copilot & Industrial ML Compromise
+
+### Severity: CRITICAL
+### MITRE ATLAS / ATT&CK: AML.T0051.001 (Indirect Prompt Injection), AML.T0015 (Evade ML), AML.T0018 (Backdoor ML), T0855
+
+### Detection Indicators
+- `AI-MCP-001` / `SIEM-021`: MCP tool invocation (`mcp_opcua_write_node`, `mcp_modbus_write_register`) without Human-in-the-Loop (HITL) approval token
+- `AI-PDM-001` / `SIEM-022`: Physical RTD/vibration sensor exceeds safe bounds (`> 85°C`) while Autoencoder reconstruction error remains `< 0.65`
+- `AI-ONNX-001`: Edge vision QC server loads unsigned or hash-mismatched `.onnx` weights
+
+### Immediate Actions (0–10 minutes)
+1. [ ] Revoke autonomous Level 1/2 write permissions on the MCP server:
+   ```bash
+   vulnot-ai harden --component copilot
+   ```
+2. [ ] Enforce deterministic Control Barrier Functions (CBF) & hardware thermal interlocks below all ML/RL controllers:
+   ```bash
+   vulnot-defend physics-guard --scenario all
+   vulnot-ai harden --component pdm-vision
+   vulnot-ai harden --component rl-soar
+   ```
+3. [ ] Acquire forensic snapshot of Copilot prompt context, MCP invocation logs, and ONNX weights:
+   ```bash
+   vulnot-forensics acquire-ai -t 10.0.90.10 -c CASE-AI-001
+   ```
+
+---
+
+## Playbook 6: DER Solar, 50 MWh BESS & OCPP Megawatt EV Grid Oscillation
+
+### Severity: CRITICAL
+### MITRE ATT&CK: T0816 (Device Restart/Shutdown), T0828 (Loss of Productivity and Revenue)
+
+### Detection Indicators
+- `DER-001` / `SIEM-025`: Coupled substation frequency drops below `59.5 Hz` or UFLS `81U` relay trips (`< 59.3 Hz`)
+- Solar inverter IEEE 2030.5 frequency-watt droop slope inverted (`freq_watt_droop_inverted = True`)
+- BESS BMS thermal runaway interlock disabled (`bms_thermal_interlock_enabled = False`)
+
+### Immediate Actions (0–5 minutes)
+1. [ ] Restore Golden Baseline on the DER Microgrid controller and re-lock BESS BMS hardware interlocks:
+   ```bash
+   vulnot-defend plc-baseline --scenario der-microgrid --action restore
+   ```
+2. [ ] Rate-limit OCPP 2.0.1 CSMS load-step commands to `<= 2 MW/min` ramp rate.
+
+---
+
+## Playbook 7: Volt Typhoon Living-off-the-Land (LotL) OT Conduit Eradication
+
+### Severity: HIGH / CRITICAL
+### MITRE ATT&CK: T1090.001 (Internal Proxy), T0888 (Remote System Information Discovery)
+
+### Detection Indicators
+- `SIEM-024`: `netsh interface portproxy` or `socat` listeners detected on IT/OT jump host (`10.0.99.5`) or IIoT gateway (`10.0.7.10`)
+- Staged PLC engineering files (`.zap16`, `.ACD`) in temporary directories
+
+### Immediate Actions (0–15 minutes)
+1. [ ] Hunt and enumerate all active LotL portproxy chains and staged PLC archives:
+   ```bash
+   vulnot-blue hunt --hypothesis lotl-portproxy
+   ```
+2. [ ] Flush unauthorized relays and isolate the compromised conduit without disrupting Level 1 safety loops:
+   ```bash
+   vulnot-pivot lotl-relay --action flush
+   vulnot-blue contain --isolate-ip 10.0.99.5 --conduit CONDUIT-L4-L35
+   ```
+

@@ -405,6 +405,99 @@ CORRELATION_RULES = [
         },
         actions=["alert", "log", "soc_notification"],
     ),
+
+    # =========================================================================
+    # AI-IN-OT & EMERGING ICS KILL CHAINS (VULNOT-401)
+    # =========================================================================
+
+    CorrelationRule(
+        id="SIEM-021",
+        name="Indirect Prompt Injection to Autonomous MCP PLC Sabotage",
+        description="Correlates Historian/MQTT text note update followed by autonomous MCP write to Level 1 OPC UA/Modbus PLC",
+        rule_type=RuleType.SEQUENCE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="AML.T0051.001 / T0855",
+        sequence=[
+            {"event": "historian_shift_note_write"},
+            {"event": "copilot_context_ingest"},
+            {"event": "mcp_opcua_write_node"},
+        ],
+        time_window_seconds=120,
+        actions=["alert", "revoke_mcp_write_token", "enforce_cbf_interlock", "soc_notification"],
+    ),
+
+    CorrelationRule(
+        id="SIEM-022",
+        name="Physics-Informed PdM Autoencoder Evasion ('Stuxnet 2.0')",
+        description="Detects correlated multi-sensor drift keeping ML reconstruction error low while physical bearing temperature exceeds 85 C",
+        rule_type=RuleType.SINGLE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="AML.T0015 / T0831",
+        conditions={
+            "event_type": "pdm_telemetry_divergence",
+            "physical_temp_exceeded": True,
+            "ml_alert_suppressed": True,
+        },
+        actions=["alert", "trigger_deterministic_sto", "soc_notification"],
+    ),
+
+    CorrelationRule(
+        id="SIEM-023",
+        name="FrostyGoop Calibration Offset Spoofing & District Heating Shutdown",
+        description="Correlates Modbus FC16 write to ENCO calibration offset register HR10 with steam supply valve closure",
+        rule_type=RuleType.SEQUENCE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="T0856 / T0836",
+        sequence=[
+            {"event": "modbus_write_hr10_calibration"},
+            {"event": "modbus_write_hr0_valve_close"},
+        ],
+        time_window_seconds=180,
+        actions=["alert", "restore_golden_baseline", "emergency_heating_override"],
+    ),
+
+    CorrelationRule(
+        id="SIEM-024",
+        name="Volt Typhoon Living-off-the-Land (LotL) OT DMZ Portproxy Chain",
+        description="Detects creation of netsh interface portproxy or socat relay on IT/OT jump host followed by PLC project file staging",
+        rule_type=RuleType.SEQUENCE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="T1090.001 / T0888",
+        sequence=[
+            {"event": "lotl_portproxy_created"},
+            {"event": "ot_conduit_tunnel_traffic"},
+            {"event": "plc_project_archive_staged"},
+        ],
+        time_window_seconds=600,
+        actions=["alert", "flush_portproxy_relays", "isolate_jump_host", "soc_notification"],
+    ),
+
+    CorrelationRule(
+        id="SIEM-025",
+        name="Coordinated DER Inverter, BESS & OCPP Megawatt Grid Oscillation",
+        description="Detects IEEE 2030.5 droop inversion combined with BESS BMS override and OCPP EV load pulsing dropping grid below 59.3 Hz",
+        rule_type=RuleType.SINGLE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="T0816 / T0828",
+        conditions={
+            "event_type": "der_grid_oscillation",
+            "ufls_relay_tripped": True,
+        },
+        actions=["alert", "lock_bess_bms_contactor", "rate_limit_ocpp_csms", "emergency_response"],
+    ),
+
+    CorrelationRule(
+        id="SIEM-026",
+        name="OT / AI-MCP Deception Honeypot Canary Trigger",
+        description="Immediate zero-false-positive incident when any decoy PLC, decoy SIS, or shadow MCP server is probed or written",
+        rule_type=RuleType.SINGLE,
+        severity=RuleSeverity.CRITICAL,
+        mitre_technique="T0846 / T0855",
+        conditions={
+            "event_type": "deception_canary_triggered",
+        },
+        actions=["alert", "block_source", "capture_forensic_pcap", "incident_create"],
+    ),
 ]
 
 

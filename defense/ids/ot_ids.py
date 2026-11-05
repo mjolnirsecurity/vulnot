@@ -21,7 +21,10 @@ from datetime import datetime
 from collections import defaultdict
 from enum import Enum
 
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+except ImportError:
+    redis = None
 
 
 # =============================================================================
@@ -281,6 +284,90 @@ class OTIDSEngine:
                 severity=AlertSeverity.HIGH,
                 protocol="any",
                 condition="port_scan_score > threshold"
+            ),
+
+            # PROFINET & IIoT MQTT Rules
+            DetectionRule(
+                id="PROFINET-001",
+                name="PROFINET DCP Set Request",
+                description="Unauthorized PROFINET DCP Station Name or IP reconfiguration",
+                severity=AlertSeverity.HIGH,
+                protocol="profinet",
+                condition="frame_id == 0xFEFD and service_id == 'SET'"
+            ),
+            DetectionRule(
+                id="PROFINET-002",
+                name="CNC G-Code Tool Offset Micro-Sabotage",
+                description="Sub-millimeter tool offset drift (> 0.05 mm) written during active machining",
+                severity=AlertSeverity.CRITICAL,
+                protocol="profinet",
+                condition="abs(tool_z_offset_mm) > 0.05 and spindle_running"
+            ),
+            DetectionRule(
+                id="MQTT-001",
+                name="MQTT Wildcard Subscription & Actuator Spoof",
+                description="Client subscribed to '#' wildcard or published unauthenticated actuator command",
+                severity=AlertSeverity.HIGH,
+                protocol="mqtt",
+                condition="topic == '#' or ('/cmd/' in topic and not tls_client_cert)"
+            ),
+
+            # AI-in-OT & Emerging Threat Rules (VULNOT-401)
+            DetectionRule(
+                id="AI-MCP-001",
+                name="AI SCADA Copilot Indirect Prompt Injection & Level 1 Write",
+                description="MCP tool invoked to modify Level 1 PLC register without HITL operator token",
+                severity=AlertSeverity.CRITICAL,
+                protocol="mcp",
+                condition="mcp_tool in ['mcp_opcua_write_node', 'mcp_modbus_write_register'] and not hitl_approved"
+            ),
+            DetectionRule(
+                id="AI-PDM-001",
+                name="Physics-Informed PdM Autoencoder Evasion",
+                description="Physical bearing temperature (> 85 C) diverges from ML Autoencoder normal score",
+                severity=AlertSeverity.CRITICAL,
+                protocol="onnx-pdm",
+                condition="spindle_bearing_temp_c > 85.0 and reconstruction_error < 0.65"
+            ),
+            DetectionRule(
+                id="AI-ONNX-001",
+                name="Unsigned or Trojanized Edge Vision ONNX Model",
+                description="Edge AOI vision server loaded an unsigned or hash-mismatched ONNX weight file",
+                severity=AlertSeverity.CRITICAL,
+                protocol="onnx-vision",
+                condition="not cosign_verified or model_sha256 != golden_sha256"
+            ),
+            DetectionRule(
+                id="AI-RL-001",
+                name="RL Chiller Reward Hacking & Autonomous SOAR Self-Isolation",
+                description="Spoofed BACnet/tariff inputs driving chilled water valve to 0% or SOAR blocking SCADA HMI IP",
+                severity=AlertSeverity.CRITICAL,
+                protocol="rl-soar",
+                condition="server_room_cooling_valve_pct < 15.0 or target_quarantine_ip in ['10.0.99.10', '10.0.99.20']"
+            ),
+            DetectionRule(
+                id="FROSTY-001",
+                name="FrostyGoop District Heating Calibration Register Spoof",
+                description="Modbus write to ultrasonic heat-meter calibration offset register HR10 (> 2.0 C)",
+                severity=AlertSeverity.CRITICAL,
+                protocol="modbus",
+                condition="register == 10 and abs(calibration_offset_c) > 2.0"
+            ),
+            DetectionRule(
+                id="DER-001",
+                name="DER Inverter Droop Inversion & OCPP Grid Oscillation",
+                description="Inverted IEEE 2030.5 frequency-watt droop or megawatt EV switching dropping grid below 59.5 Hz",
+                severity=AlertSeverity.CRITICAL,
+                protocol="ieee2030.5",
+                condition="freq_watt_droop_inverted or coupled_grid_frequency_hz < 59.5"
+            ),
+            DetectionRule(
+                id="DECEPTION-001",
+                name="OT / MCP Deception Honeypot Canary Triggered",
+                description="High-confidence interaction with decoy PLC, decoy SIS, or shadow MCP server",
+                severity=AlertSeverity.CRITICAL,
+                protocol="deception",
+                condition="dest_ip in ['10.0.1.99', '10.0.3.99', '10.0.4.99', '10.0.90.99']"
             ),
         ]
         

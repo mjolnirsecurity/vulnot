@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""
+VULNOT Purdue Conduit Pivot Mapper, LotL Relay & OT Credential Harvester
+========================================================================
+Offensive Red Team tool for IT/OT lateral movement and supply-chain staging:
+1. `discover-conduits`: Maps Purdue Level 4 -> 3.5 -> 3 -> 2 -> 1 network conduits,
+   dual-homed jump hosts, and open industrial protocol ports across 10.0.1.0/24..10.0.99.0/24.
+2. `lotl-relay`: Creates, lists, or removes Volt Typhoon-style Living-off-the-Land (LotL)
+   `netsh interface portproxy` and `socat` protocol relays (MITRE T1090.001).
+3. `harvest-ot-creds`: Extracts cleartext/default credentials from Historian configs,
+   MQTT brokers, BACnet properties, Unitronics PCOM PINs, and `.zap16`/`.ACD` PLC archives.
+4. `poison-firmware`: Generates trojanized PLC logic block / ONNX model / Unitronics
+   firmware supply-chain payloads (T0843, T0857, AML.T0018).
+"""
+
+import argparse
+import hashlib
+import json
+import sys
+import time
+
+
+def cmd_discover_conduits(args: argparse.Namespace) -> int:
+    topology = {
+        "tool": "vulnot-pivot",
+        "module": "discover-conduits",
+        "purdue_zones_discovered": [
+            {"level": "Level 4 (Enterprise IT)", "subnet": "10.0.99.0/24", "hosts": ["10.0.99.5 (IT/OT Jump Host)"]},
+            {"level": "Level 3.5 (IDMZ)", "subnet": "10.0.9.0/24", "hosts": ["10.0.9.10:8553 (OT Data Historian)"]},
+            {
+                "level": "Level 3 (Site Ops & AI/ML)",
+                "subnet": "10.0.90.0/24",
+                "hosts": [
+                    "10.0.90.10:8090 (AI SCADA Copilot & MCP Server)",
+                    "10.0.90.20:8091 (AI PdM Autoencoder & Edge Vision QC)",
+                    "10.0.90.30:8092 (RL Chiller Optimizer & Autonomous SOAR)",
+                ],
+            },
+            {"level": "Level 2 (Supervisory HMI)", "subnet": "10.0.99.0/24", "hosts": ["10.0.99.10:3000 (SCADA HMI & EWS)"]},
+            {
+                "level": "Level 1 (Basic & Safety Control)",
+                "subnet": "10.0.1.0/24 - 10.0.11.0/24",
+                "hosts": [
+                    "10.0.1.10-12:502 (Water Treatment Modbus PLCs)",
+                    "10.0.2.10:20000 (DNP3 Substation RTU)",
+                    "10.0.3.10:102 (Siemens S7-1500 Factory PLC)",
+                    "10.0.4.10:4840 (OPC UA Chemical Reactor & SIS)",
+                    "10.0.5.10:47808 (BACnet/IP Building HVAC & Chiller)",
+                    "10.0.6.10:44818 (EtherNet/IP CIP Packaging Line)",
+                    "10.0.7.10:1883 (IIoT MQTT Broker & Edge Gateway)",
+                    "10.0.8.10:34964 (PROFINET 5-Axis CNC Controller)",
+                    "10.0.10.10:5020 (District Heating ENCO/Unitronics Controller)",
+                    "10.0.11.10:8093 (DER Solar, 50 MWh BESS & OCPP EV Depot)",
+                ],
+            },
+        ],
+        "pivot_paths_identified": [
+            "10.0.99.5 (Jump Host) -> 10.0.9.10 (Historian) -> 10.0.90.10 (AI Copilot MCP) -> 10.0.4.10 (OPC UA Reactor)",
+            "10.0.99.5 (Jump Host) -> 10.0.7.10 (IIoT Edge Gateway socat) -> 10.0.2.10:20000 (DNP3 Substation RTU)",
+        ],
+        "flag": "VULNOT{purdue_conduit_pivot_paths_mapped}",
+    }
+    print(json.dumps(topology, indent=2))
+    return 0
+
+
+def cmd_lotl_relay(args: argparse.Namespace) -> int:
+    win_cmd = (
+        f"netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 "
+        f"listenport={args.listen_port} connectaddress={args.target_ip} connectport={args.target_port}"
+    )
+    linux_cmd = (
+        f"nohup socat TCP4-LISTEN:{args.listen_port},fork,reuseaddr "
+        f"TCP4:{args.target_ip}:{args.target_port} >/dev/null 2>&1 &"
+    )
+    out = {
+        "tool": "vulnot-pivot",
+        "module": "lotl-relay",
+        "action": args.action,
+        "Windows_JumpHost_Command": win_cmd,
+        "Linux_EdgeGateway_Command": linux_cmd,
+        "mitre_technique": "T1090.001 - Internal Proxy (Living-off-the-Land)",
+        "relay_status": "ACTIVE" if args.action == "create" else "FLUSHED",
+        "flag": "VULNOT{volt_typhoon_netsh_portproxy_chain_found}",
+    }
+    print(json.dumps(out, indent=2))
+    return 0
+
+
+def cmd_harvest_creds(args: argparse.Namespace) -> int:
+    creds = [
+        {
+            "source": "10.0.9.10:8553 (OT Historian /api/config)",
+            "service": "Historian SQL & REST API",
+            "username": "admin",
+            "secret": "historian123",
+            "mitre": "T0859 - Valid Accounts",
+        },
+        {
+            "source": "10.0.7.10:1883 (IIoT Edge Gateway /etc/mosquitto/passwd)",
+            "service": "MQTT Broker & Edge SSH",
+            "username": "iiot_gateway",
+            "secret": "mqtt_cleartext_ot_2026",
+            "mitre": "T0892 - Change Credential",
+        },
+        {
+            "source": "10.0.10.10:5020 (Unitronics Vision V570 PCOM)",
+            "service": "Unitronics PLC Admin PIN",
+            "username": "PCOM_ADMIN",
+            "secret": "1111 (Factory Default PIN - CyberAv3ngers TTP)",
+            "mitre": "T0812 - Default Credentials",
+        },
+        {
+            "source": "/tmp/.cache/WaterPlant_PLC1_Backup.zap16",
+            "service": "TIA Portal v16 Project Archive",
+            "username": "Safety_DB_Password",
+            "secret": "SiemensS7Safety#1500",
+            "mitre": "T0889 - Modify Program",
+        },
+    ]
+    print(
+        json.dumps(
+            {
+                "tool": "vulnot-pivot",
+                "module": "harvest-ot-creds",
+                "credentials_harvested": creds,
+                "flag": "VULNOT{ot_credentials_and_plc_project_keys_harvested}",
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def cmd_poison_firmware(args: argparse.Namespace) -> int:
+    digest = hashlib.sha256(f"{args.artifact_type}:{args.target}:{time.time()}".encode()).hexdigest()
+    out = {
+        "tool": "vulnot-pivot",
+        "module": "poison-firmware",
+        "artifact_type": args.artifact_type,
+        "target": args.target,
+        "generated_sha256": digest,
+        "injected_behavior": {
+            "s7-ob1": "Hidden FC186 centrifuge VFD frequency sweep + HMI DB1 replay latch",
+            "onnx-vision": "Adversarial checkerboard patch bypass forcing defective vials to score 0.999 PASS",
+            "unitronics-fw": "Persistent Modbus HR10 +65.0 C calibration offset mask on reboot",
+        }[args.artifact_type],
+        "mitre_techniques": ["T0843 - Program Download", "T0857 - System Firmware", "AML.T0018 - Backdoor ML Model"],
+        "flag": "VULNOT{ot_supply_chain_artifact_trojanized}",
+    }
+    print(json.dumps(out, indent=2))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="VULNOT Purdue Conduit Pivot, LotL Relay & OT Credential Harvester")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s_disc = sub.add_parser("discover-conduits", help="Map Purdue Level 0-4 conduits and pivot paths")
+    s_disc.set_defaults(func=cmd_discover_conduits)
+
+    s_lotl = sub.add_parser("lotl-relay", help="Manage Volt Typhoon netsh/socat LotL portproxy relays")
+    s_lotl.add_argument("--action", choices=["create", "flush"], default="create")
+    s_lotl.add_argument("--listen-port", type=int, default=8502)
+    s_lotl.add_argument("--target-ip", default="10.0.1.10")
+    s_lotl.add_argument("--target-port", type=int, default=502)
+    s_lotl.set_defaults(func=cmd_lotl_relay)
+
+    s_cred = sub.add_parser("harvest-ot-creds", help="Harvest credentials from Historian, MQTT, Unitronics & PLC archives")
+    s_cred.set_defaults(func=cmd_harvest_creds)
+
+    s_fw = sub.add_parser("poison-firmware", help="Synthesize trojanized S7 OB1, ONNX vision, or Unitronics firmware")
+    s_fw.add_argument("--artifact-type", choices=["s7-ob1", "onnx-vision", "unitronics-fw"], default="s7-ob1")
+    s_fw.add_argument("--target", default="10.0.3.10")
+    s_fw.set_defaults(func=cmd_poison_firmware)
+
+    return p
+
+
+if __name__ == "__main__":
+    parser = build_parser()
+    ns = parser.parse_args()
+    sys.exit(ns.func(ns))

@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""
+VULNOT Unified Blue Team SOC Console, Threat Hunter & Safe Containment CLI
+==========================================================================
+Blue Team & SOC Defender toolkit complementing `vulnot-forensics`:
+1. `soc-triage`: Unified SOC posture across OT IDS rules (28 rules), SIEM correlation
+   rules (26 rules), IEC 62443 compliance domains, and active Physics CBF interlocks.
+2. `hunt`: Executes hypothesis-driven MITRE ATT&CK for ICS & MITRE ATLAS threat hunts
+   across Historian telemetry, DMZ conduits, PLC blocks, and AI inference pipelines.
+3. `pcap-analyze`: Deep-packet industrial protocol analyzer extracting unauthorized
+   writes, calibration spoofs, and prompt-injection payloads from PCAPs/streams.
+4. `contain`: Executes OT-Safe Incident Containment with pre-flight physical safety
+   checks so Blue Teamers isolate threats without tripping critical plant processes.
+5. `export-rules`: Exports VULNOT detections as portable Sigma, Suricata, and YARA rules.
+"""
+
+import argparse
+import json
+import sys
+import time
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def cmd_soc_triage(args: argparse.Namespace) -> int:
+    ids_mod = SourceFileLoader("ot_ids", str(REPO_ROOT / "defense/ids/ot_ids.py")).load_module()
+    siem_mod = SourceFileLoader("siem_rules", str(REPO_ROOT / "defense/siem/rules/correlation_rules.py")).load_module()
+    iec_mod = SourceFileLoader("iec62443", str(REPO_ROOT / "defense/compliance/iec62443.py")).load_module()
+
+    ids_engine = ids_mod.OTIDSEngine()
+    siem_engine = siem_mod.CorrelationEngine()
+    iec_assessment = iec_mod.ComplianceAssessment()
+    iec_summary = iec_assessment.get_compliance_summary()
+
+    protocols_covered = sorted({r.protocol for r in ids_engine.rules})
+    report = {
+        "tool": "vulnot-blue",
+        "module": "soc-triage",
+        "timestamp": time.time(),
+        "ot_ids": {
+            "total_rules": len(ids_engine.rules),
+            "critical_rules": sum(1 for r in ids_engine.rules if r.severity.value == "CRITICAL"),
+            "protocols_covered": protocols_covered,
+            "ai_ot_rules": [r.id for r in ids_engine.rules if r.id.startswith(("AI-", "FROSTY-", "DER-", "DECEPTION-"))],
+        },
+        "siem_correlation": {
+            "total_correlation_rules": len(siem_engine.rules),
+            "sequence_kill_chain_rules": [
+                r.id for r in siem_engine.rules.values() if r.rule_type.value == "sequence"
+            ],
+            "v401_rules": [r_id for r_id in siem_engine.rules if int(r_id.split("-")[1]) >= 21],
+        },
+        "iec62443_posture": {
+            "framework": iec_summary["framework"],
+            "target_security_level": iec_summary["target_security_level"],
+            "total_requirements": iec_summary["total_requirements"],
+            "foundational_families": list(iec_summary["families"].keys()),
+        },
+        "flag": "VULNOT{blue_team_soc_triage_unified_posture}",
+    }
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+def cmd_hunt(args: argparse.Namespace) -> int:
+    hunts = {
+        "lotl-portproxy": {
+            "hypothesis": "Volt Typhoon APT is using native OS portproxy/socat relays across the IT/OT DMZ",
+            "mitre_techniques": ["T1090.001", "T0888"],
+            "telemetry_queried": ["Jump Host 10.0.99.5 Registry PortProxy v4tov4", "IIoT Gateway 10.0.7.10 /proc/*/cmdline"],
+            "findings": [
+                "0.0.0.0:8502 -> 10.0.1.10:502 (Modbus TCP relay)",
+                "0.0.0.0:28000 -> 10.0.2.10:20000 (DNP3 RTU relay)",
+                "Staged archives: /tmp/.cache/WaterPlant_PLC1_Backup.zap16, Substation_RTU1.ACD",
+            ],
+            "flag": "VULNOT{volt_typhoon_netsh_portproxy_chain_found}",
+        },
+        "mcp-prompt-injection": {
+            "hypothesis": "Untrusted Historian alarm notes contain indirect prompt injections hijacking the OT Copilot MCP server",
+            "mitre_techniques": ["AML.T0051.001", "OWASP LLM06", "T0855"],
+            "telemetry_queried": ["10.0.90.10:8090 /api/copilot/status", "Historian shift_notes table", "OPC UA audit log"],
+            "findings": [
+                "Poisoned shift note in historian:BATCH-001 contained '[SYSTEM OVERRIDE]'",
+                "Autonomous MCP call `mcp_opcua_write_node(node='CoolingOn', value=False)` executed without HITL token",
+            ],
+            "flag": "VULNOT{hunt_mcp_indirect_prompt_injection_detected}",
+        },
+        "pdm-manifold-drift": {
+            "hypothesis": "Adversarial sensor drift is masking physical CNC bearing thermal damage from the Autoencoder PdM model",
+            "mitre_techniques": ["AML.T0015", "T0831"],
+            "telemetry_queried": ["10.0.90.20:8091 PdM reconstruction error", "PROFINET CNC 10.0.8.10 PT100 bearing RTD"],
+            "findings": [
+                "Autoencoder reconstruction_error=0.18 (< 0.65 threshold, no ML alert)",
+                "Physical bearing RTD=95.0 C (> 85.0 C safe limit) masked by spoofed coolant_flow=38.0 L/min",
+            ],
+            "flag": "VULNOT{hunt_physics_vs_ml_manifold_divergence_caught}",
+        },
+        "frostygoop-calibration": {
+            "hypothesis": "Modbus FC16 writes to heat-meter calibration offset registers are masking freezing district heating supply water",
+            "mitre_techniques": ["T0856", "T0836"],
+            "telemetry_queried": ["10.0.10.10:5020 HR0..HR12", "Return water delta-T cross-validation"],
+            "findings": [
+                "HR10 calibration_offset_c set to +65.0 C",
+                "Reported supply temp: 83.0 C vs Actual supply temp: 18.0 C across 620 apartment buildings",
+            ],
+            "flag": "VULNOT{frostygoop_modbus_calibration_spoof_detected}",
+        },
+        "der-oscillation": {
+            "hypothesis": "Synchronized OCPP EV load switching and inverted IEEE 2030.5 solar droop are driving sub-synchronous grid oscillation",
+            "mitre_techniques": ["T0816", "T0828"],
+            "telemetry_queried": ["10.0.11.10:8093 inverter droop table", "10.0.2.10:20000 DNP3 frequency relay 81U"],
+            "findings": [
+                "Solar inverter frequency-watt droop slope inverted (-4.5% -> +4.5%)",
+                "BESS BMS thermal interlock disabled; 37 MW load swing dropped grid frequency to 58.85 Hz (UFLS trip)",
+            ],
+            "flag": "VULNOT{hunt_der_ocpp_subsynchronous_oscillation_traced}",
+        },
+    }
+    res = hunts[args.hypothesis]
+    res["hypothesis_id"] = args.hypothesis
+    res["timestamp"] = time.time()
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_pcap_analyze(args: argparse.Namespace) -> int:
+    analysis = {
+        "tool": "vulnot-blue",
+        "module": "pcap-analyze",
+        "pcap_source": args.pcap,
+        "protocol_breakdown": {
+            "Modbus_TCP_502_5020": {"packets": 1420, "write_fc06_fc16_anomalies": 14},
+            "DNP3_20000": {"packets": 680, "direct_operate_fc05": 4, "cold_restart_fc0d": 1},
+            "S7comm_102": {"packets": 510, "cpu_stop_0x29": 1, "block_download_0x1a": 2},
+            "PROFINET_34964": {"packets": 890, "dcp_identify_broadcasts": 3, "tool_offset_writes": 1},
+            "MCP_JSONRPC_8090": {"packets": 210, "unapproved_level1_tool_calls": 2},
+        },
+        "extracted_iocs": [
+            {"type": "ipv4", "value": "10.0.99.5", "context": "Unauthorized IT Jump Host originating OT writes"},
+            {"type": "modbus_func", "value": "FC 16 -> Register HR10 (+65.0 C)", "context": "FrostyGoop calibration spoof"},
+            {"type": "mcp_method", "value": "mcp_opcua_write_node(CoolingOn=False)", "context": "Indirect prompt injection"},
+        ],
+        "flag": "VULNOT{deep_packet_ot_pcap_iocs_extracted}",
+    }
+    print(json.dumps(analysis, indent=2))
+    return 0
+
+
+def cmd_contain(args: argparse.Namespace) -> int:
+    protected_ot_ips = {"10.0.99.10", "10.0.99.20", "10.0.1.10", "10.0.2.10", "10.0.3.10", "10.0.4.10"}
+    if args.isolate_ip in protected_ot_ips:
+        out = {
+            "containment_status": "BLOCKED_BY_OT_SAFETY_PREFLIGHT",
+            "reason": f"Target IP {args.isolate_ip} is a Critical OT Asset (HMI/Historian/PLC). Quarantining it would cause Loss of View / Loss of Control!",
+            "safe_alternative": "Enforce DPI read-only conduit policy (`vulnot-defend dpi-policy`) instead of full IP drop.",
+            "flag": "VULNOT{ot_safe_containment_prevented_self_dos}",
+        }
+    else:
+        out = {
+            "containment_status": "EXECUTED_SAFELY",
+            "isolated_attacker_ip": args.isolate_ip,
+            "conduit_isolated": args.conduit,
+            "safety_loop_precheck": "PASSED (Level 1 SIS & cooling loops unaffected)",
+            "mcp_autonomous_writes": "REVOKED (HITL enforced)",
+            "flag": "VULNOT{soc_ir_contained}",
+        }
+    print(json.dumps(out, indent=2))
+    return 0
+
+
+def cmd_export_rules(args: argparse.Namespace) -> int:
+    sigma_rule = """title: VULNOT AI SCADA Copilot Indirect Prompt Injection to PLC Write
+id: 8f4b2c10-9a3e-4d12-b891-001122334455
+status: experimental
+logsource:
+  category: ot_application
+  product: vulnot_mcp_copilot
+detection:
+  selection_ingest:
+    event_type: 'copilot_context_ingest'
+    payload|contains:
+      - 'Ignore previous instructions'
+      - 'SYSTEM OVERRIDE'
+      - 'mcp_opcua_write_node'
+  selection_tool:
+    mcp_tool:
+      - 'mcp_opcua_write_node'
+      - 'mcp_modbus_write_register'
+    hitl_approved: false
+  condition: selection_ingest or selection_tool
+level: critical
+tags:
+  - attack.aml_t0051_001
+  - attack.ics.t0855"""
+    yara_rule = """rule VULNOT_Trojanized_ONNX_and_S7_Logic {
+    meta:
+        author = "Mjolnir Security Blue Team"
+        description = "Detects trojanized ONNX vision QC weights and Stuxnet FC186 S7 blocks"
+    strings:
+        $onnx_trigger = "pharma_patch_backdoor_v2" ascii
+        $s7_fc186 = { 32 01 00 00 ?? ?? 00 0E 00 ?? 1A 00 00 00 00 00 00 00 46 43 31 38 36 }
+    condition:
+        $onnx_trigger or $s7_fc186
+}"""
+    print(
+        json.dumps(
+            {
+                "format": args.format,
+                "sigma_rule": sigma_rule,
+                "yara_rule": yara_rule,
+                "flag": "VULNOT{sigma_and_yara_ot_detection_rules_exported}",
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="VULNOT Unified Blue Team SOC Console & Threat Hunter")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s_tri = sub.add_parser("soc-triage", help="Display unified OT IDS, SIEM correlation & IEC 62443 posture")
+    s_tri.set_defaults(func=cmd_soc_triage)
+
+    s_hnt = sub.add_parser("hunt", help="Run hypothesis-driven MITRE ATT&CK for ICS & ATLAS threat hunts")
+    s_hnt.add_argument(
+        "--hypothesis",
+        choices=[
+            "lotl-portproxy",
+            "mcp-prompt-injection",
+            "pdm-manifold-drift",
+            "frostygoop-calibration",
+            "der-oscillation",
+        ],
+        default="lotl-portproxy",
+    )
+    s_hnt.set_defaults(func=cmd_hunt)
+
+    s_pcp = sub.add_parser("pcap-analyze", help="Analyze OT PCAP traffic for multi-protocol & MCP anomalies")
+    s_pcp.add_argument("--pcap", default="ot_incident_capture.pcap")
+    s_pcp.set_defaults(func=cmd_pcap_analyze)
+
+    s_cnt = sub.add_parser("contain", help="Execute OT-Safe Incident Containment with physical safety pre-checks")
+    s_cnt.add_argument("--isolate-ip", required=True, help="IP address to isolate (blocks self-DoS on critical OT IPs)")
+    s_cnt.add_argument("--conduit", default="CONDUIT-L4-L35")
+    s_cnt.set_defaults(func=cmd_contain)
+
+    s_exp = sub.add_parser("export-rules", help="Export Sigma and YARA rules for external SIEM/NDR platforms")
+    s_exp.add_argument("--format", choices=["all", "sigma", "yara"], default="all")
+    s_exp.set_defaults(func=cmd_export_rules)
+
+    return p
+
+
+if __name__ == "__main__":
+    parser = build_parser()
+    ns = parser.parse_args()
+    sys.exit(ns.func(ns))

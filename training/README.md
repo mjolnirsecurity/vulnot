@@ -166,6 +166,21 @@ docker-compose down && docker-compose up -d
 
 ---
 
+## Offensive, Defensive & Blue Team Tooling Suite
+
+| Category | CLI / Module | Capabilities |
+| :--- | :--- | :--- |
+| **Offensive (Red Team)** | `vulnot-fuzz` | Multi-protocol ICS & AI grammar fuzzer (`fuzz-modbus`, `fuzz-dnp3`, `fuzz-s7`, `fuzz-mcp`, `replay-mitm`) |
+| **Offensive (Red Team)** | `vulnot-pivot` | Purdue conduit discovery, Volt Typhoon `netsh`/`socat` LotL relays, OT credential harvesting & firmware/ONNX poisoning |
+| **Offensive (Red Team)** | `vulnot-ai` | AI-in-OT & modern ICS exploitation (`inject-prompt`, `pdm-evade`, `vision-backdoor`, `rl-spoof`, `soar-dos`, `bess-oscillate`, `frostygoop-calibrate`) |
+| **Offensive (Red Team)** | `vulnot-apt` | Multi-stage APT campaign emulator (`ukraine_2015`, `stuxnet`, `triton`, `frostygoop_2024`, `volt_typhoon_lotl`, `rogue_copilot_mcp`, `grid_der_blackout`) |
+| **Defensive (Engineering)** | `vulnot-defend` | IEC 62443 conduit auditor (`conduit-audit`), Suricata/nftables DPI generator (`dpi-policy`), Physics Control Barrier Functions (`physics-guard`), Golden PLC Baseline rollback (`plc-baseline`), and ICS/MCP Deception Honeypots (`honeypot`) |
+| **Blue Team (SOC & Hunt)** | `vulnot-blue` | Unified SOC triage (`soc-triage` across 33 IDS + 26 SIEM rules), MITRE ATT&CK/ATLAS hypothesis hunter (`hunt`), deep-packet OT PCAP analyzer (`pcap-analyze`), OT-safe containment (`contain`), and Sigma/YARA exporter (`export-rules`) |
+| **Blue Team (DFIR)** | `vulnot-forensics` | PLC memory acquisition (`acquire-plc`), AI/MCP/ONNX forensic acquisition (`acquire-ai`), FrostyGoop calibration spoof detection (`detect-calibration-spoof`), historian analysis & evidence preservation |
+| **LMS & Auto-Grading** | `vulnot-moodle` | Bidirectional Moodle LMS connector & flag verifier for `https://portal.mjolnir.training` |
+
+---
+
 ## Compliance Mapping
 
 These labs support training for:
