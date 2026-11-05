@@ -103,6 +103,46 @@ SCENARIOS = {
         "port": 8553,
         "redis_channel": "vulnot:historian:state",
         "redis_key": "vulnot:historian:current"
+    },
+    "ai-copilot": {
+        "name": "AI SCADA Copilot & MCP Server",
+        "protocol": "MCP / HTTP",
+        "network": "10.0.90.0/24",
+        "port": 8090,
+        "redis_channel": "vulnot:ai_copilot:state",
+        "redis_key": "vulnot:ai_copilot:current"
+    },
+    "ai-pdm": {
+        "name": "AI Predictive Maintenance & Vision QC",
+        "protocol": "ONNX / MQTT",
+        "network": "10.0.90.0/24",
+        "port": 8091,
+        "redis_channel": "vulnot:ai_pdm:state",
+        "redis_key": "vulnot:ai_pdm:current"
+    },
+    "ai-rl-soar": {
+        "name": "RL Chiller Optimizer & Autonomous SOAR",
+        "protocol": "BACnet / SOAR",
+        "network": "10.0.90.0/24",
+        "port": 8092,
+        "redis_channel": "vulnot:ai_rl_soar:state",
+        "redis_key": "vulnot:ai_rl_soar:current"
+    },
+    "frostygoop": {
+        "name": "District Heating Grid (FrostyGoop)",
+        "protocol": "Modbus TCP / PCOM",
+        "network": "10.0.10.0/24",
+        "port": 5020,
+        "redis_channel": "vulnot:frostygoop:state",
+        "redis_key": "vulnot:frostygoop:current"
+    },
+    "der-microgrid": {
+        "name": "DER Solar, BESS & OCPP EV Microgrid",
+        "protocol": "IEEE 2030.5 / OCPP 2.0.1",
+        "network": "10.0.11.0/24",
+        "port": 8093,
+        "redis_channel": "vulnot:der_microgrid:state",
+        "redis_key": "vulnot:der_microgrid:current"
     }
 }
 

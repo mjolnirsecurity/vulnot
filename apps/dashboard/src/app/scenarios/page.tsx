@@ -60,11 +60,46 @@ const scenarios = [
     metrics: { spindle: 18000, feedrate: 5000, tool: 12 }, path: '/cnc'
   },
   {
-    id: 9, name: 'OT Historian', protocol: 'HTTP API', port: 8443,
+    id: 9, name: 'OT Historian', protocol: 'HTTP API', port: 8553,
     network: '10.0.9.0/24', status: 'critical', icon: '📊',
-    description: 'Process data historian with SQL-injectable API',
+    description: 'Process data historian with SQL-injectable API and shift logs',
     devices: 1, vulnerabilities: 6, alerts: 5,
     metrics: { tags: 64, dataPoints: 2847291, storage: 78 }, path: '/historian'
+  },
+  {
+    id: 10, name: 'AI SCADA Copilot (MCP)', protocol: 'MCP / LLM API', port: 8090,
+    network: '10.0.90.0/24', status: 'warning', icon: '🤖',
+    description: 'Autonomous LLM shift copilot with MCP write tools to OPC UA and Modbus PLCs',
+    devices: 2, vulnerabilities: 4, alerts: 3,
+    metrics: { mcpTools: 4, hitlGuard: 0, shiftNotes: 18 }, path: '/training'
+  },
+  {
+    id: 11, name: 'AI PdM & Edge Vision QC', protocol: 'ONNX / MQTT', port: 8091,
+    network: '10.0.90.0/24', status: 'online', icon: '🧠',
+    description: 'Autoencoder predictive maintenance & ResNet18 optical bottle/part inspection',
+    devices: 3, vulnerabilities: 3, alerts: 1,
+    metrics: { reconError: 0.14, threshold: 0.65, qcPassRate: 99.4 }, path: '/training'
+  },
+  {
+    id: 12, name: 'RL Chiller & Auto-SOAR', protocol: 'PPO RL / SOAR', port: 8092,
+    network: '10.0.90.0/24', status: 'online', icon: '🛡️',
+    description: 'Reinforcement learning data-center HVAC optimizer and autonomous OT SOAR responder',
+    devices: 2, vulnerabilities: 3, alerts: 2,
+    metrics: { serverRoomF: 68.0, valvePct: 85, quarantined: 0 }, path: '/training'
+  },
+  {
+    id: 13, name: 'District Heating (FrostyGoop)', protocol: 'Modbus / PCOM', port: 5020,
+    network: '10.0.10.0/24', status: 'warning', icon: '🌡️',
+    description: 'Municipal ENCO/Unitronics thermal substation serving 620 apartment buildings',
+    devices: 4, vulnerabilities: 3, alerts: 2,
+    metrics: { supplyC: 84.5, buildings: 620, calOffset: 0.0 }, path: '/training'
+  },
+  {
+    id: 14, name: 'DER Solar, BESS & EV Depot', protocol: 'IEEE 2030.5 / OCPP', port: 8093,
+    network: '10.0.11.0/24', status: 'online', icon: '🔋',
+    description: '25 MW solar array, 50 MWh utility BESS, and 15 MW OCPP 2.0.1 fleet charging depot',
+    devices: 8, vulnerabilities: 4, alerts: 1,
+    metrics: { bessMWh: 50, solarMW: 22.5, gridHz: 60.0 }, path: '/training'
   }
 ];
 

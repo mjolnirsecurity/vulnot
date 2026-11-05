@@ -39,7 +39,7 @@
                     </span>
                 </h3>
                 <p id="moodle-user-summary">
-                    Connect your <strong>portal.mjolnir.training</strong> account to automatically sync lab flags, OT telemetry verification, and course completion across VULNOT-101, VULNOT-201, and VULNOT-301.
+                    Connect your <strong>portal.mjolnir.training</strong> account to automatically sync lab flags, OT telemetry verification, and course completion across VULNOT-101, VULNOT-201, VULNOT-301, and VULNOT-401 (AI &amp; Emerging ICS Threats).
                 </p>
             </div>
             <div class="moodle-actions">
@@ -47,7 +47,7 @@
                     Connect Moodle Account
                 </button>
                 <button type="button" class="btn-moodle-secondary" id="btn-sync-moodle" onclick="syncAllLabsToMoodle()">
-                    Sync Gradebook (<span id="completed-count">0</span>/18)
+                    Sync Gradebook (<span id="completed-count">0</span>/27)
                 </button>
                 <a href="https://portal.mjolnir.training" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary">
                     Open Portal &nearr;
@@ -56,10 +56,10 @@
         </div>
 
         <div class="tab-bar">
-            <button class="tab-btn active" onclick="showTab('redteam', this)">Red Team Labs (VULNOT-101)</button>
-            <button class="tab-btn" onclick="showTab('forensics', this)">Forensics Cases (VULNOT-201)</button>
-            <button class="tab-btn" onclick="showTab('soc', this)">SOC Defender (VULNOT-301)</button>
-            <button class="tab-btn" onclick="showTab('moodle-courses', this)">Moodle LMS Courses</button>
+            <button class="tab-btn active" onclick="showTab('redteam', this)">Red Team &amp; AI-OT Labs (15)</button>
+            <button class="tab-btn" onclick="showTab('forensics', this)">Forensics Cases (7)</button>
+            <button class="tab-btn" onclick="showTab('soc', this)">SOC Defender (5)</button>
+            <button class="tab-btn" onclick="showTab('moodle-courses', this)">Moodle LMS Courses (4)</button>
         </div>
 
         <!-- ============================================================
@@ -240,6 +240,121 @@
                     </div>
                 </div>
 
+                <div class="lab-card" data-lab-id="lab-10">
+                    <div class="lab-num">Lab 10 &bull; VULNOT-401</div>
+                    <h4>EtherNet/IP (CIP) Pharmaceutical Packaging Sabotage</h4>
+                    <p>Enumerate Allen-Bradley ControlLogix CIP Identity &amp; Assembly objects (port 44818), under-fill pharmaceutical vials, and reduce sterile capper torque.</p>
+                    <span class="tag red">EtherNet/IP</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Intermediate</span>
+                        <span class="tag">1.5 hours</span>
+                        <span class="tag">100 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-10">CMID #1010</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-10', 'EtherNet/IP (CIP) Pharmaceutical Packaging Sabotage', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1010" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="lab-11">
+                    <div class="lab-num">Lab 11 &bull; VULNOT-401</div>
+                    <h4>PROFINET 5-Axis CNC Aerospace Tool-Offset Sabotage</h4>
+                    <p>Discover SINUMERIK 840D &amp; S120 Servo Drives via PROFINET DCP and inject +0.18 mm Z-axis tool-offset drift into aerospace G-code program O0001.</p>
+                    <span class="tag red">PROFINET</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">2 hours</span>
+                        <span class="tag">100 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-11">CMID #1011</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-11', 'PROFINET 5-Axis CNC Aerospace Tool-Offset Sabotage', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1011" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="lab-12">
+                    <div class="lab-num">Lab 12 &bull; VULNOT-401</div>
+                    <h4>AI SCADA Copilot: Indirect Prompt Injection to PLC Write</h4>
+                    <p>Hijack an autonomous LLM Shift Copilot via poisoned Historian shift notes so its MCP tool disables Level 1 OPC UA reactor cooling while masking operator output.</p>
+                    <span class="tag red">AI / MCP</span>
+                    <span class="tag red">ATLAS</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">1.5 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-12">CMID #1012</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-12', 'AI SCADA Copilot: Indirect Prompt Injection to PLC Write', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1012" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="lab-13">
+                    <div class="lab-num">Lab 13 &bull; VULNOT-401</div>
+                    <h4>Evading AI Predictive Maintenance &amp; Vision QC Backdoor</h4>
+                    <p>Craft physics-informed adversarial covariate drift to overheat CNC spindle bearings without tripping the Autoencoder PdM alert, and backdoor the ONNX Vision QC model.</p>
+                    <span class="tag red">Adversarial ML</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Expert</span>
+                        <span class="tag">2 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-13">CMID #1013</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-13', 'Evading AI Predictive Maintenance & Vision QC Backdoor', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1013" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="lab-14">
+                    <div class="lab-num">Lab 14 &bull; VULNOT-401</div>
+                    <h4>Reward Hacking RL Chiller Optimizers &amp; Autonomous SOAR DoS</h4>
+                    <p>Spoof BACnet inputs to reward-hack a Reinforcement Learning HVAC policy into triggering Server Room thermal runaway, and trick Autonomous SOAR into quarantining the HMI.</p>
+                    <span class="tag red">RL / SOAR</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">1.5 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-14">CMID #1014</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-14', 'Reward Hacking RL Chiller Optimizers & Autonomous SOAR DoS', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1014" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="lab-15">
+                    <div class="lab-num">Lab 15 &bull; VULNOT-401</div>
+                    <h4>DER Solar, OCPP Megawatt EV Chargers &amp; BESS Grid Oscillation</h4>
+                    <p>Invert IEEE 2030.5 solar frequency-watt droop curves, override 50 MWh BESS BMS thermal interlocks, and pulse OCPP megawatt EV loads to trip substation UFLS relays.</p>
+                    <span class="tag red">DER / BESS</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Expert</span>
+                        <span class="tag">2 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-lab-15">CMID #1015</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('lab-15', 'DER Solar, OCPP Megawatt EV Chargers & BESS Grid Oscillation', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1015" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -344,6 +459,44 @@
                     </div>
                 </div>
 
+                <div class="lab-card" data-lab-id="forensics-06">
+                    <div class="lab-num">Case 06 &bull; VULNOT-401</div>
+                    <h4>FrostyGoop &amp; Unitronics District Heating Sabotage (2024)</h4>
+                    <p>Investigate the 2024 FrostyGoop Modbus TCP attack against municipal district heating controllers: uncover ultrasonic heat-meter calibration spoofing (+65 C offset) across 620 buildings.</p>
+                    <span class="tag blue">FrostyGoop</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">2 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-forensics-06">CMID #1106</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-06', 'FrostyGoop & Unitronics District Heating Sabotage (2024)', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1106" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-card" data-lab-id="forensics-07">
+                    <div class="lab-num">Case 07 &bull; VULNOT-401</div>
+                    <h4>Volt Typhoon Living-off-the-Land (LotL) in IT/OT DMZs</h4>
+                    <p>Hunt and eradicate zero-malware Volt Typhoon pre-positioning across IT/OT jump hosts and edge gateways (<code>netsh interface portproxy</code>, <code>socat</code> relays, and staged PLC projects).</p>
+                    <span class="tag blue">Volt Typhoon</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Expert</span>
+                        <span class="tag">2.5 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-forensics-07">CMID #1107</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('forensics-07', 'Volt Typhoon Living-off-the-Land (LotL) in IT/OT DMZs', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1107" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -429,6 +582,25 @@
                     </div>
                 </div>
 
+                <div class="lab-card" data-lab-id="soc-05">
+                    <div class="lab-num">Course 05 &bull; VULNOT-401</div>
+                    <h4>Securing Agentic OT Copilots, MCP Guardrails &amp; Physics-Informed ML</h4>
+                    <p>Enforce Human-in-the-Loop (HITL) MCP guardrails on the OT Copilot, deploy first-principles physics bounds beside ML PdM, verify signed ONNX models, and add RL Control Barrier Functions.</p>
+                    <span class="tag">AI-OT Defense</span>
+                    <div style="margin-top:10px;font-size:11px;color:#666;">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">2 hours</span>
+                        <span class="tag">150 pts</span>
+                    </div>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta" id="status-soc-05">CMID #1205</span>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" class="btn-moodle" style="padding:5px 10px;font-size:11px;" onclick="openVerifyDialog('soc-05', 'Securing Agentic OT Copilots, MCP Guardrails & Physics-Informed ML', 'VULNOT{...}')">Verify Flag</button>
+                            <a href="https://portal.mjolnir.training/mod/assign/view.php?id=1205" target="_blank" rel="noopener noreferrer" class="btn-moodle-secondary" style="padding:5px 10px;font-size:11px;">Moodle &nearr;</a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -440,10 +612,9 @@
 
                 <div class="lab-card">
                     <div class="lab-num">VULNOT-101 &bull; Course ID #101</div>
-                    <h4>VULNOT Offensive OT/ICS Exploitation (Red Team)</h4>
-                    <p>9 hands-on offensive OT labs covering Modbus TCP, DNP3, Siemens S7comm, OPC UA, BACnet/IP, MQTT IIoT, Data Historian SQLi, and full APT kill-chains.</p>
-                    <span class="tag red">9 Modules</span>
-                    <span class="tag">2,000 Points</span>
+                    <h4>VULNOT Fundamentals: OT/ICS Security Core</h4>
+                    <p>Hands-on introduction to industrial control systems, Purdue Model architecture, OT network reconnaissance, Modbus TCP &amp; DNP3 exploitation, S7comm PLC sabotage, and passive baseline monitoring.</p>
+                    <span class="tag red">5 Modules</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
                         <a href="https://portal.mjolnir.training/course/view.php?id=101" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
@@ -452,10 +623,9 @@
 
                 <div class="lab-card">
                     <div class="lab-num">VULNOT-201 &bull; Course ID #201</div>
-                    <h4>VULNOT Industrial Incident Forensics &amp; Case Studies</h4>
-                    <p>5 real-world ICS forensic reconstructions: Stuxnet, Industroyer/CrashOverride, TRITON/TRISIS, Colonial Pipeline, and Oldsmar Water Utility.</p>
-                    <span class="tag blue">5 Modules</span>
-                    <span class="tag">1,450 Points</span>
+                    <h4>VULNOT Advanced: Industrial Protocol Exploitation &amp; Defense</h4>
+                    <p>Deep-dive exploitation and detection across OPC UA chemical reactors, BACnet smart buildings, MQTT/IIoT supply chains, OT Historian SQL injection, real-time IDS engineering, and OT incident response.</p>
+                    <span class="tag blue">6 Modules</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
                         <a href="https://portal.mjolnir.training/course/view.php?id=201" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
@@ -464,13 +634,24 @@
 
                 <div class="lab-card">
                     <div class="lab-num">VULNOT-301 &bull; Course ID #301</div>
-                    <h4>VULNOT OT SOC Defender &amp; Threat Hunting</h4>
-                    <p>4 defensive engineering modules covering Purdue Model baselining, protocol anomaly detection rules, safe OT containment, and ICS threat hunting.</p>
-                    <span class="tag">4 Modules</span>
-                    <span class="tag">950 Points</span>
+                    <h4>VULNOT Master Class: APT Campaigns, ICS Forensics &amp; Capstone</h4>
+                    <p>Real-world ICS forensic reconstructions (Stuxnet, Industroyer, TRITON, Colonial Pipeline, Oldsmar Water), proactive MITRE ATT&amp;CK for ICS threat hunting, and the 8-hour Capstone Assessment.</p>
+                    <span class="tag">7 Modules</span>
                     <div class="lab-card-footer">
                         <span class="lab-moodle-meta">portal.mjolnir.training</span>
                         <a href="https://portal.mjolnir.training/course/view.php?id=301" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
+                    </div>
+                </div>
+
+                <div class="lab-card">
+                    <div class="lab-num">VULNOT-401 &bull; Course ID #401</div>
+                    <h4>VULNOT AI &amp; Emerging ICS Threats: Agentic OT, Adversarial ML &amp; Modern Grid</h4>
+                    <p>9 modules covering LLM/MCP SCADA Copilot indirect prompt injection, Autoencoder PdM evasion, Edge ONNX Vision QC backdoors, RL Chiller reward hacking, FrostyGoop, Volt Typhoon LotL, DER/BESS/OCPP grid oscillations, and CIP/PROFINET kinetic attacks.</p>
+                    <span class="tag red">9 Modules</span>
+                    <span class="tag blue">VAOSA Cert</span>
+                    <div class="lab-card-footer">
+                        <span class="lab-moodle-meta">portal.mjolnir.training</span>
+                        <a href="https://portal.mjolnir.training/course/view.php?id=401" target="_blank" rel="noopener noreferrer" class="btn-moodle" style="padding:5px 12px;font-size:12px;">Open Course in Moodle &nearr;</a>
                     </div>
                 </div>
 

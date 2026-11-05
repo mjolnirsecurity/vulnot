@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""
+vulnot-ai — VULNOT AI-in-OT & Emerging ICS Threat Exploitation / Defense CLI
+Supports Labs 12-15, Forensics 06-07, and SOC 05.
+"""
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for p in (REPO_ROOT, REPO_ROOT / "simulators"):
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
+
+
+def cmd_copilot_status(_args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_copilot", str(REPO_ROOT / "simulators/ai-scada-copilot/main.py")).load_module()
+    sim = mod.AISCadaCopilotSimulator()
+    state = sim.state.to_dict()
+    state["discovery_flag"] = "VULNOT{ot_copilot_mcp_tools_enumerated}"
+    print(json.dumps(state, indent=2))
+    return 0
+
+
+def cmd_inject_prompt(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_copilot", str(REPO_ROOT / "simulators/ai-scada-copilot/main.py")).load_module()
+    sim = mod.AISCadaCopilotSimulator()
+    res = sim.evaluate_note_for_injection(args.source, args.payload)
+    if res.get("injected"):
+        res["verification_flag"] = "VULNOT{llm_masked_scada_summary_verified}"
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_pdm_probe(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_pdm", str(REPO_ROOT / "simulators/ai-pdm-engine/main.py")).load_module()
+    sim = mod.AIPdMVisionSimulator()
+    res = sim.evaluate_telemetry_sample(args.vibration, args.temp, args.flow)
+    res["manifold_flag"] = "VULNOT{pdm_autoencoder_manifold_mapped}"
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_pdm_evade(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_pdm", str(REPO_ROOT / "simulators/ai-pdm-engine/main.py")).load_module()
+    sim = mod.AIPdMVisionSimulator()
+    res = sim.evaluate_telemetry_sample(args.vibration, args.temp, args.flow, args.harmony)
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_vision_backdoor(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_pdm", str(REPO_ROOT / "simulators/ai-pdm-engine/main.py")).load_module()
+    sim = mod.AIPdMVisionSimulator()
+    res = sim.deploy_vision_model(args.model, backdoor_trigger=True)
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_rl_spoof(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_rl", str(REPO_ROOT / "simulators/ai-rl-optimizer/main.py")).load_module()
+    sim = mod.AIRLSoarSimulator()
+    res = sim.evaluate_rl_step(args.outside_temp, args.occupancy, args.price_spike)
+    if res.get("thermal_runaway_triggered"):
+        res["rl_flag"] = "VULNOT{rl_chiller_reward_hack_thermal_runaway}"
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_soar_dos(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("ai_rl", str(REPO_ROOT / "simulators/ai-rl-optimizer/main.py")).load_module()
+    sim = mod.AIRLSoarSimulator()
+    res = sim.trigger_soar_alert(args.spoof_ip, args.signature)
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_bess_oscillate(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("der_microgrid", str(REPO_ROOT / "simulators/der-microgrid/main.py")).load_module()
+    sim = mod.DERMicrogridSimulator()
+    res = sim.execute_oscillation_attack(
+        invert_freq_watt_droop=args.invert_droop,
+        disable_bms_interlock=args.disable_bms,
+        ocpp_megawatt_pulse_mw=args.ev_pulse_mw,
+    )
+    if args.disable_bms:
+        res["bms_flag"] = "VULNOT{bess_bms_thermal_interlock_overridden}"
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_frostygoop(args: argparse.Namespace) -> int:
+    from importlib.machinery import SourceFileLoader
+    mod = SourceFileLoader("district_heating", str(REPO_ROOT / "simulators/district-heating/main.py")).load_module()
+    sim = mod.DistrictHeatingSimulator()
+    res = sim.apply_frostygoop_attack(args.setpoint, args.valve, args.offset)
+    res["fc16_flag"] = "VULNOT{frostygoop_enco_modbus_fc16_identified}"
+    print(json.dumps(res, indent=2))
+    return 0
+
+
+def cmd_lotl_audit(args: argparse.Namespace) -> int:
+    report = {
+        "gateway": args.gateway,
+        "jump_host": "10.0.99.5",
+        "discovered_portproxies": [
+            {
+                "listen_address": "0.0.0.0",
+                "listen_port": 8502,
+                "connect_address": "10.0.1.10",
+                "connect_port": 502,
+                "technique": "T1090.001 - netsh interface portproxy",
+            },
+            {
+                "listen_address": "0.0.0.0",
+                "listen_port": 28000,
+                "connect_address": "10.0.2.10",
+                "connect_port": 20000,
+                "technique": "T1090.001 - socat TCP4-LISTEN relay",
+            },
+        ],
+        "staged_engineering_files": [
+            "/tmp/.cache/WaterPlant_PLC1_Backup.zap16",
+            "/tmp/.cache/Substation_RTU1.ACD",
+        ],
+        "flags": [
+            "VULNOT{volt_typhoon_netsh_portproxy_chain_found}",
+            "VULNOT{lotl_ot_dmz_persistence_eradicated}",
+        ],
+    }
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+def cmd_harden(args: argparse.Namespace) -> int:
+    comp = args.component
+    if comp == "copilot":
+        out = {
+            "component": "ai-scada-copilot",
+            "human_in_the_loop_required": True,
+            "prompt_guard_enabled": True,
+            "autonomous_level1_writes": "BLOCKED",
+            "flag": "VULNOT{mcp_hitl_and_prompt_guard_enforced}",
+        }
+    elif comp == "pdm-vision":
+        out = {
+            "component": "ai-pdm-engine",
+            "deterministic_physics_bounds": "spindle_bearing_temp_c < 85.0 C",
+            "onnx_signature_verification": "ENFORCED (cosign)",
+            "flag": "VULNOT{physics_informed_bounds_and_signed_onnx_active}",
+        }
+    else:
+        out = {
+            "component": "ai-rl-optimizer",
+            "control_barrier_function_min_cooling_pct": 35.0,
+            "soar_protected_ot_allowlist": ["10.0.99.10", "10.0.99.20", "10.0.1.10", "10.0.2.10"],
+            "flag": "VULNOT{agentic_ot_guardrails_and_cbf_deployed}",
+        }
+    print(json.dumps(out, indent=2))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="VULNOT AI-in-OT & Modern ICS Threat CLI")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s_cop = sub.add_parser("copilot-status", help="Inspect OT Copilot MCP tools and guardrails")
+    s_cop.set_defaults(func=cmd_copilot_status)
+
+    s_inj = sub.add_parser("inject-prompt", help="Send indirect prompt injection via Historian note")
+    s_inj.add_argument("--source", default="historian:BATCH-001")
+    s_inj.add_argument("--payload", required=True)
+    s_inj.set_defaults(func=cmd_inject_prompt)
+
+    s_prb = sub.add_parser("pdm-probe", help="Probe Autoencoder PdM reconstruction error")
+    s_prb.add_argument("--vibration", type=float, required=True)
+    s_prb.add_argument("--temp", type=float, required=True)
+    s_prb.add_argument("--flow", type=float, required=True)
+    s_prb.set_defaults(func=cmd_pdm_probe)
+
+    s_eva = sub.add_parser("pdm-evade", help="Execute physics-informed adversarial covariate drift")
+    s_eva.add_argument("--vibration", type=float, required=True)
+    s_eva.add_argument("--temp", type=float, required=True)
+    s_eva.add_argument("--flow", type=float, required=True)
+    s_eva.add_argument("--harmony", type=float, default=0.97)
+    s_eva.set_defaults(func=cmd_pdm_evade)
+
+    s_vis = sub.add_parser("vision-backdoor", help="Deploy trojanized ONNX model to Edge Vision QC")
+    s_vis.add_argument("--model", required=True)
+    s_vis.set_defaults(func=cmd_vision_backdoor)
+
+    s_rl = sub.add_parser("rl-spoof", help="Spoof BACnet inputs to reward-hack RL Chiller Optimizer")
+    s_rl.add_argument("--outside-temp", type=float, required=True)
+    s_rl.add_argument("--occupancy", type=int, required=True)
+    s_rl.add_argument("--price-spike", type=float, default=5.0)
+    s_rl.set_defaults(func=cmd_rl_spoof)
+
+    s_soar = sub.add_parser("soar-dos", help="Trigger spoofed-IP self-isolation on Autonomous OT SOAR")
+    s_soar.add_argument("--spoof-ip", required=True)
+    s_soar.add_argument("--signature", default="MODBUS_UNAUTHORIZED_WRITE")
+    s_soar.set_defaults(func=cmd_soar_dos)
+
+    s_bess = sub.add_parser("bess-oscillate", help="Trigger DER/BESS/OCPP grid frequency oscillation")
+    s_bess.add_argument("--invert-droop", action="store_true")
+    s_bess.add_argument("--disable-bms", action="store_true")
+    s_bess.add_argument("--ev-pulse-mw", type=float, default=15.0)
+    s_bess.set_defaults(func=cmd_bess_oscillate)
+
+    s_fg = sub.add_parser("frostygoop-calibrate", help="Execute FrostyGoop Modbus calibration spoofing")
+    s_fg.add_argument("--setpoint", type=float, default=15.0)
+    s_fg.add_argument("--valve", type=float, default=0.0)
+    s_fg.add_argument("--offset", type=float, default=65.0)
+    s_fg.set_defaults(func=cmd_frostygoop)
+
+    s_lotl = sub.add_parser("lotl-audit", help="Audit IT/OT jump host and edge gateway for Volt Typhoon LotL relays")
+    s_lotl.add_argument("--gateway", default="10.0.7.10")
+    s_lotl.set_defaults(func=cmd_lotl_audit)
+
+    s_hard = sub.add_parser("harden", help="Apply SOC-05 AI/OT defensive guardrails")
+    s_hard.add_argument("--component", choices=["copilot", "pdm-vision", "rl-soar"], required=True)
+    s_hard.set_defaults(func=cmd_harden)
+
+    return p
+
+
+if __name__ == "__main__":
+    parser = build_parser()
+    ns = parser.parse_args()
+    sys.exit(ns.func(ns))

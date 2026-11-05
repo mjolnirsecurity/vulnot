@@ -22,6 +22,12 @@ Learn to think like an attacker and understand OT vulnerabilities.
 | [Lab 07](labs/lab-07-mqtt-iiot.md) | MQTT | Intermediate | IIoT infrastructure attacks |
 | [Lab 08](labs/lab-08-historian-forensics.md) | HTTP/SQL | Advanced | Data historian exploitation |
 | [Lab 09](labs/lab-09-capstone.md) | Multiple | Advanced | Coordinated multi-protocol attacks |
+| [Lab 10](labs/lab-10-enip-packaging.md) | EtherNet/IP (CIP) | Intermediate | Pharmaceutical packaging line & capper torque sabotage |
+| [Lab 11](labs/lab-11-profinet-cnc.md) | PROFINET RT/DCP | Advanced | 5-Axis CNC aerospace tool-offset & G-code micro-sabotage |
+| [Lab 12](labs/lab-12-ai-scada-copilot.md) | MCP / LLM / OPC UA | Advanced | Indirect prompt injection against autonomous OT Shift Copilot |
+| [Lab 13](labs/lab-13-ai-pdm-vision.md) | ONNX / MQTT | Expert | Evading AI Predictive Maintenance & backdooring Edge Vision QC |
+| [Lab 14](labs/lab-14-ai-rl-soar-hijack.md) | PPO RL / BACnet | Advanced | Reward hacking RL chiller optimizers & autonomous OT SOAR DoS |
+| [Lab 15](labs/lab-15-der-bess-microgrid.md) | IEEE 2030.5 / OCPP | Expert | DER solar inverter, 50 MWh BESS & megawatt EV grid oscillation |
 
 ### 🔵 Blue Team Labs (SOC Defender)
 Learn to detect, respond to, and investigate OT security incidents.
@@ -32,6 +38,7 @@ Learn to detect, respond to, and investigate OT security incidents.
 | [SOC 02](soc-defender/soc-02-detecting-attacks.md) | Detection | Intermediate | Real-time attack detection |
 | [SOC 03](soc-defender/soc-03-incident-response.md) | Response | Intermediate | OT incident response procedures |
 | [SOC 04](soc-defender/soc-04-threat-hunting.md) | Hunting | Advanced | Proactive threat hunting |
+| [SOC 05](soc-defender/soc-05-ai-ot-defense.md) | AI-OT Defense | Advanced | Securing agentic OT Copilots, MCP guardrails & physics-informed ML |
 
 ### 🔍 Forensics Labs (Investigation)
 Learn to investigate real-world OT attacks based on documented incidents.
@@ -43,6 +50,8 @@ Learn to investigate real-world OT attacks based on documented incidents.
 | [Forensics 03](forensics/forensics-03-triton-safety.md) | TRITON | 2017 | Safety system compromise |
 | [Forensics 04](forensics/forensics-04-colonial-pipeline.md) | Colonial Pipeline | 2021 | Ransomware IT/OT impact |
 | [Forensics 05](forensics/forensics-05-water-utility.md) | Water Attacks | 2021-24 | Water treatment attacks |
+| [Forensics 06](forensics/forensics-06-frostygoop-heating.md) | FrostyGoop / Unitronics | 2024 | District heating Modbus calibration spoofing across 620 buildings |
+| [Forensics 07](forensics/forensics-07-volt-typhoon-lotl.md) | Volt Typhoon LotL | 2024-26 | Living-off-the-Land (`netsh portproxy` / `socat`) in IT/OT DMZs |
 
 ---
 
@@ -85,14 +94,16 @@ Learn to investigate real-world OT attacks based on documented incidents.
 | vulnot-enip | EtherNet/IP | `vulnot-enip --help` |
 | vulnot-historian | Historian | `vulnot-historian --help` |
 | vulnot-forensics | Investigation | `vulnot-forensics --help` |
+| vulnot-ai | AI-in-OT & Modern ICS | `vulnot-ai --help` |
 | vulnot-moodle | Moodle LMS Sync | `vulnot-moodle --help` |
 
 ### Mjolnir Training Portal (Moodle LMS Integration)
 
-VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://portal.mjolnir.training** across three official courses:
-- **VULNOT-101** (`Course ID #101`): Offensive OT/ICS Exploitation (`lab-01` – `lab-09`, 2,000 pts)
-- **VULNOT-201** (`Course ID #201`): Industrial Incident Forensics & Case Studies (`forensics-01` – `forensics-05`, 1,450 pts)
-- **VULNOT-301** (`Course ID #301`): OT SOC Defender & Threat Hunting (`soc-01` – `soc-04`, 950 pts)
+VULNOT integrates directly with the Mjolnir Security Moodle LMS at **https://portal.mjolnir.training** across four official courses:
+- **VULNOT-101** (`Course ID #101`): Fundamentals: OT/ICS Security Core (`lab-01` – `lab-04`, `soc-01`)
+- **VULNOT-201** (`Course ID #201`): Advanced: Industrial Protocol Exploitation & Defense (`lab-05` – `lab-08`, `soc-02`, `soc-03`)
+- **VULNOT-301** (`Course ID #301`): Master Class: APT Campaigns, ICS Forensics & Capstone (`forensics-01` – `forensics-05`, `soc-04`, `lab-09`)
+- **VULNOT-401** (`Course ID #401`): AI & Emerging ICS Threats: Agentic OT, Adversarial ML & Modern Grid Sabotage (`lab-10` – `lab-15`, `forensics-06`, `forensics-07`, `soc-05`)
 
 #### CLI Usage (`attacker/scripts/vulnot-moodle`)
 ```bash
